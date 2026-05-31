@@ -132,9 +132,25 @@ export type ShopHomePayload = {
   banners?: ShopBannerRow[];
 };
 
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 10000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
+}
+
 export async function fetchSiteConfig(): Promise<PublicSiteConfig | null> {
   try {
-    const r = await fetch(`${API_URL}/v2/api/site-config`, {
+    const r = await fetchWithTimeout(`${API_URL}/v2/api/site-config`, {
       next: { revalidate: 60 },
     });
     if (!r.ok) return null;
@@ -146,7 +162,7 @@ export async function fetchSiteConfig(): Promise<PublicSiteConfig | null> {
 
 export async function fetchHomeReviews(): Promise<PublicHomeReview[]> {
   try {
-    const r = await fetch(`${API_URL}/v2/api/home-reviews`, {
+    const r = await fetchWithTimeout(`${API_URL}/v2/api/home-reviews`, {
       next: { revalidate: 60 },
     });
     if (!r.ok) return [];
@@ -159,7 +175,7 @@ export async function fetchHomeReviews(): Promise<PublicHomeReview[]> {
 
 export async function fetchPageSeo(pageKey: string): Promise<PublicPageSeo | null> {
   try {
-    const r = await fetch(`${API_URL}/v2/api/page-seo/${pageKey}`, {
+    const r = await fetchWithTimeout(`${API_URL}/v2/api/page-seo/${pageKey}`, {
       next: { revalidate: 60 },
     });
     if (!r.ok) return null;
@@ -173,7 +189,7 @@ export async function fetchInstitutionalPage(
   slug: string
 ): Promise<PublicInstitutionalPage | null> {
   try {
-    const r = await fetch(`${API_URL}/v2/api/pages/${slug}`, {
+    const r = await fetchWithTimeout(`${API_URL}/v2/api/pages/${slug}`, {
       next: { revalidate: 60 },
     });
     if (!r.ok) return null;
@@ -185,7 +201,7 @@ export async function fetchInstitutionalPage(
 
 export async function fetchShopHome(): Promise<ShopHomePayload> {
   try {
-    const r = await fetch(`${API_URL}/v2/api/shop/home`, {
+    const r = await fetchWithTimeout(`${API_URL}/v2/api/shop/home`, {
       next: { revalidate: 30 },
     });
     if (!r.ok) return { categories: [], uncategorized: [] };

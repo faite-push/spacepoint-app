@@ -17,27 +17,39 @@ export function getCsrfToken(): string {
  */
 export async function apiFetch<T = unknown>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  timeout = 10000
 ): Promise<T> {
   const method = (options.method ?? 'GET').toUpperCase();
   const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(isMutation ? { 'X-CSRF-Token': getCsrfToken() } : {}),
-      ...options.headers,
-    },
-  });
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw Object.assign(new Error(error.error ?? 'Erro na API'), { status: response.status });
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      signal: controller.signal,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(isMutation ? { 'X-CSRF-Token': getCsrfToken() } : {}),
+        ...options.headers,
+      },
+    });
+
+    clearTimeout(id);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: response.statusText }));
+      throw Object.assign(new Error(error.error ?? 'Erro na API'), { status: response.status });
+    }
+
+    return response.json();
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
   }
-
-  return response.json();
 }
 
 /**
