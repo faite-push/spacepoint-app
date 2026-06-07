@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { usePermission } from "@/providers/PermissionProvider";
 import { Button } from "@/components/ui/button";
-import { apiFetch, API_URL } from "@/lib/api";
+import { API_URL } from "@/lib/api";
 
 import { PerformanceChart } from "@/components/admin/dashboard/PerformanceChart";
 import { DateRangeFilter } from "@/components/admin/dashboard/DateRangeFilter";
@@ -18,7 +18,12 @@ import { MetricSidebar } from "@/components/admin/dashboard/MetricSidebar";
 async function fetchStats(from: Date, to: Date) {
   const fromIso = from.toISOString();
   const toIso = to.toISOString();
-  const data = await apiFetch<any>(`/v2/api/admin/stats?from=${fromIso}&to=${toIso}`);
+  const res = await fetch(
+    `${API_URL}/v2/api/admin/stats?from=${fromIso}&to=${toIso}`,
+    { credentials: "include" }
+  );
+  if (!res.ok) throw new Error("Falha ao carregar métricas");
+  const data = await res.json();
   
   // Normalização estrita: usamos apenas o que a API enviar.
   // Se os produtos não aparecerem, é necessário verificar se a API 

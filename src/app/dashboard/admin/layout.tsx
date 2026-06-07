@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { AdminShell } from "@/components/admin/layout/admin-shell";
 import { PermissionProvider } from "@/providers/PermissionProvider";
-import { API_URL } from "@/lib/api";
 
 async function checkAdminAuth() {
   const cookieStore = await cookies();
@@ -13,7 +12,7 @@ async function checkAdminAuth() {
   }
 
   try {
-    const res = await fetch(`${API_URL}/v2/api/request/me`, {
+    const res = await fetch(`http://localhost:5000/v2/api/request/me`, {
       headers: { Cookie: `access_token=${token}` },
       cache: "no-store",
     });

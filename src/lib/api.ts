@@ -33,7 +33,6 @@ export async function apiFetch<T = unknown>(
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
         ...(isMutation ? { 'X-CSRF-Token': getCsrfToken() } : {}),
         ...options.headers,
       },
