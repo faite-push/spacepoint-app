@@ -3,27 +3,27 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { ShoppingCart, Search, X, User, LayoutDashboard, Package, Heart, Settings, LogOut, ChevronDown, } from "lucide-react";
-import { FaUser } from "react-icons/fa";
-import { FaBasketShopping } from "react-icons/fa6";
-import { BsBoxFill } from "react-icons/bs";
-import { HiMenuAlt2 } from "react-icons/hi";
-import { useCartStore } from "@/store/cart-store";
-import { RiSearch2Fill } from "react-icons/ri";
-import { useAuth } from "@/context/auth-context";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, } from "@/components/ui/dropdown-menu";
+import { X, User, LayoutDashboard, Package, Heart, LogOut, ChevronDown, } from "lucide-react";
 import { NavbarCategoriesDesktop, NavbarCategoriesMobile } from "./navbar-categories";
+import type { PublicSiteConfig } from "@/lib/site-api";
+import { FaBasketShopping } from "react-icons/fa6";
+import { useCartStore } from "@/store/cart-store";
+import { useAuth } from "@/context/auth-context";
+import { CartSheet } from "../shop/cart-sheet";
 import { SearchInput } from "./search-input";
+import { HiMenuAlt2 } from "react-icons/hi";
 
-export function Navbar() {
-  const count = useCartStore((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
+export function Navbar({ siteConfig }: { siteConfig?: PublicSiteConfig | null }) {
+  const count = useCartStore((state) => state.items.length);
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? "Usuário";
+  const primaryColor = siteConfig?.primaryColor || "#A855F7";
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-[#A855F7]">
+    <header className="sticky top-0 z-50 w-full shadow-lg" style={{ backgroundColor: primaryColor }}>
       <div className="mx-auto flex h-16 md:h-20 max-w-7xl items-center justify-between px-4">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -59,17 +59,18 @@ export function Navbar() {
             )}
           </Link>
 
-          <Link
-            href="/checkout"
-            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[#ffffff05] border-1 border-dashed border-white/30 text-white transition-all duration-300 md:border-white/30 group active:scale-95 md:hover:bg-primary"
-          >
-            <FaBasketShopping className="h-5 w-5" />
-            {count > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#A855F7]">
-                {count}
-              </span>
-            )}
-          </Link>
+          <CartSheet siteConfig={siteConfig}>
+            <button
+              className="relative flex h-10 w-10 items-center cursor-pointer justify-center rounded-full bg-[#ffffff05] border-1 border-dashed border-white/30 text-white transition-all duration-300 md:border-white/30 group active:scale-95 md:hover:bg-primary"
+            >
+              <FaBasketShopping className="h-5 w-5" />
+              {count > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#A855F7]">
+                  {count}
+                </span>
+              )}
+            </button>
+          </CartSheet>
 
           {user ? (
             <DropdownMenu open={userMenuOpen} onOpenChange={setUserMenuOpen}>

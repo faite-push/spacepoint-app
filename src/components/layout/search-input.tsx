@@ -6,6 +6,7 @@ import Image from "next/image";
 import { RiSearch2Fill } from "react-icons/ri";
 import { AiOutlineEnter } from "react-icons/ai";
 import { X, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "@/hooks/use-debounce";
 import { fetchProducts, formatPrice } from "@/lib/shop-api";
 import { Product } from "@/types/shop";
@@ -199,7 +200,7 @@ export function SearchInput({ mobile }: SearchInputProps) {
         }`}
       />
 
-      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+      <div className="absolute select-none right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
         {isLoading && <Loader2 className="h-4 w-4 animate-spin text-white/50" />}
         {query && (
           <button
@@ -217,7 +218,18 @@ export function SearchInput({ mobile }: SearchInputProps) {
               : 'bg-white/10 text-white/90'
           }`}
         >
-          {isFocused ? (query ? <span className="flex items-center gap-1.5 font-bold">esc</span> : "esc") : "P"}
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={isFocused ? (query ? "enter" : "esc") : "p"}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+              className="flex items-center"
+            >
+              {isFocused ? (query ? <span className="flex items-center gap-1.5 font-bold">esc</span> : "esc") : "P"}
+            </motion.span>
+          </AnimatePresence>
         </kbd>
       </div>
 

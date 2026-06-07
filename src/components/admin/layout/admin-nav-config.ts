@@ -18,7 +18,6 @@ export type AdminNavGroup = {
 export const adminMainNavItems: AdminNavItem[] = [
   { href: "/dashboard/admin", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/admin/products", icon: FolderClosed, label: "Produtos", permission: "products:view" },
-  { href: "/dashboard/admin/inventory", icon: Package, label: "Estoque", permission: "products:view" },
   { href: "/dashboard/admin/orders", icon: BadgeDollarSign, label: "Vendas", permission: "orders:view" },
   { href: "/dashboard/admin/coupon", icon: Tag, label: "Cupom", permission: "codes:view" },
   { href: "/dashboard/admin/promotions", icon: CalendarIcon, label: "Promoções", permission: "settings:manage" },

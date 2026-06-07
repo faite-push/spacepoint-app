@@ -3,16 +3,19 @@
 import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 
+import { Slot } from "@radix-ui/react-slot"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
+import { Tooltip, TooltipTrigger, TooltipContent } from "./tooltip"
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
 
-function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
+function SheetTrigger({ asChild, ...props }: SheetPrimitive.Trigger.Props & { asChild?: boolean }) {
+  const Comp = asChild ? Slot : SheetPrimitive.Trigger
+  return <Comp data-slot="sheet-trigger" {...(props as any)} />
 }
 
 function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
@@ -60,20 +63,27 @@ function SheetContent({
       >
         {children}
         {showCloseButton && (
-          <SheetPrimitive.Close
-            data-slot="sheet-close"
-            render={
-              <Button
-                variant="ghost"
-                className="absolute top-3 right-3"
-                size="icon-sm"
-              />
-            }
-          >
-            <XIcon
-            />
-            <span className="sr-only">Close</span>
-          </SheetPrimitive.Close>
+          <Tooltip >
+            <TooltipTrigger
+              render={
+                <SheetPrimitive.Close
+                  data-slot="sheet-close"
+                  render={
+                    <button
+                      className="absolute top-3 right-3 p-1 bg-transparent hover:bg-white/10 rounded-md cursor-pointer transition-all duration-300 border-none text-sm"
+                    />
+                  }
+                >
+                  <XIcon className="text-white/80" size={20} />
+                  <span className="sr-only">Close</span>
+                </SheetPrimitive.Close>
+              }
+            >
+            </TooltipTrigger>
+            <TooltipContent align="start">
+              <p>Fechar</p>
+            </TooltipContent>
+          </Tooltip>
         )}
       </SheetPrimitive.Popup>
     </SheetPortal>

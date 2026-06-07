@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
@@ -36,15 +37,26 @@ export function NavbarCategoriesDesktop() {
   if (!data?.length) return null;
 
   return (
-    <nav className="hidden bg-primary md:block">
+    <motion.nav
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="hidden bg-primary md:block"
+    >
       <div className="mx-auto flex h-11 max-w-7xl items-center justify-center gap-6 px-4 font-medium text-sm">
-        {data.map((cat) => {
-          const subs = (cat.subcategories ?? []).filter((s) => s.isActive);
+        {data.map((cat, idx) => {
+          const subs = (cat.subcategories ?? []).filter((s) => s.isActive && s.showInNavbar);
           const hasSubs = subs.length > 0;
           const href = `/category/${cat.slug}`;
 
           return (
-            <div key={cat.id} className="group relative h-full flex items-center">
+            <motion.div
+              key={cat.id}
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: idx * 0.05 }}
+              className="group relative h-full flex items-center"
+            >
               <Link
                 href={href}
                 className="flex items-center gap-1 text-white/90 transition-colors hover:text-white"
@@ -76,11 +88,11 @@ export function NavbarCategoriesDesktop() {
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </div>
-    </nav>
+    </motion.nav>
   );
 }
 
@@ -96,9 +108,13 @@ export function NavbarCategoriesMobile() {
   if (!data?.length) return null;
 
   return (
-    <div className="space-y-1">
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      className="space-y-1 overflow-hidden"
+    >
       {data.map((cat) => {
-        const subs = (cat.subcategories ?? []).filter((s) => s.isActive);
+        const subs = (cat.subcategories ?? []).filter((s) => s.isActive && s.showInNavbar);
         return (
           <details
             key={cat.id}
@@ -134,6 +150,6 @@ export function NavbarCategoriesMobile() {
           </details>
         );
       })}
-    </div>
+    </motion.div>
   );
 }

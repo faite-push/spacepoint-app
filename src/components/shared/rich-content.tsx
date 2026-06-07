@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
 import { cn } from "@/lib/utils";
 
 interface RichContentProps {
@@ -26,6 +29,8 @@ export function RichContent({ content, className }: RichContentProps) {
       }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Image.configure({ HTMLAttributes: { class: "rounded-lg my-4 max-w-full" } }),
+      TextStyle,
+      Color,
     ],
     content: content ?? "",
     editable: false,
@@ -51,6 +56,13 @@ export function RichContent({ content, className }: RichContentProps) {
       },
     },
   });
+  
+  // Update content when it changes
+  useEffect(() => {
+    if (editor && content) {
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
 
   if (!editor) return null;
 

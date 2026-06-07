@@ -27,10 +27,12 @@ export function SiteShell({
     return <>{children}</>;
   }
 
+  const showReviews = pathname === "/" && siteConfig?.homeReviewsEnabled !== false && homeReviews.length > 0;
+  
   return (
     <MaintenanceGate config={siteConfig}>
       <PromoTopBar config={siteConfig} />
-      {!isMaintenance && <Navbar />}
+      {!isMaintenance && <Navbar siteConfig={siteConfig} />}
       <main
         className={`mx-auto w-full max-w-7xl flex-1 px-4 ${
           isMaintenance ? "pt-12" : hasTopBar ? "pt-36" : "pt-32"
@@ -39,7 +41,7 @@ export function SiteShell({
         {children}
       </main>
 
-      {pathname === "/" && siteConfig?.homeReviewsEnabled !== false && homeReviews.length > 0 && (
+      {showReviews && (
         <div className="relative z-10 -mb-60">
           <div className="mx-auto max-w-[1580px] px-4 md:px-10">
             <div className="rounded-3xl border-2 border-dashed border-white/20 bg-background p-6 sm:p-12">
@@ -49,7 +51,7 @@ export function SiteShell({
         </div>
       )}
 
-      {!isMaintenance && <SiteFooter config={siteConfig} />}
+      {!isMaintenance && <SiteFooter config={siteConfig} showReviews={showReviews} />}
     </MaintenanceGate>
   );
 }

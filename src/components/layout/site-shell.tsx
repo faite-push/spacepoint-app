@@ -20,6 +20,8 @@ export function SiteShell({
     return <>{children}</>;
   }
 
+  const showReviews = pathname === "/" && siteConfig?.homeReviewsEnabled !== false;
+
   return (
     <>
       <Navbar />
@@ -27,7 +29,7 @@ export function SiteShell({
         {children}
       </main>
 
-      {pathname === "/" && (
+      {showReviews && (
         <div className="relative z-10 -mb-60">
           <div className="mx-auto max-w-[1580px] px-4 md:px-10">
             <div className="rounded-3xl border-2 border-dashed border-white/20 bg-background p-12">
@@ -37,7 +39,7 @@ export function SiteShell({
         </div>
       )}
 
-      <SiteFooter config={siteConfig} />
+      <SiteFooter config={siteConfig} showReviews={showReviews} />
     </>
   );
 }

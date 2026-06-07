@@ -46,4 +46,4 @@ export default async function AdminLayout({
       <AdminShell user={user}>{children}</AdminShell>
     </PermissionProvider>
   );
-}
+};

@@ -305,10 +305,9 @@ export default function UnifiedInventoryPage() {
   }, [liveCategories, fCatAtivo, fCatDesativado]);
 
   const onBeforeDragStart = (start: DragStart) => {
-    if (start.type === "CATEGORY" || start.type === "SUBCATEGORY") {
-      const catId = start.draggableId.replace("cat-", "");
-      setExpandedCats((prev) => (prev[catId] ? { ...prev, [catId]: false } : prev));
-    }
+    // We removed the auto-collapse logic from here because it was causing 
+    // "Invariant failed: Cannot find droppable entry" errors by unmounting 
+    // components exactly when the drag engine was initializing.
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -419,7 +418,7 @@ export default function UnifiedInventoryPage() {
           </div>
           <div className="flex items-center gap-2 min-w-0">
             {indent > 0 && (
-              <Badge variant="secondary" className="bg-[#3b82f6]/10 text-[#3b82f6] text-[10px] uppercase border-transparent shrink-0">
+              <Badge variant="secondary" className="bg-primary/10 text-primary text-[10px] uppercase border-transparent shrink-0">
                 sub
               </Badge>
             )}
@@ -633,12 +632,12 @@ export default function UnifiedInventoryPage() {
             <div
               className={cn(
                 "flex flex-col overflow-hidden transition-all duration-200",
-                isExpanded && !snapshot.isDragging
+                isExpanded
                   ? indent > 0
-                    ? "rounded-lg border border-[#3b82f6]/15 bg-[#3b82f6]/[0.04]"
+                    ? "rounded-lg border border-primary/15 bg-primary/3"
                     : "rounded-lg border border-white/5 bg-[#111]"
                   : "rounded-lg border border-white/5 bg-[#111]",
-                snapshot.isDragging && "rounded-lg ring-1 ring-white/20 shadow-2xl"
+                snapshot.isDragging && "rounded-lg ring-1 ring-white/20 shadow-2xl opacity-90"
               )}
             >
               <CategoryHeader
@@ -649,14 +648,14 @@ export default function UnifiedInventoryPage() {
                 onDelete={setDeleteCategory}
               />
 
-              {isExpanded && !snapshot.isDragging && (
+              {isExpanded && (
                 <>
                   {subcats.length > 0 && (
-                    <Droppable droppableId={`subcats-${cat.id}`} type="SUBCATEGORY">
+                    <Droppable droppableId={`subcats-${cat.id}`} type="SUBCATEGORY" isDropDisabled={snapshot.isDragging}>
                       {(dropProvided) => (
                         <div ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="px-3 pb-2 space-y-1.5">
                           {subcats.map((sub, i) => (
-                            <CategorySection key={sub.id} cat={sub} index={i} indent={0} type="SUBCATEGORY" />
+                            <CategorySection key={sub.id} cat={sub} index={i} indent={indent + 1} type="SUBCATEGORY" />
                           ))}
                           {dropProvided.placeholder}
                         </div>
@@ -664,7 +663,7 @@ export default function UnifiedInventoryPage() {
                     </Droppable>
                   )}
 
-                  <Droppable droppableId={`prod-${cat.id}`} type="PRODUCT">
+                  <Droppable droppableId={`prod-${cat.id}`} type="PRODUCT" isDropDisabled={snapshot.isDragging}>
                     {(dropProvided) => (
                       <div ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="min-h-[2px]">
                         {directProds.map((p, i) => (

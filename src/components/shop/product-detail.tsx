@@ -3,24 +3,26 @@
 import { useMemo, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 import { ShoppingBasket, Heart, Zap, ShieldCheck, CreditCard, ChevronRight, OctagonAlert, Check, Info, CircleCheck, Receipt, BadgeDollarSign } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useCartStore } from "@/store/cart-store";
+import { RichContent } from "@/components/shared/rich-content";
 import { formatPrice, formatPriceLabel } from "@/lib/shop-api";
 import type { Product, ProductVariant } from "@/types/shop";
-import { cn } from "@/lib/utils";
+import { useCartStore } from "@/store/cart-store";
+import { Button } from "@/components/ui/button";
 import { ProductCard } from "./product-card";
-import { RichContent } from "@/components/shared/rich-content";
+import { cn } from "@/lib/utils";
 
 
 export function ProductDetail({ product, relatedProducts = [] }: { product: Product; relatedProducts?: Product[]; }) {
   const router = useRouter();
   const addProduct = useCartStore((s) => s.addProduct);
+
   const [selectedVariantId, setSelectedVariantId] = useState<string | "">(
     product.hasVariants ? (product.variants[0]?.id ?? "") : ""
   );
@@ -30,12 +32,11 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
     return product.variants.find((v) => v.id === selectedVariantId) ?? null;
   }, [product, selectedVariantId]);
 
-  const displayImage = selectedVariant?.imageUrl || product.imageUrl || product.images[0] || "/placeholder.svg";
-
-  const displayPrice = selectedVariant?.price ?? product.price;
-  const comparePrice = selectedVariant?.comparePrice ?? product.comparePrice;
-
   const outOfStock = selectedVariant != null ? selectedVariant.stockQuantity <= 0 : !product.hasVariants && (product.stockQuantity ?? 0) <= 0;
+  const displayImage = selectedVariant?.imageUrl || product.imageUrl || product.images[0] || "/placeholder.svg";
+  const comparePrice = selectedVariant?.comparePrice ?? product.comparePrice;
+  const displayPrice = selectedVariant?.price ?? product.price;
+
 
   function handleAdd() {
     if (product.hasVariants && !selectedVariant) {
@@ -45,17 +46,17 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
     addProduct(product, selectedVariant);
     toast.success("Adicionado ao carrinho");
     return true;
-  }
+  };
 
   function handleBuyNow() {
     if (handleAdd()) {
       router.push("/checkout");
     }
-  }
+  };
 
   function handleWishlist() {
     toast.success("Adicionado à lista de desejos!");
-  }
+  };
 
   const [showFloatingBar, setShowFloatingBar] = useState(false);
   useEffect(() => {
@@ -89,7 +90,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
         <span className="text-white/80 truncate max-w-auto sm:max-w-none">{product.name}</span>
       </nav>
 
-      <div className="rounded-2xl border border-white/5 bg-[#111111]/30 p-5 md:p-8 backdrop-blur-md">
+      <div className="rounded-xl border border-white/5 bg-[#111111]/30 p-5 md:p-8 backdrop-blur-md">
         <div className="grid gap-8 md:gap-12 lg:grid-cols-[400px_1fr]">
           <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-white/5 bg-[#0a0a0a]">
             <Image
@@ -140,7 +141,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
 
               <Dialog>
                 <DialogTrigger asChild>
-                  <button className="flex items-center cursor-pointer underline decoration-dotted gap-2 text-[13px] text-primary/90 hover:text-primary/70 font-bold w-fit mt-1 transition-colors">
+                  <button className="flex items-center cursor-pointer gap-2 text-[13px] text-primary/90 hover:text-primary/70 font-bold w-fit mt-1 transition-colors">
                     Entenda como funciona as Licenças Primária e Secundária
                   </button>
                 </DialogTrigger>
@@ -193,7 +194,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
             </div>
 
             {product.hasVariants && (
-              <div className="mb-6 rounded-xl border border-white/10 bg-[#ffffff05] p-4 shadow-inner">
+              <div className="mb-6 rounded-lg border border-white/5 bg-transparent p-4 shadow-inner">
                 <div className="flex justify-between items-center mb-3">
                   <p className="text-sm font-semibold text-white/70 tracking-wide">Escolha a Variante</p>
                   {selectedVariant && selectedVariant.stockQuantity < 10 && selectedVariant.stockQuantity > 0 && (
@@ -378,17 +379,27 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
 
       <div className="rounded-3xl border border-white/[0.04] bg-[#ffffff02] p-6 lg:p-8 mt-6">
         <h2 className="mb-6 text-2xl font-bold text-white tracking-wide">Descrição</h2>
-        {product.description && typeof product.description === "object" ? (
-          <RichContent content={product.description} />
-        ) : typeof product.description === "string" && product.description.trim().length > 0 ? (
-          <div className="text-white/70 leading-relaxed whitespace-pre-wrap font-medium">
-            {product.description}
-          </div>
-        ) : (
-          <p className="text-white/50 italic text-sm">
-            Este produto garante acesso instantâneo ao conteúdo digital. Entre em sua conta após o pagamento para desfrutar automaticamente das suas recompensas e jogos.
-          </p>
-        )}
+        {(() => {
+          const desc = selectedVariant?.description || product.description;
+          
+          if (desc && typeof desc === "object") {
+            return <RichContent content={desc} />;
+          }
+          
+          if (typeof desc === "string" && desc.trim().length > 0) {
+            return (
+              <div className="text-white/70 leading-relaxed whitespace-pre-wrap font-medium">
+                {desc}
+              </div>
+            );
+          }
+
+          return (
+            <p className="text-white/50 italic text-sm">
+              Este produto garante acesso instantâneo ao conteúdo digital. Entre em sua conta após o pagamento para desfrutar automaticamente das suas recompensas e jogos.
+            </p>
+          );
+        })()}
       </div>
 
       {relatedProducts.length > 0 && (
@@ -422,4 +433,4 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
       )}
     </div>
   );
-}
+};

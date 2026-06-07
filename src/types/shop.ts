@@ -3,6 +3,7 @@ export type ProductVariant = {
   productId: string;
   sku: string | null;
   name: string;
+  description: any | null;
   price: number;
   comparePrice: number | null;
   imageUrl: string | null;
@@ -45,6 +46,8 @@ export type CartItem = {
   image?: string;
   platform: string;
   quantity: number;
+  stockQuantity?: number | null;
+  maxPurchaseQuantity?: number | null;
 };
 
 export type OrderCode = {

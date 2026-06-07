@@ -3,15 +3,21 @@
 import * as React from "react"
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
+import { Slot } from "@radix-ui/react-slot"
 import { cn } from "@/lib/utils"
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />
 }
 
-function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
-  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />
-}
+const PopoverTrigger = React.forwardRef<
+  HTMLButtonElement,
+  PopoverPrimitive.Trigger.Props & { asChild?: boolean }
+>(({ asChild, ...props }, ref) => {
+  const Comp = asChild ? Slot : PopoverPrimitive.Trigger
+  return <Comp ref={ref} data-slot="popover-trigger" {...(props as any)} />
+})
+PopoverTrigger.displayName = "PopoverTrigger"
 
 function PopoverContent({
   className,
@@ -47,7 +53,7 @@ function PopoverContent({
   )
 }
 
-function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
+function PopoverHeader({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
   return (
     <div
       data-slot="popover-header"
