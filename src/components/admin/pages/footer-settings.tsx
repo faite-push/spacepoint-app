@@ -84,6 +84,17 @@ function formToPublicConfig(form: Partial<SiteConfigRecord>): PublicSiteConfig {
     homeReviewsTotalCount: null,
     homeReviewsGoogleMapsUrl: null,
     homeReviewsLinkLabel: null,
+    homeShowcaseEnabled: null,
+    homeShowcaseTitle: null,
+    homeShowcaseSubtitle: null,
+    popupEnabled: null,
+    popupTitle: null,
+    popupDescription: null,
+    popupImageUrl: null,
+    popupCtaLabel: null,
+    popupCtaLink: null,
+    popupTrigger: null,
+    popupDelay: null,
   };
 }
 

@@ -14,20 +14,15 @@ import { DateRangeFilter } from "@/components/admin/dashboard/DateRangeFilter";
 import { CustomersChart } from "@/components/admin/dashboard/CustomersChart";
 import { OverviewCards } from "@/components/admin/dashboard/OverviewCards";
 import { MetricSidebar } from "@/components/admin/dashboard/MetricSidebar";
+import { DashboardSkeleton } from "@/components/admin/skeletons/DashboardSkeleton";
 
 async function fetchStats(from: Date, to: Date) {
   const fromIso = from.toISOString();
   const toIso = to.toISOString();
-  const res = await fetch(
-    `${API_URL}/v2/api/admin/stats?from=${fromIso}&to=${toIso}`,
-    { credentials: "include" }
-  );
+  const res = await fetch(`${API_URL}/v2/api/admin/stats?from=${fromIso}&to=${toIso}`, { credentials: "include" });
   if (!res.ok) throw new Error("Falha ao carregar métricas");
+
   const data = await res.json();
-  
-  // Normalização estrita: usamos apenas o que a API enviar.
-  // Se os produtos não aparecerem, é necessário verificar se a API 
-  // v2/api/admin/stats está retornando o objeto 'sidebar' com 'latestSales' e 'productStats'.
   return {
     ...data,
     sidebar: {
@@ -36,7 +31,7 @@ async function fetchStats(from: Date, to: Date) {
       productStats: data.sidebar?.productStats || { lowStock: [], topSellers: [] }
     }
   };
-}
+};
 
 export default function AdminDashboard() {
   const { hasPermission } = usePermission();
@@ -58,7 +53,7 @@ export default function AdminDashboard() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-zinc-500">Bem-vindo ao painel administrativo</p>
+          <p className="text-muted-foreground">Bem-vindo ao painel administrativo</p>
         </div>
         <div className="flex h-[50vh] flex-col items-center justify-center gap-4 rounded-3xl border border-white/5 bg-[#0A0A0A]">
           <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-purple-500/10 border border-purple-500/20">
@@ -77,35 +72,28 @@ export default function AdminDashboard() {
     );
   };
 
+  if (isLoading) return <DashboardSkeleton />;
+
   return (
     <div className="relative space-y-8 pb-20 animate-in fade-in duration-700 min-h-screen">
-      <div className="animate-pulse absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/10 rounded-full blur-[120px] z-0 pointer-events-none" />
-      <div className="animate-pulse absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/10 rounded-full blur-[120px] z-0 pointer-events-none" />
-      <div className="animate-pulse absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/10 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/5 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/5 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/5 rounded-full blur-[120px] z-0 pointer-events-none" />
 
-       <div className="animate-pulse absolute bottom-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/10 rounded-full blur-[120px] z-0 pointer-events-none" />
-      <div className="animate-pulse absolute bottom-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/10 rounded-full blur-[120px] z-0 pointer-events-none" />
-      <div className="animate-pulse absolute bottom-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/10 rounded-full blur-[120px] z-0 pointer-events-none" />
-      
+      <div className="absolute bottom-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/5 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/5 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/5 rounded-full blur-[120px] z-0 pointer-events-none" />
+
       <div className="relative z-10 flex flex-col gap-4">
         <div>
-           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-           <p className="text-muted-foreground">Análises e informações de rendimentos</p>
+          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <p className="text-muted-foreground">Análises e informações de rendimentos</p>
         </div>
         <DateRangeFilter onRangeChange={(range) => setDateRange(range)} />
       </div>
 
       <div className="relative z-10">
-        {isLoading ? (
-          <div className="flex h-[50vh] items-center justify-center">
-            <div className="relative">
-              <Loader2 className="h-12 w-12 text-primary animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-6 w-6 rounded-full bg-primary/20"></div>
-              </div>
-            </div>
-          </div>
-        ) : error || !data ? (
+        {error || !data ? (
           <div className="flex h-[50vh] items-center justify-center flex-col gap-4 text-zinc-500">
             <p className="text-lg font-medium text-white">Ops! Algo deu errado.</p>
             <p className="text-sm">Não foi possível carregar as métricas agora.</p>

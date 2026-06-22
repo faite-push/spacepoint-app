@@ -3,8 +3,6 @@
 import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Link from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
 import { TextStyle } from "@tiptap/extension-text-style";
@@ -21,11 +19,10 @@ export function RichContent({ content, className }: RichContentProps) {
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-      }),
-      Underline,
-      Link.configure({
-        openOnClick: true,
-        HTMLAttributes: { class: "text-primary underline hover:text-primary/80 transition-colors" },
+        link: {
+          openOnClick: true,
+          HTMLAttributes: { class: "text-primary underline hover:text-primary/80 transition-colors" },
+        }
       }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Image.configure({ HTMLAttributes: { class: "rounded-lg my-4 max-w-full" } }),

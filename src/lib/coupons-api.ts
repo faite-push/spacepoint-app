@@ -51,7 +51,7 @@ export interface Coupon {
   usedCount: number;
   perUserLimit: number;
   isActive: boolean;
-  startDate: string;
+  startDate: string | null;
   endDate: string | null;
   allowedPayments: string[];
   createdAt: string;
@@ -73,7 +73,7 @@ export interface CouponPayload {
   maxUses?: number | null;
   perUserLimit?: number;
   isActive?: boolean;
-  startDate?: string;
+  startDate?: string | null;
   endDate?: string | null;
   allowedPayments?: string[];
   references?: { type: "PRODUCT" | "CATEGORY" | "VARIANT"; referenceId: string }[];
@@ -91,8 +91,15 @@ export const couponsApi = {
     const qs = search ? `?search=${encodeURIComponent(search)}` : "";
     return request<{ coupons: Coupon[] }>(`/v2/api/admin/coupons${qs}`);
   },
-  stats: (period: "today" | "7days" | "30days" | "all" = "all") =>
-    request<CouponStats>(`/v2/api/admin/coupons/stats?period=${period}`),
+  stats: (range?: { from: Date; to: Date } | string) => {
+    if (typeof range === "object") {
+      const fromIso = range.from.toISOString();
+      const toIso = range.to.toISOString();
+      return request<CouponStats>(`/v2/api/admin/coupons/stats?from=${fromIso}&to=${toIso}`);
+    }
+    const period = range || "all";
+    return request<CouponStats>(`/v2/api/admin/coupons/stats?period=${period}`);
+  },
   get: (id: string) => request<Coupon>(`/v2/api/admin/coupons/${id}`),
   create: (payload: CouponPayload) =>
     request<Coupon>("/v2/api/admin/coupons", {

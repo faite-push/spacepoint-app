@@ -10,7 +10,7 @@ import { createOrder, formatPrice, fetchProducts } from "@/lib/shop-api";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useCartStore } from "@/store/cart-store";
+import { useCartStore, useCartHydrated } from "@/store/cart-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Product } from "@/types/shop";
@@ -33,6 +33,8 @@ export default function CheckoutPage() {
     email: "",
     robloxName: ""
   });
+
+  const hydrated = useCartHydrated();
 
   useEffect(() => {
     async function loadRecs() {
@@ -60,7 +62,7 @@ export default function CheckoutPage() {
     } finally {
       setIsApplyingCoupon(false);
     }
-  }
+  };
 
   async function submitOrder() {
     if (!acceptedTerms || isSubmitting) return;
@@ -74,15 +76,17 @@ export default function CheckoutPage() {
           productId: item.productId,
           variantId: item.variantId,
           quantity: item.quantity,
-        }))
+        })),
+        { couponCode: appliedCoupon?.code ?? null }
       );
       clear();
-      setStatus(`Pedido ${order.id} criado com sucesso!`);
+      // Redireciona para a página de pagamento
+      window.location.href = `/checkout/payment/${order.id}`;
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Erro ao criar pedido");
       setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="pb-24 lg:pb-12 -mt-32 py-6 md:py-12 relative">
@@ -240,7 +244,7 @@ export default function CheckoutPage() {
                 disabled={!acceptedTerms || items.length === 0 || isSubmitting}
                 className="w-full h-12 rounded-lg text-md font-semibold bg-primary hover:bg-primary/90 text-white flex items-center justify-center gap-3 transition-all active:scale-95"
               >
-                {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : `Pagar ${formatPrice(total())}`}
+                {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : `Pagar ${hydrated ? formatPrice(total()) : "R$ 0,00"}`}
               </Button>
             </div>
           </div>
@@ -254,9 +258,9 @@ export default function CheckoutPage() {
                 </Badge>
               </div>
 
-              <ScrollArea className="flex-2">
+              <ScrollArea className="flex-2 max-h-46 overflow-y-scroll pr-1">
                 <div className="space-y-3">
-                  {items.map((item) => (
+                  {hydrated ? items.map((item) => (
                     <div
                       key={item.cartKey}
                       className="group flex items-center gap-4 p-3 transition-all bg-white/[0.02] hover:bg-white/[0.02] rounded-lg border border-white/5"
@@ -346,12 +350,14 @@ export default function CheckoutPage() {
 
                       <div className="text-right">
                         <p className="text-sm font-bold text-white">
-                          {formatPrice(item.price * item.quantity)}
+                          {hydrated ? formatPrice(item.price * item.quantity) : "R$ 0,00"}
                         </p>
                       </div>
                     </div>
-                  ))}
-                  {items.length === 0 && (
+                  )) : (
+                    <div className="h-20 rounded-lg bg-white/[0.02] animate-pulse" />
+                  )}
+                  {hydrated && items.length === 0 && (
                     <div className="py-12 text-center text-zinc-600">
                       <ShoppingCart className="h-8 w-8 mx-auto mb-3 opacity-20" />
                       <p className="text-sm font-medium">Seu carrinho está vazio</p>
@@ -436,9 +442,9 @@ export default function CheckoutPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-white/40 tracking-widest">Subtotal</span>
-                  <span className="text-white font-bold">{formatPrice(subtotal())}</span>
+                  <span className="text-white font-bold">{hydrated ? formatPrice(subtotal()) : "R$ 0,00"}</span>
                 </div>
-                {discount() > 0 && (
+                {hydrated && discount() > 0 && (
                   <div className="flex justify-between text-xs font-medium">
                     <span className="text-white/40 tracking-widest">Desconto</span>
                     <span className="text-emerald-400 font-bold">- {formatPrice(discount())}</span>
@@ -448,7 +454,7 @@ export default function CheckoutPage() {
                 <div className="flex justify-between items-end">
                   <span className="text-sm font-bold text-white/60">Valor Total</span>
                   <span className="text-3xl font-bold text-white tracking-tighter">
-                    {formatPrice(total())}
+                    {hydrated ? formatPrice(total()) : "R$ 0,00"}
                   </span>
                 </div>
               </div>
@@ -466,7 +472,7 @@ export default function CheckoutPage() {
                     </div>
                   ) : (
                     <>
-                      <span>Pagar {formatPrice(total())}</span>
+                      <span>Pagar {hydrated ? formatPrice(total()) : "R$ 0,00"}</span>
                       <ArrowRight className="h-5 w-5" />
                     </>
                   )}

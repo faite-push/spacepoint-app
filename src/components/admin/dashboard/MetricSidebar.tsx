@@ -131,7 +131,7 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
           </div>
           <div className="flex">
             <Tooltip>
-              <TooltipTrigger>
+              <TooltipTrigger asChild>
                 <button
                   onClick={() => setProductFilter("topSellers")}
                   className={cn(
@@ -148,7 +148,7 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
             </Tooltip>
 
             <Tooltip>
-              <TooltipTrigger>
+              <TooltipTrigger asChild>
                 <button
                   onClick={() => setProductFilter("lowStock")}
                   className={cn(

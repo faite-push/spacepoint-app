@@ -1,15 +1,17 @@
-import { LayoutDashboard, FolderClosed, BadgeDollarSign, Tag, UserRoundCog, Star, UsersRound, Settings, Globe, Home, PanelBottom, FileText, SlidersHorizontal, Megaphone, MessageSquareQuote, Search, Package, Calendar as CalendarIcon, Wrench, type LucideIcon, } from "lucide-react";
+import React from "react";
+import { LayoutDashboard, FolderClosed, BadgeDollarSign, Tag, UserRoundCog, Star, UsersRound, Settings, Globe, Home, PanelBottom, FileText, SlidersHorizontal, Megaphone, MessageSquareQuote, Search, Package, Calendar as CalendarIcon, Wrench, Image as ImageIcon, CreditCard, type LucideIcon, Paintbrush, ReceiptText, } from "lucide-react";
+import { PiGooglePhotosLogo } from "react-icons/pi";
 
 export type AdminNavItem = {
   href: string;
-  icon: LucideIcon;
+  icon: React.ElementType;
   label: string;
   permission?: string;
 };
 
 export type AdminNavGroup = {
   id: string;
-  icon: LucideIcon;
+  icon: React.ElementType;
   label: string;
   permission?: string;
   children: AdminNavItem[];
@@ -20,7 +22,7 @@ export const adminMainNavItems: AdminNavItem[] = [
   { href: "/dashboard/admin/products", icon: FolderClosed, label: "Produtos", permission: "products:view" },
   { href: "/dashboard/admin/orders", icon: BadgeDollarSign, label: "Vendas", permission: "orders:view" },
   { href: "/dashboard/admin/coupon", icon: Tag, label: "Cupom", permission: "codes:view" },
-  { href: "/dashboard/admin/promotions", icon: CalendarIcon, label: "Promoções", permission: "settings:manage" },
+  { href: "/dashboard/admin/gallery", icon: PiGooglePhotosLogo, label: "Galeria", permission: "settings:manage" },
   { href: "/dashboard/admin/clients", icon: UserRoundCog, label: "Clientes", permission: "users:view" },
   { href: "/dashboard/admin/reviews", icon: Star, label: "Avaliações", permission: "analytics:view" },
 ];
@@ -32,14 +34,15 @@ export const adminSitePagesGroup: AdminNavGroup = {
   permission: "settings:manage",
   children: [
     { href: "/dashboard/admin/pages/home", icon: Home, label: "Página Inicial" },
-    { href: "/dashboard/admin/pages/global", icon: SlidersHorizontal, label: "Aparência" },
-    { href: "/dashboard/admin/pages/institutional", icon: FileText, label: "Páginas Institucionais" },
+    { href: "/dashboard/admin/pages/global", icon: Paintbrush, label: "Aparência" },
+    { href: "/dashboard/admin/pages/institutional", icon: ReceiptText, label: "Páginas Institucionais" },
     { href: "/dashboard/admin/pages/seo", icon: Wrench, label: "Configurações Técnicas" },
   ],
 };
 
 export const adminConfigNavItems: AdminNavItem[] = [
   { href: "/dashboard/admin/users", icon: UsersRound, label: "Equipe", permission: "users:view" },
+  { href: "/dashboard/admin/gateways", icon: CreditCard, label: "Gateways", permission: "settings:manage" },
   { href: "/dashboard/admin/settings", icon: Settings, label: "Configurações", permission: "settings:manage" },
 ];
 

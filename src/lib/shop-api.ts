@@ -19,13 +19,19 @@ export async function fetchMyOrders(): Promise<Order[]> {
   return data.orders;
 }
 
+export async function fetchOrder(id: string): Promise<{ order: Order; paymentData?: any }> {
+  const data = await apiFetch<{ order: Order; paymentData?: any }>(`/v2/api/orders/${id}`);
+  return data;
+}
+
 export async function createOrder(
-  items: Array<{ productId: string; variantId?: string | null; quantity: number }>
+  items: Array<{ productId: string; variantId?: string | null; quantity: number }>,
+  opts?: { couponCode?: string | null }
 ): Promise<Order> {
   const data = await apiFetch<{ order: Order }>("/v2/api/orders", {
     method: "POST",
     headers: { "Idempotency-Key": generateIdempotencyKey() },
-    body: JSON.stringify({ items }),
+    body: JSON.stringify({ items, couponCode: opts?.couponCode ?? null }),
   });
   return data.order;
 }

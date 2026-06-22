@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { API_URL } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface NavCategory {
   id: string;
@@ -28,19 +29,28 @@ async function fetchNavbarCategories(): Promise<NavCategory[]> {
 }
 
 export function NavbarCategoriesDesktop() {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["public", "navbar-categories"],
     queryFn: fetchNavbarCategories,
     staleTime: 5 * 60_000,
   });
 
+  if (isLoading) {
+    return (
+      <div className="hidden bg-primary md:block transition-all duration-300">
+        <div className="mx-auto flex h-11 max-w-7xl items-center justify-center gap-6 px-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-4 w-20 bg-white/20" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (!data?.length) return null;
 
   return (
     <motion.nav
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
       className="hidden bg-primary md:block"
     >
       <div className="mx-auto flex h-11 max-w-7xl items-center justify-center gap-6 px-4 font-medium text-sm">
@@ -52,9 +62,6 @@ export function NavbarCategoriesDesktop() {
           return (
             <motion.div
               key={cat.id}
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: idx * 0.05 }}
               className="group relative h-full flex items-center"
             >
               <Link
@@ -99,11 +106,21 @@ export function NavbarCategoriesDesktop() {
 // ─── Mobile ──────────────────────────────────────────────────────────────────
 
 export function NavbarCategoriesMobile() {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["public", "navbar-categories"],
     queryFn: fetchNavbarCategories,
     staleTime: 5 * 60_000,
   });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2 py-1">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-10 w-full bg-white/10" />
+        ))}
+      </div>
+    );
+  }
 
   if (!data?.length) return null;
 
@@ -153,3 +170,4 @@ export function NavbarCategoriesMobile() {
     </motion.div>
   );
 }
+

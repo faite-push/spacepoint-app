@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
+import { Chakra_Petch } from "next/font/google";
 import "@/styles/globals.css";
 import { SiteShell } from "@/components/site-shell";
 import { AnalyticsVisit } from "@/components/shared/analytics-visit";
@@ -8,6 +9,12 @@ import { AuthProvider } from "@/context/auth-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Providers } from "@/components/shared/providers";
 import { fetchSiteConfig, fetchHomeReviews, fetchPageSeo } from "@/lib/site-api";
+
+const chakra = Chakra_Petch({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-chakra",
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const [config, homeSeo] = await Promise.all([
@@ -46,7 +53,7 @@ export default async function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased dark`}
+      className={`${GeistSans.variable} ${GeistMono.variable} ${chakra.variable} h-full antialiased dark`}
     >
       <body
         className={`${GeistSans.className} min-h-full flex flex-col bg-background text-foreground`}

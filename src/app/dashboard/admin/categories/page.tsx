@@ -75,6 +75,14 @@ export default function CategoriesListPage() {
 
   return (
     <div className="space-y-6">
+      <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+
+      <div className="absolute bottom-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-white lg:text-3xl">Categorias</h1>
@@ -198,7 +206,6 @@ function CategoryRow({ category, depth, index, expanded, onToggle, onEdit, onDel
     <Draggable draggableId={category.id} index={index}>
       {(dragProv) => (
         <div ref={dragProv.innerRef} {...dragProv.draggableProps}>
-          {/* Mobile */}
           <div
             className="lg:hidden border-b border-white/5 px-3 py-3 transition-colors hover:bg-white/5"
             style={{ marginLeft: depth * 12 }}
@@ -274,7 +281,6 @@ function CategoryRow({ category, depth, index, expanded, onToggle, onEdit, onDel
             </div>
           </div>
 
-          {/* Desktop */}
           <div
             className="hidden lg:grid grid-cols-[2fr_140px_120px_80px_80px_100px_120px] items-center gap-2 px-4 py-3 transition-colors hover:bg-white/5 cursor-pointer"
             style={{ paddingLeft: 16 + depth * 24 }}

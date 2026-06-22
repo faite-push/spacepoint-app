@@ -73,7 +73,7 @@ export function BannerSlider({
   if (!banners || banners.length === 0) return null;
 
   return (
-    <div className="w-[100vw] relative left-1/2 -translate-x-1/2 overflow-hidden max-w-[1580px] mx-auto px-4 sm:px-6 lg:px-[2rem] -mt-28 mb-12 rounded-2xl">
+    <div className="w-[100vw] relative left-1/2 -translate-x-1/2 overflow-hidden max-w-[1580px] mx-auto px-4 sm:px-6 lg:px-[2rem] -mt-28 rounded-2xl">
       <div ref={sliderRef} className="keen-slider h-full rounded-2xl">
         {banners.map((b) => (
           <div

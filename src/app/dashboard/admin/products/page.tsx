@@ -5,27 +5,27 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, Loader2, Package, ChevronRight, ChevronDown, Check, Filter, PlusCircle, MoreHorizontal, Copy, Layers, ArrowRightLeft, GitBranch, ClipboardCopy } from "lucide-react";
-import { TbGridDots } from "react-icons/tb";
-import { DragDropContext, Droppable, Draggable, DropResult, DraggableProvided, DraggableStateSnapshot, DragStart } from "@hello-pangea/dnd";
 
+import { Plus, Pencil, Trash2, Search, Loader2, Package, ChevronRight, ChevronDown, Check, Filter, PlusCircle, MoreHorizontal, Copy, Layers, ArrowRightLeft, GitBranch, ClipboardCopy, MonitorUp, MoreVertical, Move, ListChecks, Star } from "lucide-react";
+import { DragDropContext, Droppable, Draggable, DropResult, DraggableProvided, DraggableStateSnapshot, DragStart } from "@hello-pangea/dnd";
+import { TbGridDots } from "react-icons/tb";
+import { toast } from "sonner";
+
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
-import { categoriesApi, productsApi, type AdminProduct, type Category } from "@/lib/admin-api";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { Can } from "@/providers/PermissionProvider";
 
-function PortalAware({ provided, snapshot, portalEl, children, }: {
-  provided: DraggableProvided;
-  snapshot: DraggableStateSnapshot;
-  portalEl: HTMLElement | null;
-  children: React.ReactNode;
-}) {
+import { categoriesApi, productsApi, type AdminProduct, type Category } from "@/lib/admin-api";
+import { ProductForm } from "@/components/admin/forms/product-form";
+import { Can } from "@/providers/PermissionProvider";
+import { cn } from "@/lib/utils";
+import { TableSkeleton } from "@/components/admin/skeletons/TableSkeleton";
+
+function PortalAware({ provided, snapshot, portalEl, children, }: { provided: DraggableProvided; snapshot: DraggableStateSnapshot; portalEl: HTMLElement | null; children: React.ReactNode; }) {
   const element = (
     <div
       ref={provided.innerRef}
@@ -42,15 +42,7 @@ function PortalAware({ provided, snapshot, portalEl, children, }: {
   return element;
 };
 
-function FilterCheckbox({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-}) {
+function FilterCheckbox({ checked, onChange, label, }: { checked: boolean; onChange: (v: boolean) => void; label: string; }) {
   return (
     <label
       className="flex items-center gap-3 cursor-pointer group py-1"
@@ -88,7 +80,8 @@ export default function UnifiedInventoryPage() {
   const [transferProduct, setTransferProduct] = useState<AdminProduct | null>(null);
   const [transferCatId, setTransferCatId] = useState<string>("");
   const [convertProduct, setConvertProduct] = useState<AdminProduct | null>(null);
-  const [convertTargetId, setConvertTargetId] = useState<string>("");
+  const [convertTargetId, setConvertTargetId] = useState("");
+  const [quickEditProduct, setQuickEditProduct] = useState<AdminProduct | null>(null);
   const [convertSearch, setConvertSearch] = useState<string>("");
 
   const [fCatAtivo, setFCatAtivo] = useState(true);
@@ -147,7 +140,7 @@ export default function UnifiedInventoryPage() {
       if (p.fTypeMisto !== undefined) setFTypeMisto(p.fTypeMisto);
       if (p.fEstoqueOut !== undefined) setFEstoqueOut(p.fEstoqueOut);
       if (p.fEstoqueIn !== undefined) setFEstoqueIn(p.fEstoqueIn);
-    } catch { /* noop */ }
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -156,8 +149,7 @@ export default function UnifiedInventoryPage() {
       fCatAtivo, fCatDesativado, fStockQtd, fProdAtivo, fProdDesativado,
       fTypeSerie, fTypeTexto, fTypeManual, fTypeMisto, fEstoqueOut, fEstoqueIn,
     }));
-  }, [fCatAtivo, fCatDesativado, fStockQtd, fProdAtivo, fProdDesativado,
-    fTypeSerie, fTypeTexto, fTypeManual, fTypeMisto, fEstoqueOut, fEstoqueIn, isDndReady]);
+  }, [fCatAtivo, fCatDesativado, fStockQtd, fProdAtivo, fProdDesativado, fTypeSerie, fTypeTexto, fTypeManual, fTypeMisto, fEstoqueOut, fEstoqueIn, isDndReady]);
 
   const { data: catData, isLoading: catLoading } = useQuery({
     queryKey: ["admin", "categories"],
@@ -245,6 +237,16 @@ export default function UnifiedInventoryPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const toggleFeaturedMutation = useMutation({
+    mutationFn: ({ id, featured }: { id: string; featured: boolean }) =>
+      productsApi.update(id, { featured }),
+    onSuccess: (_data, { featured }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+      toast.success(featured ? "Produto marcado como destaque" : "Destaque removido");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const convertToVariantMutation = useMutation({
     mutationFn: ({ sourceId, targetProductId }: { sourceId: string; targetProductId: string }) =>
       productsApi.convertToVariant(sourceId, targetProductId),
@@ -290,8 +292,7 @@ export default function UnifiedInventoryPage() {
       if (p.deliveryType === "mixed" && !fTypeMisto) return false;
       return true;
     });
-  }, [liveProducts, search, fProdAtivo, fProdDesativado, fEstoqueIn, fEstoqueOut,
-    fStockQtd, fTypeSerie, fTypeTexto, fTypeManual, fTypeMisto]);
+  }, [liveProducts, search, fProdAtivo, fProdDesativado, fEstoqueIn, fEstoqueOut, fStockQtd, fTypeSerie, fTypeTexto, fTypeManual, fTypeMisto]);
 
   const filteredTopCategories = useMemo(() => {
     return liveCategories
@@ -304,11 +305,7 @@ export default function UnifiedInventoryPage() {
       .sort((a, b) => a.sortOrder - b.sortOrder);
   }, [liveCategories, fCatAtivo, fCatDesativado]);
 
-  const onBeforeDragStart = (start: DragStart) => {
-    // We removed the auto-collapse logic from here because it was causing 
-    // "Invariant failed: Cannot find droppable entry" errors by unmounting 
-    // components exactly when the drag engine was initializing.
-  };
+  const onBeforeDragStart = (start: DragStart) => { };
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination, type } = result;
@@ -378,37 +375,31 @@ export default function UnifiedInventoryPage() {
     setExpandedCats((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const CategoryHeader = ({ cat, indent = 0, dragHandleProps, isDragging, onDelete, }: {
-    cat: Category;
-    indent?: number;
-    dragHandleProps: DraggableProvided["dragHandleProps"];
-    isDragging: boolean;
-    onDelete: (c: Category) => void;
-  }) => {
+  const CategoryHeader = ({ cat, indent = 0, dragHandleProps, isDragging, onDelete, }: { cat: Category; indent?: number; dragHandleProps: DraggableProvided["dragHandleProps"]; isDragging: boolean; onDelete: (c: Category) => void; }) => {
     const isExpanded = search ? true : !!expandedCats[cat.id];
     const directProds = filteredProducts.filter((p) => p.categoryId === cat.id);
+
     const subcatCount = (cat.subcategories ?? []).length;
     const productCount = cat._count?.products ?? directProds.length;
+
     const hasChildren = subcatCount > 0;
     const canDelete = productCount === 0 && !hasChildren;
-    const totalCount = directProds.length + (cat.subcategories ?? []).reduce(
-      (acc, s) => acc + (s._count?.products ?? 0), 0
-    );
+
+    const isRoot = indent === 0;
+
+    const displayCount = subcatCount > 0 ? subcatCount : productCount;
+    const displayLabel = subcatCount > 0 ? "SUB" : "PROD";
 
     return (
       <div
         className={cn(
           "flex items-center justify-between gap-4 px-4 py-3 cursor-pointer transition-colors",
-          isDragging
-            ? "bg-[#1a1a1a]"
-            : isExpanded
-              ? "bg-transparent hover:bg-white/[0.02]"
-              : "bg-transparent"
+          isDragging ? "bg-transparent" : isExpanded ? "bg-transparent" : "bg-transparent"
         )}
-        style={{ paddingLeft: `${indent * 32 + 16}px` }}
+        style={{ paddingLeft: `${indent * 0 + 16}px` }}
         onClick={(e) => toggleCat(cat.id, e)}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center justify-start gap-2 min-w-0">
           <div
             {...dragHandleProps}
             className="text-white/60 shrink-0 cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 sm:flex p-1"
@@ -416,46 +407,69 @@ export default function UnifiedInventoryPage() {
           >
             <TbGridDots className="h-5 w-5" />
           </div>
+
           <div className="flex items-center gap-2 min-w-0">
-            {indent > 0 && (
-              <Badge variant="secondary" className="bg-primary/10 text-primary text-[10px] uppercase border-transparent shrink-0">
-                sub
-              </Badge>
-            )}
-            <span className="font-medium text-sm text-zinc-100 tracking-widest truncate">
+            <span className="font-medium text-sm text-zinc-100">
               {cat.name}
             </span>
-            <span className="text-xs font-mono text-zinc-600 font-bold shrink-0">
-              ({totalCount})
+
+            <span className="bg-primary text-black text-[10px] py-0.5 px-2 rounded-sm font-medium shrink-0">
+              {displayLabel} ( {displayCount} )
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
           <Can I="products:edit">
-            <Button
-              variant="ghost" size="icon"
-              className="cursor-pointer h-8 w-8 text-zinc-400 hover:text-white"
-              onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/admin/categories/${cat.id}/edit`); }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="cursor-pointer h-8 w-8 text-zinc-400 hover:text-white"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/dashboard/admin/categories/${cat.id}/edit`);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                }
+              >
+                <Plus className="text-white h-5 w-5" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Editar categoria</p>
+              </TooltipContent>
+            </Tooltip>
           </Can>
+
           <Can I="products:create">
-            <Button
-              className="flex justify-center rounded-lg cursor-pointer h-8 w-8 text-white"
-              onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/admin/products/new?categoryId=${cat.id}`); }}
-            >
-              <Plus className="text-white h-5 w-5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    className="flex justify-center rounded-lg cursor-pointer h-8 w-8 text-white"
+                    onClick={() => router.push(`/dashboard/admin/products/new?categoryId=${cat.id}`)}
+                  />
+                }
+              >
+                <Plus className="text-white h-5 w-5" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Criar produto</p>
+              </TooltipContent>
+            </Tooltip>
           </Can>
+
           <Can I="products:delete">
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="inline-flex items-center justify-center cursor-pointer h-8 w-8 rounded-md text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreVertical className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-[#141414] border-white/10" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuItem
@@ -475,6 +489,7 @@ export default function UnifiedInventoryPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </Can>
+
           <div className="cursor-pointer w-8 h-8 flex items-center justify-center text-zinc-500">
             {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
           </div>
@@ -483,15 +498,7 @@ export default function UnifiedInventoryPage() {
     );
   };
 
-  const ProductRow = ({
-    p,
-    indent = 0,
-    index,
-  }: {
-    p: AdminProduct;
-    indent?: number;
-    index: number;
-  }) => {
+  const ProductRow = ({ p, indent = 0, index }: { p: AdminProduct; indent?: number; index: number; }) => {
     const variantCount = p._count?.variants ?? 0;
 
     return (
@@ -502,99 +509,202 @@ export default function UnifiedInventoryPage() {
               <div
                 {...provided.dragHandleProps}
                 className={cn(
-                  "group flex items-center justify-between gap-4 py-3 transition-colors",
-                  snapshot.isDragging
-                    ? "bg-[#111] rounded-lg border border-white/10"
-                    : "bg-transparent hover:bg-white/[0.02]"
+                  "group flex items-center justify-between gap-4 py-3 transition-colors", snapshot.isDragging ? "bg-[#111] rounded-md border border-white/10" : "bg-transparent hover:bg-black/20"
                 )}
-                style={{ paddingLeft: `${indent * 32 + 16}px`, paddingRight: "16px" }}
+                style={{ paddingLeft: `${indent * 6 + 16}px`, paddingRight: "16px" }}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="text-zinc-600 shrink-0 opacity-50 hover:opacity-100 hidden sm:flex p-1 cursor-grab active:cursor-grabbing">
-                    <TbGridDots className="h-4 w-4" />
+                  <div className="text-white/60 shrink-0 cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 sm:flex p-1">
+                    <TbGridDots className="h-5 w-5" />
                   </div>
+
                   <div className="flex items-center justify-center shrink-0 w-10 h-10 rounded border border-white/10 bg-white/5 overflow-hidden">
                     {p.imageUrl
-                      ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                      ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover select-none pointer-events-none" />
                       : <Package className="h-4 w-4 text-zinc-500" />}
                   </div>
-                  <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/dashboard/admin/products/${p.id}/edit`);
-                      }}
-                      className="font-semibold text-sm text-zinc-100 truncate text-left hover:text-[#a855f7] transition-colors cursor-pointer"
-                    >
-                      {p.name}
-                    </button>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="secondary" className="bg-[#FFC107]/10 text-[#FFBA00] hover:bg-[#FFC107]/10 border-transparent text-[10px] uppercase font-bold tracking-wider">
-                        {p.deliveryType === "automatic_lines" ? "Linhas"
-                          : p.deliveryType === "file" ? "Arquivo"
-                            : p.deliveryType === "manual_chat" ? "Manual"
-                              : "Misto"}
-                      </Badge>
-                      <span className={cn("text-[11px] uppercase tracking-wider font-bold", p.isVisible ? "text-emerald-500" : "text-zinc-500")}>
-                        {p.isVisible ? "ON" : "OFF"}
-                      </span>
-                      {variantCount > 0 && (
-                        <Badge variant="secondary" className="bg-[#9333EA]/10 text-[#a855f7] border-transparent text-[10px] uppercase font-bold">
-                          {variantCount} var.
-                        </Badge>
-                      )}
-                      {variantCount === 0 && (p.stockQuantity ?? 0) <= 0 && (
-                        <Badge variant="secondary" className="bg-red-500/10 text-red-400 border-transparent text-[10px] uppercase font-bold">
-                          Sem estoque
-                        </Badge>
-                      )}
+
+                  <div className="min-w-0 flex-1 flex items-center justify-between">
+                    <div className="min-w-0 gap-36 flex">
                       <button
-                        onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/admin/products/${p.id}/variants`); }}
-                        className="flex items-center gap-1 text-[10px] font-semibold text-zinc-500 hover:text-[#a855f7] transition-colors cursor-pointer"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/dashboard/admin/products/${p.id}/edit`);
+                        }}
+                        className="font-semibold text-sm text-white/80 truncate text-left transition-colors cursor-pointer block"
                       >
-                        <Layers className="h-3 w-3" />
-                        Ver Variantes ({variantCount})
+                        {p.name}
                       </button>
+
+                      <span className={cn("text-xs font-medium px-2 py-1 rounded-sm", p.isVisible ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/10 text-zinc-500")}>
+                        {p.isVisible ? "on" : "off"}
+                      </span>
+
+                      <Badge variant="secondary" className="bg-white/5 rounded-sm text-zinc-400 text-xs px-2 py-1 font-medium">
+                        {p.deliveryType === "automatic_lines" ? "linhas"
+                          : p.deliveryType === "file" ? "arquivo"
+                            : p.deliveryType === "manual" ? "manual"
+                              : p.deliveryType === "manual_chat" ? "manual chat"
+                                : p.deliveryType === "automatic_text" ? "texto"
+                                  : "misto"}
+                      </Badge>
+
+                      {(p.minPurchaseQuantity > 1 || p.maxPurchaseQuantity || p.onePurchasePerUser) && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            {p.minPurchaseQuantity > 1 && (
+                              <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
+                                min: {p.minPurchaseQuantity}
+                              </Badge>
+                            )}
+                            {p.maxPurchaseQuantity && (
+                              <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
+                                max: {p.maxPurchaseQuantity}
+                              </Badge>
+                            )}
+                            {p.onePurchasePerUser && (
+                              <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
+                                1 p/ user
+                              </Badge>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-6 shrink-0 pr-4">
+                      {variantCount > 0 ? (
+                        <div className="flex flex-col items-start">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/admin/products/${p.id}/variants`); }}
+                            className="bg-white/5 py-1 px-2 rounded-sm cursor-pointer text-xs font-medium text-white/60"
+                          >
+                            {variantCount} {variantCount === 1 ? "variante" : "variantes"}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-end">
+                          <span className={cn(
+                            "text-sm font-medium",
+                            (p.stockQuantity ?? 0) <= 0 ? "text-red-500" : "text-zinc-300"
+                          )}>
+                            {(p.stockQuantity ?? 0) === 0 ? "sem estoque" : p.stockQuantity}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col items-end min-w-[70px]">
+                        <div className="flex items-center gap-1.5">
+                          {p.comparePrice && Number(p.comparePrice) > 0 && (
+                            <span className="text-sm text-zinc-500 line-through">
+                              R${Number(p.comparePrice).toFixed(2)}
+                            </span>
+                          )}
+                          <span className="text-sm font-medium text-white">
+                            R${Number(p.price).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-                  <span className="text-sm font-medium text-zinc-300 w-10 text-right hidden sm:block">{p.stockQuantity}</span>
-                  <span className="text-sm font-semibold text-white w-20 text-right hidden sm:block">R$ {Number(p.price).toFixed(2)}</span>
+                  <Can I="products:edit">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            disabled={toggleFeaturedMutation.isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFeaturedMutation.mutate({
+                                id: p.id,
+                                featured: !p.featured,
+                              });
+                            }}
+                          >
+                            <Star
+                              className={cn(
+                                "h-4 w-4",
+                                p.featured
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "text-zinc-500"
+                              )}
+                            />
+                          </Button>
+                        }
+                      />
+                      <TooltipContent side="top">
+                        {p.featured ? "Remover destaque da home" : "Destacar na home"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </Can>
+
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setQuickEditProduct(p);
+                          }}
+                        >
+                          <MonitorUp className="h-4 w-4" />
+                        </Button>
+                      }
+                    >
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Edição rápida</TooltipContent>
+                  </Tooltip>
+
                   <DropdownMenu>
                     <DropdownMenuTrigger className="inline-flex items-center justify-center cursor-pointer h-8 w-8 rounded-md text-zinc-400 hover:text-white hover:bg-white/5 transition-colors" onClick={(e) => e.stopPropagation()}>
-                      <MoreHorizontal className="h-4 w-4" />
+                      <MoreVertical className="h-4 w-4" />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-68 bg-[#141414] border-white/10">
+
+                    <DropdownMenuContent align="end" className="w-auto rounded-md">
                       <Can I="products:edit">
-                        <DropdownMenuItem className="cursor-pointer gap-3 py-2" onClick={() => router.push(`/dashboard/admin/products/${p.id}/edit`)}>
+                        <DropdownMenuItem className="cursor-pointer gap-2 px-4 py-2" onClick={() => router.push(`/dashboard/admin/products/${p.id}/edit`)}>
                           <Pencil className="h-4 w-4" /> Editar
                         </DropdownMenuItem>
                       </Can>
-                      <Can I="products:create">
-                        <DropdownMenuItem className="cursor-pointer gap-3 py-2" onClick={() => duplicateProdMutation.mutate(p)}>
-                          <Copy className="h-4 w-4" /> Duplicar
+                      <Can I="products:edit">
+                        <DropdownMenuItem className="cursor-pointer gap-2 px-4 py-2" onClick={() => setQuickEditProduct(p)}>
+                          <MonitorUp className="h-4 w-4" /> Editar por Popup
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer gap-3 py-2" onClick={() => { setTransferProduct(p); setTransferCatId(p.categoryId ?? ""); }}>
-                          <ArrowRightLeft className="h-4 w-4" /> Transferir para outra categoria
+                      </Can>
+                      <Can I="products:create">
+                        <DropdownMenuItem className="cursor-pointer gap-2 px-4 py-2" onClick={() => duplicateProdMutation.mutate(p)}>
+                          <Copy className="h-4 w-4" /> Duplicar Produto
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer gap-2 px-4 py-2" onClick={() => { setTransferProduct(p); setTransferCatId(p.categoryId ?? ""); }}>
+                          <Move className="h-4 w-4" /> Transferir para outra categoria
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className="cursor-pointer gap-3 py-2"
+                          className="cursor-pointer gap-2 px-4 py-2"
                           onClick={() => {
                             setConvertProduct(p);
                             setConvertTargetId("");
                           }}
                         >
-                          <GitBranch className="h-4 w-4" /> Mover para variação
+                          <ListChecks className="h-4 w-4" /> Transformar em Variante
                         </DropdownMenuItem>
                       </Can>
-                      <DropdownMenuItem className="cursor-pointer gap-3 py-2" onClick={() => { navigator.clipboard.writeText(p.id); toast.success("ID copiado!"); }}>
-                        <ClipboardCopy className="h-4 w-4" /> Copiar ID
+                      <DropdownMenuItem className="cursor-pointer gap-2 px-4 py-2" onClick={() => { navigator.clipboard.writeText(p.id); toast.success("ID copiado!"); }}>
+                        <Copy className="h-4 w-4" /> Copiar ID
                       </DropdownMenuItem>
                       <Can I="products:delete">
                         <DropdownMenuSeparator className="bg-white/10" />
-                        <DropdownMenuItem className="cursor-pointer gap-3 py-2" onClick={() => setDeleteProduct(p)}>
+                        <DropdownMenuItem className="cursor-pointer gap-2 px-4 py-2" onClick={() => setDeleteProduct(p)}>
                           <Trash2 className="h-4 w-4" /> Deletar
                         </DropdownMenuItem>
                       </Can>
@@ -602,7 +712,6 @@ export default function UnifiedInventoryPage() {
                   </DropdownMenu>
                 </div>
               </div>
-
             </div>
           </PortalAware>
         )}
@@ -610,17 +719,7 @@ export default function UnifiedInventoryPage() {
     );
   };
 
-  const CategorySection = ({
-    cat,
-    index,
-    indent = 0,
-    type,
-  }: {
-    cat: Category;
-    index: number;
-    indent?: number;
-    type: "CATEGORY" | "SUBCATEGORY";
-  }) => {
+  const CategorySection = ({ cat, index, indent = 0, type, }: { cat: Category; index: number; indent?: number; type: "CATEGORY" | "SUBCATEGORY"; }) => {
     const isExpanded = search ? true : !!expandedCats[cat.id];
     const subcats = (cat.subcategories ?? []).sort((a, b) => a.sortOrder - b.sortOrder);
     const directProds = filteredProducts.filter((p) => p.categoryId === cat.id).sort((a, b) => a.sortOrder - b.sortOrder);
@@ -634,10 +733,10 @@ export default function UnifiedInventoryPage() {
                 "flex flex-col overflow-hidden transition-all duration-200",
                 isExpanded
                   ? indent > 0
-                    ? "rounded-lg border border-primary/15 bg-primary/3"
-                    : "rounded-lg border border-white/5 bg-[#111]"
-                  : "rounded-lg border border-white/5 bg-[#111]",
-                snapshot.isDragging && "rounded-lg ring-1 ring-white/20 shadow-2xl opacity-90"
+                    ? "rounded-md border border-white/5 bg-transparent"
+                    : "rounded-md border border-white/5 bg-card"
+                  : "rounded-md border border-white/5 bg-card",
+                snapshot.isDragging && "rounded-md ring-1 ring-white/20 shadow-2xl opacity-90"
               )}
             >
               <CategoryHeader
@@ -665,19 +764,11 @@ export default function UnifiedInventoryPage() {
 
                   <Droppable droppableId={`prod-${cat.id}`} type="PRODUCT" isDropDisabled={snapshot.isDragging}>
                     {(dropProvided) => (
-                      <div ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="min-h-[2px]">
+                      <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}>
                         {directProds.map((p, i) => (
                           <ProductRow key={p.id} p={p} index={i} indent={indent + 1} />
                         ))}
                         {dropProvided.placeholder}
-                        {subcats.length === 0 && directProds.length === 0 && (
-                          <div
-                            className="py-3 text-xs text-zinc-600 italic"
-                            style={{ paddingLeft: `${(indent + 1) * 32 + 16}px` }}
-                          >
-                            Nenhum produto nesta categoria.
-                          </div>
-                        )}
                       </div>
                     )}
                   </Droppable>
@@ -701,10 +792,20 @@ export default function UnifiedInventoryPage() {
 
   const isLoading = catLoading || prodLoading;
 
+  if (isLoading) return <TableSkeleton />;
+
   if (!isDndReady) return null;
 
   return (
     <div className="space-y-6">
+      <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+
+      <div className="absolute bottom-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white lg:text-2xl">Categorias</h1>
@@ -751,13 +852,10 @@ export default function UnifiedInventoryPage() {
           </button>
 
           {showFilters && (
-            <div className="absolute right-0 sm:left-0 sm:right-auto top-full mt-2 w-80 sm:w-96 rounded-xl border border-white/10 bg-[#121212] shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-center gap-2 bg-[#1A1A1A] p-3 border-b border-white/5 text-xs text-zinc-400 font-medium">
-                <span className="text-xl">⚠️</span> Os filtros são salvos automaticamente
-              </div>
+            <div className="absolute right-0 sm:left-0 sm:right-auto top-full mt-2 w-80 sm:w-96 rounded-md border border-white/5 bg-card z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
               <div className="p-4 space-y-5">
                 <div>
-                  <h4 className="text-zinc-500 font-semibold text-xs uppercase tracking-wider mb-2">Categoria</h4>
+                  <h4 className="text-white font-medium text-sm mb-2">Categoria</h4>
                   <div className="space-y-1">
                     <FilterCheckbox checked={fCatAtivo} onChange={setFCatAtivo} label="Ativo" />
                     <FilterCheckbox checked={fCatDesativado} onChange={setFCatDesativado} label="Desativado" />
@@ -765,27 +863,26 @@ export default function UnifiedInventoryPage() {
                 </div>
                 <div className="h-px bg-white/5" />
                 <div>
-                  <h4 className="text-zinc-500 font-semibold text-xs uppercase tracking-wider mb-2">Quantidade em Estoque</h4>
+                  <h4 className="text-white font-medium text-sm mb-2">Quantidade em Estoque</h4>
                   <div className="flex items-center gap-2">
-                    <div className="flex h-9 items-center rounded-md border border-white/10 bg-[#1A1A1A] px-3 text-sm text-white w-24 shrink-0">Igual a</div>
-                    <input
+                    <div className="flex h-10 items-center rounded-md border border-white/10 bg-card px-3 text-sm text-white w-24 shrink-0">Igual a</div>
+                    <Input
                       type="number" placeholder="Qtd" value={fStockQtd}
                       onChange={(e) => setFStockQtd(e.target.value)}
-                      className="flex-1 h-9 rounded-md border border-white/10 bg-[#1A1A1A] px-3 text-sm text-white focus:outline-none focus:border-white/30"
                     />
                   </div>
                 </div>
                 <div className="h-px bg-white/5" />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="text-zinc-500 font-semibold text-xs uppercase tracking-wider mb-2">Produto — Status</h4>
+                    <h4 className="text-white font-medium text-sm mb-2">Produto — Status</h4>
                     <div className="space-y-1">
                       <FilterCheckbox checked={fProdAtivo} onChange={setFProdAtivo} label="Ativo" />
                       <FilterCheckbox checked={fProdDesativado} onChange={setFProdDesativado} label="Desativado" />
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-zinc-500 font-semibold text-xs uppercase tracking-wider mb-2">Produto — Estoque</h4>
+                    <h4 className="text-white font-medium text-sm mb-2">Produto — Estoque</h4>
                     <div className="space-y-1">
                       <FilterCheckbox checked={fEstoqueOut} onChange={setFEstoqueOut} label="Esgotado" />
                       <FilterCheckbox checked={fEstoqueIn} onChange={setFEstoqueIn} label="Não esgotado" />
@@ -793,7 +890,7 @@ export default function UnifiedInventoryPage() {
                   </div>
                 </div>
                 <div>
-                  <h4 className="text-zinc-500 font-semibold text-xs uppercase tracking-wider mb-2">Produto — Tipo</h4>
+                  <h4 className="text-white font-medium text-sm mb-2">Produto — Tipo</h4>
                   <div className="grid grid-cols-2 gap-y-1">
                     <FilterCheckbox checked={fTypeSerie} onChange={setFTypeSerie} label="Série (Linhas)" />
                     <FilterCheckbox checked={fTypeTexto} onChange={setFTypeTexto} label="Texto (Arquivo)" />
@@ -830,9 +927,48 @@ export default function UnifiedInventoryPage() {
                   ))}
                   {provided.placeholder}
 
-                  {filteredTopCategories.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                      <Package className="h-12 w-12 text-white/5 mb-4" />
+                  {uncategorized.length > 0 && (
+                    <div className="flex flex-col border border-white/5 bg-[#111] rounded-lg overflow-hidden mt-6">
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#111]">
+                        <div className="flex items-center gap-2">
+                          <Layers className="h-5 w-5 text-white/40" />
+                          <span className="font-bold text-sm text-zinc-100 tracking-widest uppercase">Sem Categoria</span>
+                          <span className="text-xs font-mono text-zinc-600 font-bold">({uncategorized.length})</span>
+                        </div>
+                        <Can I="products:create">
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  className="flex justify-center rounded-lg cursor-pointer h-8 w-8 text-white"
+                                  onClick={() => router.push("/dashboard/admin/products/new")}
+                                />
+                              }
+                            >
+                              <Plus className="text-white h-5 w-5" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Criar produto</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </Can>
+                      </div>
+                      <Droppable droppableId="uncategorized" type="PRODUCT">
+                        {(prodProvided) => (
+                          <div ref={prodProvided.innerRef} {...prodProvided.droppableProps} className="min-h-[2px]">
+                            {uncategorized.map((p, i) => (
+                              <ProductRow key={p.id} p={p} index={i} indent={1} />
+                            ))}
+                            {prodProvided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    </div>
+                  )}
+
+                  {filteredTopCategories.length === 0 && uncategorized.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-52 text-center">
+                      <Package className="h-12 w-12 text-white mb-4" />
                       <h3 className="text-lg font-medium text-white mb-2">Inventário Vazio</h3>
                       <p className="text-sm text-zinc-500">Nenhum item bate com os filtros atuais.</p>
                     </div>
@@ -985,6 +1121,27 @@ export default function UnifiedInventoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!quickEditProduct} onOpenChange={() => setQuickEditProduct(null)}>
+        <DialogContent className="max-w-6xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle>Edição de Produto</DialogTitle>
+            <DialogDescription>
+              Ajuste as informações principais de <strong>{quickEditProduct?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 pb-6 overflow-y-auto max-h-[80vh]">
+            {quickEditProduct && (
+              <ProductForm
+                product={quickEditProduct}
+                isModal={true}
+                onCancel={() => setQuickEditProduct(null)}
+                onSuccess={() => setQuickEditProduct(null)}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
+};

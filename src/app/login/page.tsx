@@ -7,6 +7,13 @@ import { FaDiscord } from "react-icons/fa";
 import { Mail, Lock, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 function LoginContent() {
   const router = useRouter();
@@ -101,10 +108,9 @@ function LoginContent() {
   };
 
   return (
-    <div className="relative flex items-center justify-center overflow-hidden bg-background px-4 mb-12">
-      <div className="absolute inset-0 opacity-80" style={{ backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px)`, backgroundSize: "50px 50px" }} />
-
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
+    <div className="relative py-6 md:py-12 -mt-22">
+      <div className="absolute top-0 right-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+      <div className="absolute bottom-0 left-[-10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
 
       <div className="relative mx-auto z-10 w-full md:w-[600px]">
         <div className="mb-8 text-center">
@@ -112,25 +118,29 @@ function LoginContent() {
           <p className="text-white/40 font-light">Entre com sua conta para continuar</p>
         </div>
 
-        <div className="max-w-full rounded-2xl border border-white/5 bg-[#0d0d0d]/90 py-6 px-6 backdrop-blur-sm">
+        <div className="max-w-full rounded-lg border border-white/5 bg-transparent py-6 px-6 backdrop-blur-sm">
           {step === "email" ? (
             <>
               <div className="space-y-3">
-                <button
+                <Button
+                  size="lg"
+                  variant="outline"
                   onClick={() => handleOAuth("google")}
-                  className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-white/5 bg-white/5 text-white/80 transition-all duration-300 hover:bg-white/10"
+                  className="h-12 w-full rounded-md border border-white/5"
                 >
                   <FcGoogle className="h-5 w-5" />
                   <span className="font-normal">Entrar com Google</span>
-                </button>
+                </Button>
 
-                <button
+                <Button
+                  size="lg"
+                  variant="outline"
                   onClick={() => handleOAuth("discord")}
-                  className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-white/5 bg-white/5 text-white/80 transition-all duration-300 hover:bg-white/10"
+                  className="h-12 w-full rounded-md border border-white/5"
                 >
                   <FaDiscord className="h-5 w-5 text-[#5865F2]" />
                   <span className="font-normal">Entrar com Discord</span>
-                </button>
+                </Button>
               </div>
 
               <div className="my-6 flex items-center gap-4">
@@ -146,12 +156,12 @@ function LoginContent() {
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
-                    <input
+                    <Input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="seu@email.com"
-                      className="h-12 w-full rounded-xl border border-white/5 bg-white/5 pl-12 pr-4 text-white placeholder:text-gray-500 focus:border-primary/50 focus:outline-none focus:none transition-all duration-300"
+                      className="pl-12 h-12 w-full"
                       required
                       disabled={loading}
                     />
@@ -165,17 +175,17 @@ function LoginContent() {
                   </div>
                 )}
 
-                <button
+                <Button
                   type="submit"
                   disabled={loading}
-                  className="flex h-12 w-full items-center cursor-pointer justify-center rounded-xl bg-primary text-black transition-all duration-300 hover:bg-primary/90 disabled:opacity-50"
+                  className="h-12 w-full rounded-md border border-white/5"
                 >
                   {loading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     "Entrar"
                   )}
-                </button>
+                </Button>
               </form>
             </>
           ) : (
@@ -200,19 +210,26 @@ function LoginContent() {
 
               <form onSubmit={handleVerifyCode} className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-300">
-                    Código de verificação:
+                  <label className="flex justify-center mb-2 block text-sm font-medium text-gray-300">
+                    Código de verificação
                   </label>
-                  <input
-                    type="text"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="000000"
-                    maxLength={6}
-                    className="h-12 w-full rounded-xl border border-white/5 bg-white/5 px-4 text-center text-2xl tracking-[0.5em] text-white placeholder:text-gray-500 focus:border-primary/50 focus:outline-none focus:none transition-all duration-300"
-                    required
-                    disabled={loading}
-                  />
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      value={code}
+                      onChange={(val) => setCode(val)}
+                      disabled={loading}
+                    >
+                      <InputOTPGroup className="gap-2">
+                        <InputOTPSlot index={0} className="w-12 h-14 text-xl rounded-md border" />
+                        <InputOTPSlot index={1} className="w-12 h-14 text-xl rounded-md border" />
+                        <InputOTPSlot index={2} className="w-12 h-14 text-xl rounded-md border" />
+                        <InputOTPSlot index={3} className="w-12 h-14 text-xl rounded-md border" />
+                        <InputOTPSlot index={4} className="w-12 h-14 text-xl rounded-md border" />
+                        <InputOTPSlot index={5} className="w-12 h-14 text-xl rounded-md border" />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
                 </div>
 
                 {message && (

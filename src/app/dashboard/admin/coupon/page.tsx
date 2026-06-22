@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Search, Filter, MoreHorizontal, Copy, Edit, Trash2, RotateCcw, Eye, Ticket, Calendar as CalendarIcon, ChevronDown, ArrowUpDown, ExternalLink, ToggleLeft, ToggleRight, PlusCircle } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Copy, Edit, Trash2, RotateCcw, Eye, Ticket, Calendar as CalendarIcon, ChevronDown, ArrowUpDown, ExternalLink, ToggleLeft, ToggleRight, PlusCircle, MoreVertical, Pencil } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PiCopySimpleLight } from "react-icons/pi";
 import { toast } from "sonner";
@@ -16,18 +16,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
 import { couponsApi, Coupon } from "@/lib/coupons-api";
 import { CouponStatsCards } from "@/components/admin/coupons/coupon-stats-cards";
 import { CouponModal } from "@/components/admin/coupons/coupon-modal";
+import { DateRangeFilter } from "@/components/admin/dashboard/DateRangeFilter";
+import { subDays, format } from "date-fns";
 
 export default function CouponsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [period, setPeriod] = useState<"today" | "7days" | "30days" | "all">("all");
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dateRange, setDateRange] = useState({
+    from: subDays(new Date(), 7),
+    to: new Date(),
+  });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
@@ -38,8 +39,8 @@ export default function CouponsPage() {
   });
 
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
-    queryKey: ["admin", "coupons", "stats", period],
-    queryFn: () => couponsApi.stats(period),
+    queryKey: ["admin", "coupons", "stats", dateRange.from.toISOString(), dateRange.to.toISOString()],
+    queryFn: () => couponsApi.stats(dateRange),
   });
 
   const deleteMutation = useMutation({
@@ -105,41 +106,22 @@ export default function CouponsPage() {
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in duration-500">
+      <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+
+      <div className="absolute bottom-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Cupons</h1>
-          <p className="text-zinc-500">Crie e gerencie cupons de desconto para sua loja.</p>
+          <h1 className="text-2xl font-bold text-white">Cupons</h1>
+          <p className="text-muted-foreground">Crie e gerencie cupons de desconto para sua loja.</p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Popover>
-            <PopoverTrigger className={cn(buttonVariants({ variant: "outline" }), "bg-[#0A0A0A] border-white/10 h-11 px-4 gap-2 text-zinc-300")}>
-              <CalendarIcon className="h-4 w-4" />
-              {date ? format(date, "PPP", { locale: ptBR }) : "Selecionar data"}
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-[#0D0D0D] border-white/10" align="end">
-              <div className="p-3 border-b border-white/5">
-                <Select value={period} onValueChange={(v: any) => setPeriod(v)}>
-                  <SelectTrigger className="bg-white/5 border-white/10 h-8">
-                    <SelectValue placeholder="Ação rápida" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#0D0D0D] border-white/10 text-white">
-                    <SelectItem value="today">Hoje</SelectItem>
-                    <SelectItem value="7days">Últimos 7 dias</SelectItem>
-                    <SelectItem value="30days">Últimos 30 dias</SelectItem>
-                    <SelectItem value="all">Todo o período</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                initialFocus
-                className="bg-transparent text-white"
-              />
-            </PopoverContent>
-          </Popover>
+          <DateRangeFilter onRangeChange={(range) => setDateRange(range)} />
 
           <Button variant="default" size="lg" onClick={handleCreate} className="px-6 py-5 gap-2 shrink-0">
             <PlusCircle className="h-4 w-4" />
@@ -153,19 +135,19 @@ export default function CouponsPage() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="relative w-full md:w-96 group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 group-focus-within:text-white transition-colors" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 group-focus-within:text-white transition-colors" />
             <Input
               placeholder="Pesquisar cupom pelo código..."
-              className="bg-background border-white/10 rounded-lg bg-[#0A0A0A] pl-10 h-11 w-124 focus-visible:border-primary/70 transition-all"
+              className="pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
 
-        <div className="rounded-lg border border-white/5 overflow-hidden select-none">
+        <div className="hidden md:flex rounded-lg border border-white/5 overflow-hidden select-none">
           <Table>
-            <TableHeader className="bg-background">
+            <TableHeader className="bg-card/2">
               <TableRow className="border-white/5 hover:bg-transparent">
                 <TableHead className="text-white/50 font-medium text-sm pl-6">Código</TableHead>
                 <TableHead className="text-white/50 font-medium text-sm">Desconto</TableHead>
@@ -188,23 +170,10 @@ export default function CouponsPage() {
                   </TableRow>
                 ))
               ) : couponsData?.coupons.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-72 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="h-16 w-16 rounded-3xl bg-white/[0.02] border border-white/5 flex items-center justify-center">
-                        <Ticket className="h-8 w-8 text-zinc-700" />
-                      </div>
-                      <div>
-                        <p className="text-white font-medium">Nenhum cupom encontrado</p>
-                        <p className="text-sm text-zinc-600">Tente buscar por um código diferente ou crie um novo.</p>
-                      </div>
-                      <Button variant="outline" className="mt-2 border-white/10 hover:bg-white/5" onClick={handleCreate}>Criar primeiro cupom</Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <></>
               ) : (
                 couponsData?.coupons.map((coupon) => (
-                  <TableRow key={coupon.id} className="border-white/5 bg-background hover:bg-white/5 cursor-pointer transition-colors group select-none">
+                  <TableRow key={coupon.id} className="border-white/5 bg-background hover:bg-black/5 cursor-pointer transition-colors group select-none">
                     <TableCell className="pl-6">
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
@@ -247,36 +216,23 @@ export default function CouponsPage() {
                     <TableCell className="pr-6 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost" }), "h-8 w-8 p-0 hover:bg-white/10")}>
-                          <MoreHorizontal className="h-4 w-4 text-zinc-400" />
+                          <MoreVertical className="h-4 w-4 text-zinc-400" />
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-[#0D0D0D] border-white/10 text-white min-w-[200px]">
-                          <DropdownMenuGroup>
-                            <DropdownMenuLabel className="text-[10px] uppercase font-bold text-zinc-600">Ações</DropdownMenuLabel>
-                            <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-white/5" onClick={() => handleEdit(coupon)}>
-                              <Edit className="h-3.5 w-3.5" />
+                        <DropdownMenuContent align="end" className="rounded-md text-white min-w-[220px] p-1">
+                          <DropdownMenuGroup className="cursor-pointer">
+                            <DropdownMenuItem className="rounded-sm text-sm p-2 gap-2 cursor-pointer focus:bg-white/5" onClick={() => handleEdit(coupon)}>
+                              <Pencil className="h-4 w-4" />
                               Editar Dados
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-white/5" onClick={() => duplicateMutation.mutate(coupon.id)}>
-                              <Copy className="h-3.5 w-3.5" />
-                              Duplicar Cupom
-                            </DropdownMenuItem>
                             <DropdownMenuItem
-                              className="gap-2 cursor-pointer focus:bg-white/5"
-                              onClick={() => toggleMutation.mutate({ id: coupon.id, isActive: !coupon.isActive })}
-                            >
-                              {coupon.isActive ? <ToggleLeft className="h-3.5 w-3.5" /> : <ToggleRight className="h-3.5 w-3.5" />}
-                              {coupon.isActive ? "Desativar" : "Ativar"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-white/5" />
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer text-red-500 focus:bg-red-500/10 focus:text-red-500"
+                              className="rounded-sm text-sm p-2 gap-2 cursor-pointer"
                               onClick={() => {
                                 if (confirm("Tem certeza que deseja excluir este cupom?")) {
                                   deleteMutation.mutate(coupon.id);
                                 }
                               }}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                               Excluir
                             </DropdownMenuItem>
                           </DropdownMenuGroup>
@@ -288,6 +244,128 @@ export default function CouponsPage() {
               )}
             </TableBody>
           </Table>
+        </div>
+
+        <div className="flex flex-col md:hidden gap-4">
+          {isLoadingCoupons ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-lg border border-white/5 bg-background p-4 space-y-4">
+                <div className="flex justify-between items-start">
+                  <Skeleton className="h-6 w-24 bg-white/5" />
+                  <Skeleton className="h-8 w-8 bg-white/5 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-full bg-white/5" />
+                <div className="flex justify-between">
+                  <Skeleton className="h-4 w-20 bg-white/5" />
+                  <Skeleton className="h-4 w-20 bg-white/5" />
+                </div>
+              </div>
+            ))
+          ) : couponsData?.coupons.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <Ticket className="h-12 w-12 text-zinc-700 mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">Nenhum cupom encontrado</h3>
+              <p className="text-zinc-500 max-w-xs">Tente ajustar sua pesquisa ou crie um novo cupom.</p>
+            </div>
+          ) : (
+            couponsData?.coupons.map((coupon) => (
+              <div
+                key={coupon.id}
+                className="rounded-lg border border-white/5 bg-card p-4 space-y-4 hover:bg-white/[0.02] transition-colors group relative"
+                onClick={() => handleEdit(coupon)}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <code className="text-sm font-bold text-white uppercase">{coupon.code}</code>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(coupon.code);
+                        }}
+                        variant="ghost"
+                        size="icon-sm"
+                        className="h-6 w-6"
+                      >
+                        <PiCopySimpleLight className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    {coupon.description && (
+                      <span className="text-xs text-zinc-500 line-clamp-1">{coupon.description}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(coupon)}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        asChild
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white/10">
+                          <MoreVertical className="h-4 w-4 text-zinc-400" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-[#0D0D0D] border-white/10 text-white min-w-[200px]">
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel className="text-[10px] uppercase font-bold text-zinc-600">Ações</DropdownMenuLabel>
+                          <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-white/5" onClick={() => handleEdit(coupon)}>
+                            <Edit className="h-3.5 w-3.5" />
+                            Editar Dados
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-white/5" onClick={() => duplicateMutation.mutate(coupon.id)}>
+                            <Copy className="h-3.5 w-3.5" />
+                            Duplicar Cupom
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="gap-2 cursor-pointer focus:bg-white/5"
+                            onClick={() => toggleMutation.mutate({ id: coupon.id, isActive: !coupon.isActive })}
+                          >
+                            {coupon.isActive ? <ToggleLeft className="h-3.5 w-3.5" /> : <ToggleRight className="h-3.5 w-3.5" />}
+                            {coupon.isActive ? "Desativar" : "Ativar"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-white/5" />
+                          <DropdownMenuItem
+                            className="gap-2 cursor-pointer text-red-500 focus:bg-red-500/10 focus:text-red-500"
+                            onClick={() => {
+                              if (confirm("Tem certeza que deseja excluir este cupom?")) {
+                                deleteMutation.mutate(coupon.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 py-3 border-y border-white/5">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] uppercase font-bold text-zinc-600">Desconto</span>
+                    <span className="text-sm font-medium text-white">
+                      {coupon.type === "PERCENTAGE" ? `${coupon.value}%` : formatCurrency(coupon.value)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] uppercase font-bold text-zinc-600">Expiração</span>
+                    <span className="text-sm font-medium text-white">
+                      {coupon.endDate ? format(new Date(coupon.endDate), "dd/MM/yyyy") : "Sem expiração"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[10px] uppercase font-bold text-zinc-600">
+                    <span>Uso do Cupom</span>
+                    <span className="text-white/70">{coupon.usedCount}/{coupon.maxUses || "∞"}</span>
+                  </div>
+                  <Progress value={getProgressValue(coupon)} className="h-1.5 bg-white/5" />
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

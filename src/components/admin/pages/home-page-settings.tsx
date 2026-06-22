@@ -6,17 +6,18 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+
 import { Plus, Pencil, Trash2, Loader2, PlusCircle } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
 import { bannersApi, type Banner } from "@/lib/admin-api";
-import { cn } from "@/lib/utils";
-import { TbGridDots } from "react-icons/tb";
-import { AdminBannerSlider } from "@/components/admin/shared/admin-banner-slider";
 import { Can } from "@/providers/PermissionProvider";
+import { TbGridDots } from "react-icons/tb";
+import { cn } from "@/lib/utils";
 
 export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const router = useRouter();
@@ -85,7 +86,7 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
   const isEmpty = localBanners.length === 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {!hideHeader && (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -105,64 +106,45 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
         </div>
       )}
 
-      {hideHeader && (
-        <div className="flex justify-end mb-4">
-          <Can I="settings:manage">
-            <Button asChild className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto">
-              <Link href="/dashboard/admin/banners/new">
-                <PlusCircle className="h-4 w-4" />
-                Adicionar Banner
-              </Link>
-            </Button>
-          </Can>
-        </div>
-      )}
-
-      <div className="rounded-xl overflow-hidden">
+      <div className="rounded-md overflow-hidden">
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5 mb-4">
+          <div className="flex flex-col items-center justify-center p-12 text-center mt-34">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full mb-4">
               <PlusCircle className="h-8 w-8 text-zinc-500" />
             </div>
             <h3 className="text-lg font-medium text-white mb-2">Nenhum banner cadastrado</h3>
             <p className="text-sm text-zinc-400 max-w-sm mb-6">
               Adicione banners para chamar atenção na página principal da sua loja.
             </p>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="lg">
               <Link href="/dashboard/admin/banners/new">Criar primeiro banner</Link>
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col">
-            <div className="mx-auto">
-              <AdminBannerSlider banners={localBanners} />
-            </div>
+          <div className="flex flex-col border border-white/5 p-4">
+            {hideHeader && (
+              <div className="flex justify-end mb-4">
+                <Can I="settings:manage">
+                  <Button asChild className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto">
+                    <Link href="/dashboard/admin/banners/new">
+                      <PlusCircle className="h-4 w-4" />
+                      Adicionar Banner
+                    </Link>
+                  </Button>
+                </Can>
+              </div>
+            )}
 
-            <div className="rounded-xl border border-white/10 bg-[#0A0A0A] overflow-hidden">
+            <div className="rounded-md border border-white/5 bg-transparent overflow-hidden">
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="banners-list">
                   {(provided) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className="divide-y divide-white/5"
-                    >
+                    <div {...provided.droppableProps} ref={provided.innerRef} className="divide-y divide-white/5">
                       {localBanners.map((banner, index) => (
                         <Draggable key={banner.id} draggableId={banner.id} index={index}>
                           {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              className={cn(
-                                "flex flex-col sm:flex-row sm:items-center gap-4 p-4 transition-colors hover:bg-white/[0.02]",
-                                snapshot.isDragging &&
-                                "bg-[#111] shadow-2xl ring-1 ring-white/10 z-50 rounded-lg"
-                              )}
-                            >
-                              <div
-                                {...provided.dragHandleProps}
-                                className="flex items-center justify-center w-8 h-8 rounded-md text-white/75 hover:text-white cursor-grab active:cursor-grabbing self-start sm:self-auto shrink-0"
-                              >
+                            <div ref={provided.innerRef} {...provided.draggableProps} className={cn("flex flex-col sm:flex-row sm:items-center gap-4 p-4 transition-colors hover:bg-white/[0.02]", snapshot.isDragging && "bg-[#111] shadow-2xl ring-1 ring-white/10 z-50 rounded-lg")}>
+                              <div {...provided.dragHandleProps} className="flex items-center justify-center w-8 h-8 rounded-md text-white/75 hover:text-white cursor-grab active:cursor-grabbing self-start sm:self-auto shrink-0">
                                 <TbGridDots className="h-5 w-5" />
                               </div>
 
@@ -182,47 +164,63 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
                                   )}
                                 </div>
 
-                                <div className="min-w-0 flex flex-col gap-1">
-                                  <div className="text-sm text-zinc-300 truncate">
+                                <div className="min-w-0 flex flex-row items-center justify-between gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className={cn("px-2 py-1 rounded text-xs font-medium", banner.isActive ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500")}>
+                                      {banner.isActive ? "Ativo" : "Inativo"}
+                                    </div>
+                                  </div>
+
+                                  <div className="cursor-pointer rounded hover:underline bg-blue-500/10 px-2 py-1 text-xs truncate">
                                     {banner.linkUrl ? (
                                       <a
                                         href={banner.linkUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="hover:underline text-primary"
+                                        className="hover:underline text-blue-500"
                                       >
                                         {banner.linkUrl}
                                       </a>
                                     ) : (
-                                      <span className="text-zinc-500 italic">Sem link associado</span>
+                                      <span className="text-blue-500 text-xs font-medium">Nenhum link associado</span>
                                     )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant={banner.isActive ? "default" : "secondary"}>
-                                      {banner.isActive ? "Ativo" : "Inativo"}
-                                    </Badge>
                                   </div>
                                 </div>
                               </div>
 
                               <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 mt-4 sm:mt-0">
                                 <Can I="settings:manage">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="cursor-pointer"
-                                    onClick={() => handleEdit(banner.id)}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setDeleteTarget(banner)}
-                                    className="text-destructive hover:bg-destructive/10 cursor-pointer"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                                  <Tooltip>
+                                    <TooltipTrigger render={
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="cursor-pointer"
+                                        onClick={() => handleEdit(banner.id)}
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                    }>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Editar banner</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger render={
+                                      <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        onClick={() => setDeleteTarget(banner)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    }>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Excluir banner</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 </Can>
                               </div>
                             </div>

@@ -119,7 +119,7 @@ export function FooterContent({
                 alt={footer.logoAlt}
                 width={180}
                 height={70}
-                className="h-auto w-auto max-h-16 object-contain sm:max-h-20"
+                className="h-auto w-auto max-h-16 object-contain sm:max-h-20 pointer-events-none select-none"
                 unoptimized={footer.logoUrl.startsWith("http")}
               />
             </Link>

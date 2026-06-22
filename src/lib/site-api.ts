@@ -74,6 +74,17 @@ export type PublicSiteConfig = {
   homeReviewsTotalCount: number | null;
   homeReviewsGoogleMapsUrl: string | null;
   homeReviewsLinkLabel: string | null;
+  homeShowcaseEnabled: boolean | null;
+  homeShowcaseTitle: string | null;
+  homeShowcaseSubtitle: string | null;
+  popupEnabled: boolean | null;
+  popupTitle: string | null;
+  popupDescription: string | null;
+  popupImageUrl: string | null;
+  popupCtaLabel: string | null;
+  popupCtaLink: string | null;
+  popupTrigger: "entry" | "exit" | "delay" | null;
+  popupDelay: number | null;
 };
 
 export type PublicHomeReview = {
@@ -118,6 +129,8 @@ export type ShopCategoryRow = {
   cases: ShopCaseRow[];
 };
 
+import type { Product } from "@/types/shop";
+
 export type ShopBannerRow = {
   id: string;
   imageUrl: string;
@@ -126,9 +139,9 @@ export type ShopBannerRow = {
 };
 
 export type ShopHomePayload = {
-  categories: ShopCategoryRow[];
-  uncategorized: ShopCaseRow[];
-  featured?: ShopCaseRow[];
+  categories?: ShopCategoryRow[];
+  uncategorized?: ShopCaseRow[];
+  featured?: Product[];
   banners?: ShopBannerRow[];
 };
 

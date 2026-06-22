@@ -84,7 +84,7 @@ export const categoriesApi = {
 
 // ─── Products ───────────────────────────────────────────────────────────────
 
-export type DeliveryType = "automatic_lines" | "file" | "manual_chat" | "mixed";
+export type DeliveryType = "automatic_lines" | "file" | "manual_chat" | "mixed" | "manual" | "automatic_text";
 
 export interface AdminProduct {
   id: string;
@@ -182,6 +182,7 @@ export interface ProductPayload {
   manualDeliveryNote?: string | null;
   postPurchaseInstructions?: any;
   sortOrder?: number;
+  featured?: boolean;
 }
 
 export const productsApi = {
@@ -376,6 +377,19 @@ export type SiteConfigRecord = {
   homeReviewsTotalCount: number | null;
   homeReviewsGoogleMapsUrl: string | null;
   homeReviewsLinkLabel: string | null;
+  // Vitrine Dinâmica
+  homeShowcaseEnabled: boolean | null;
+  homeShowcaseTitle: string | null;
+  homeShowcaseSubtitle: string | null;
+  // Pop-up Entrada/Saída
+  popupEnabled: boolean | null;
+  popupTitle: string | null;
+  popupDescription: string | null;
+  popupImageUrl: string | null;
+  popupCtaLabel: string | null;
+  popupCtaLink: string | null;
+  popupTrigger: "entry" | "exit" | "delay" | null;
+  popupDelay: number | null;
 };
 
 export type HomeReviewRecord = {
@@ -499,4 +513,133 @@ export const PAGE_SEO_LABELS: Record<string, string> = {
   account: "Minha conta",
   category: "Categoria (template)",
   product: "Produto (template)",
+};
+
+// ─── Media Library ──────────────────────────────────────────────────────────
+
+export interface MediaItem {
+  id: string;
+  url: string;
+  filename: string;
+  size: number;
+  type: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const mediaApi = {
+  list: (params: { search?: string; page?: number; type?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set("search", params.search);
+    if (params.page) qs.set("page", String(params.page));
+    if (params.type) qs.set("type", params.type);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{
+      items: MediaItem[];
+      pagination: { page: number; pageSize: number; total: number; totalPages: number };
+    }>(`/v2/api/admin/media${suffix}`);
+  },
+  remove: (id: string) =>
+    request<{ success: boolean }>(`/v2/api/admin/media/${id}`, {
+      method: "DELETE",
+    }),
+};
+
+// ─── Orders ─────────────────────────────────────────────────────────────────
+
+export interface OrderItemDetail {
+  id: string;
+  quantity: number;
+  unitPrice: number;
+  variantName?: string;
+  product: {
+    name: string;
+    imageUrl?: string;
+  };
+  codes: { code: string; deliveredAt?: string }[];
+}
+
+export interface AdminOrder {
+  id: string;
+  status: string;
+  total: number;
+  customerName: string;
+  customerEmail: string;
+  customerImage?: string;
+  paymentMethod: string;
+  createdAt: string;
+  paidAt: string | null;
+  itemsCount: number;
+  adminNotes?: string;
+  items?: OrderItemDetail[];
+}
+
+export const ordersApi = {
+  list: (params: { search?: string; status?: string; from?: string; to?: string; page?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set("search", params.search);
+    if (params.status) qs.set("status", params.status);
+    if (params.from) qs.set("from", params.from);
+    if (params.to) qs.set("to", params.to);
+    if (params.page) qs.set("page", String(params.page));
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{
+      orders: AdminOrder[];
+      summary: {
+        totalRevenue: number;
+        totalOrders: number;
+        avgTicket: number;
+        paidPct: number;
+      };
+      pagination: { page: number; pageSize: number; total: number; totalPages: number };
+    }>(`/v2/api/admin/orders${suffix}`);
+  },
+  updateStatus: (id: string, status: string) =>
+    request<AdminOrder>(`/v2/api/admin/orders/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  getOne: (id: string) =>
+    request<AdminOrder>(`/v2/api/admin/orders/${id}`),
+  updateNotes: (id: string, adminNotes: string) =>
+    request<AdminOrder>(`/v2/api/admin/orders/${id}/notes`, {
+      method: "PATCH",
+      body: JSON.stringify({ adminNotes }),
+    }),
+  bulkUpdateStatus: (ids: string[], status: string) =>
+    request<{ success: boolean }>("/v2/api/admin/orders/bulk-status", {
+      method: "PATCH",
+      body: JSON.stringify({ ids, status }),
+    }),
+};
+
+// ─── Gateways ───────────────────────────────────────────────────────────────
+
+export interface GatewayConfig {
+  id: string;
+  slug: string;
+  name: string;
+  config: any;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const gatewaysApi = {
+  list: () => request<{ gateways: GatewayConfig[] }>("/v2/api/admin/gateways"),
+  validate: (slug: string, config: Record<string, unknown>) =>
+    request<{ valid: boolean; message: string }>(`/v2/api/admin/gateways/${slug}/validate`, {
+      method: "POST",
+      body: JSON.stringify({ config }),
+    }),
+  update: (slug: string, payload: { name: string; config: any; isActive?: boolean }) =>
+    request<GatewayConfig>(`/v2/api/admin/gateways/${slug}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  toggle: (slug: string, isActive: boolean) =>
+    request<GatewayConfig>(`/v2/api/admin/gateways/${slug}/toggle`, {
+      method: "PATCH",
+      body: JSON.stringify({ isActive }),
+    }),
 };

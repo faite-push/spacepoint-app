@@ -2,22 +2,25 @@
 
 import { useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ChevronLeft, Loader2, Save } from "lucide-react";
+import { z } from "zod";
+
+import { ArrowLeft, Check, ChevronLeft, Loader2, Save, X, } from "lucide-react";
 import { toast } from "sonner";
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { ImageUpload } from "@/components/admin/shared/image-upload";
+import { Switch } from "@/components/ui/switch";
+import { Toggle } from "@/components/ui/toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
-import { ImageUpload } from "@/components/admin/shared/image-upload";
-import { categoriesApi, type Category } from "@/lib/admin-api";
 
+import { categoriesApi, type Category } from "@/lib/admin-api";
 
 const slugify = (v: string) => v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9-\s]/g, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-");
 
@@ -122,11 +125,20 @@ export function CategoryForm({ category }: CategoryFormProps) {
             </p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" className="px-5 py-4 cursor-pointer" onClick={() => router.push("/dashboard/admin/products")}>
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            onClick={() => router.push("/dashboard/admin/products")}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={mutation.isPending} className="gap-2 px-5 py-4 cursor-pointer">
+
+          <Button
+            type="submit"
+            size="lg"
+            disabled={mutation.isPending}>
             {mutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -138,154 +150,159 @@ export function CategoryForm({ category }: CategoryFormProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
-        <div className="space-y-6">
-          <section className="rounded-xl border border-white/10 bg-card p-6 space-y-5">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Informações</h2>
-              <p className="text-xs text-muted-foreground">
-                Identidade e hierarquia da categoria
+        <section className="rounded-md border border-white/5 bg-card">
+          <div className="border-b border-white/5 py-3 px-4">
+            <h2 className="text-sm font-semibold text-white">Informações</h2>
+          </div>
+
+          <div className="px-4 py-3">
+            <Label htmlFor="name">Nome *</Label>
+            <Input
+              id="name"
+              placeholder="Ex: PlayStation"
+              {...form.register("name")}
+            />
+            {form.formState.errors.name && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.name.message}
               </p>
-            </div>
+            )}
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome *</Label>
-              <input
-                id="name"
-                placeholder="Ex: PlayStation"
-                className="w-full rounded-lg mt-1 border border-white/10 bg-card px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-primary focus:outline-none focus:ring-none transition-all duration-300"
-                {...form.register("name")}
-              />
-              {form.formState.errors.name && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.name.message}
-                </p>
+          <div className="px-4 py-2">
+            <Label>Atribuir categoria <span className="text-xs text-muted-foreground">(opcional)</span></Label>
+            <Controller
+              control={form.control}
+              name="parentId"
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? "none"}
+                  onValueChange={(v) => field.onChange(v === "none" ? null : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhuma categoria selecionada" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="cursor-pointer">Nenhuma categoria selecionada</SelectItem>
+                    {availableParents.map((p) => (
+                      <SelectItem key={p.id} value={p.id} className="cursor-pointer">
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
-            </div>
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label>Vincular a uma categoria</Label>
+          <div className="flex flex-col sm:flex-row gap-4 p-4">
+            <div className="flex-1 space-y-2">
+              <Label className="text-white/80">Miniatura</Label>
               <Controller
                 control={form.control}
-                name="parentId"
+                name="imageUrl"
                 render={({ field }) => (
-                  <Select
-                    value={field.value ?? "none"}
-                    onValueChange={(v) => field.onChange(v === "none" ? null : v)}
-                  >
-                    <SelectTrigger className="w-full cursor-pointer rounded-lg mt-1 border border-white/10 bg-card px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-primary focus:outline-none focus:ring-none transition-all duration-300">
-                      <SelectValue placeholder="Nenhuma categoria selecionada" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none" className="cursor-pointer">Nenhuma categoria selecionada</SelectItem>
-                      {availableParents.map((p) => (
-                        <SelectItem key={p.id} value={p.id} className="cursor-pointer">
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ImageUpload
+                    value={field.value}
+                    onChange={field.onChange}
+                    aspectRatio="square"
+                    uploadType="product"
+                    recommendation="190×255px (máx. 10MB)"
+                  />
                 )}
               />
-              <p className="text-xs text-zinc-500">
-                Selecionar um pai transforma esta categoria em uma subcategoria.
-              </p>
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-white/10 bg-card p-6 space-y-5">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Imagens</h2>
-              <p className="text-xs text-muted-foreground">
-                Miniatura (navbar) e banner horizontal do carousel de subcategorias
-              </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-zinc-400">Miniatura</Label>
-                <Controller
-                  control={form.control}
-                  name="imageUrl"
-                  render={({ field }) => (
-                    <ImageUpload
-                      value={field.value}
-                      onChange={field.onChange}
-                      aspectRatio="portrait"
-                      uploadType="product"
-                      recommendation="Navbar / listagens — 190×255px (máx. 10MB)"
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-zinc-400">Banner horizontal</Label>
-                <Controller
-                  control={form.control}
-                  name="bannerUrl"
-                  render={({ field }) => (
-                    <ImageUpload
-                      value={field.value}
-                      onChange={field.onChange}
-                      aspectRatio="banner"
-                      uploadType="banner"
-                      recommendation="Carousel — 820×200px ou 1200×300px (máx. 10MB)"
-                    />
-                  )}
-                />
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <div className="space-y-6">
-          <section className="rounded-xl border border-white/10 bg-card p-6 space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Exibição</h2>
-              <p className="text-xs text-muted-foreground">
-                Controle onde a categoria aparece
-              </p>
-            </div>
-
-            <Controller
-              control={form.control}
-              name="showInNavbar"
-              render={({ field }) => (
-                <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3">
-                  <div>
-                    <Label htmlFor="show-navbar">Exibir na Navbar</Label>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      A categoria só aparece no menu se ativado
-                    </p>
-                  </div>
-                  <Switch
-                    id="show-navbar"
-                    checked={!!field.value}
-                    onCheckedChange={field.onChange}
+            <div className="flex-2 space-y-2">
+              <Label className="text-white/80">Banner horizontal</Label>
+              <Controller
+                control={form.control}
+                name="bannerUrl"
+                render={({ field }) => (
+                  <ImageUpload
+                    value={field.value}
+                    onChange={field.onChange}
+                    aspectRatio="auto"
+                    uploadType="banner"
+                    recommendation="820×200px ou 1200×300px (máx. 10MB)"
                   />
-                </div>
-              )}
-            />
+                )}
+              />
+            </div>
+          </div>
+        </section>
 
-            <Controller
-              control={form.control}
-              name="isActive"
-              render={({ field }) => (
-                <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3">
-                  <div>
-                    <Label htmlFor="active">Ativa</Label>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      Desativada não aparece em nenhuma listagem
-                    </p>
+        <div className="space-y-2">
+          <section className="rounded-md border border-white/5 bg-card">
+            <div className="border-b border-white/5 py-3 px-4">
+              <h2 className="text-sm font-semibold text-white">Configurações</h2>
+            </div>
+
+            <div className="px-4 py-3 space-y-4">
+              <Controller
+                control={form.control}
+                name="showInNavbar"
+                render={({ field }) => (
+                  <div className="flex items-center gap-4 rounded-md">
+                    <Toggle
+                      id="show-navbar"
+                      variant="default"
+                      size="sm"
+                      pressed={field.value ?? false}
+                      onPressedChange={field.onChange}
+                    >
+                      {field.value ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </Toggle>
+
+                    <div>
+                      <Label htmlFor="show-navbar" className="cursor-pointer">
+                        {field.value ? "Exibindo na Navbar" : "Oculto na Navbar"}
+                      </Label>
+                      <p className="text-xs text-white/50">
+                        Controla se a categoria aparece no menu superior da loja.
+                      </p>
+                    </div>
                   </div>
-                  <Switch
-                    id="active"
-                    checked={field.value ?? true}
-                    onCheckedChange={field.onChange}
-                  />
-                </div>
-              )}
-            />
+                )}
+              />
+
+              <Controller
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <div className="flex items-center rounded-md gap-4">
+                    <Toggle
+                      id="active"
+                      variant="default"
+                      size="sm"
+                      pressed={field.value ?? false}
+                      onPressedChange={field.onChange}
+                    >
+                      {field.value ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </Toggle>
+
+                    <div>
+                      <Label htmlFor="active" className="cursor-pointer">
+                        {field.value ? "Categoria Ativa" : "Categoria Inativa"}
+                      </Label>
+                      <p className="text-xs text-white/50">
+                        {field.value 
+                          ? "A categoria e seus produtos estão visíveis na loja." 
+                          : "A categoria está oculta e os produtos não serão exibidos."}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              />
+            </div>
           </section>
         </div>
       </div>

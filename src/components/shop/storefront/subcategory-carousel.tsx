@@ -7,7 +7,7 @@ type SubcategoryGridProps = {
 };
 
 function subcategoryVisual(sub: PublicSubcategory): string | null {
-  return sub.bannerUrl || sub.imageUrl;
+  return sub.imageUrl || sub.bannerUrl;
 }
 
 export function SubcategoryCarousel({ subcategories }: SubcategoryGridProps) {
@@ -30,7 +30,7 @@ export function SubcategoryCarousel({ subcategories }: SubcategoryGridProps) {
                   src={visual}
                   alt={sub.name}
                   fill
-                  className="object-cover object-center transition-transform duration-500 ease-out"
+                  className="object-cover select-none pointer-events-none object-center transition-transform duration-500 ease-out"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
               ) : (

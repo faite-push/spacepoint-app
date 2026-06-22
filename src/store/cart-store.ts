@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartItem, Product, ProductVariant } from "@/types/shop";
@@ -106,21 +107,23 @@ export const useCartStore = create<CartState>()(
         if (!appliedCoupon) return 0;
         
         const sub = subtotal();
-        if (appliedCoupon.minOrderValue && sub < appliedCoupon.minOrderValue) return 0;
+        if (appliedCoupon.minOrderValue != null) {
+          const minCents = Math.round(appliedCoupon.minOrderValue * 100);
+          if (sub < minCents) return 0;
+        }
 
         let disc = 0;
         if (appliedCoupon.type === "PERCENTAGE") {
-          disc = (sub * appliedCoupon.value) / 10000; // value is in basis points? or just percentage? Assuming cents/percentage
-          // If value is 10 for 10%, but stored in cents it would be 1000. 
-          // Usually percentage is stored as 10.00 -> 1000. 
-          // Let's assume appliedCoupon.value is the percentage value * 100 (e.g. 1000 for 10%).
-          disc = Math.floor((sub * (appliedCoupon.value / 100)) / 100);
+          // appliedCoupon.value é porcentagem (ex: 10 significa 10%)
+          disc = Math.floor(sub * (appliedCoupon.value / 100));
         } else {
-          disc = appliedCoupon.value;
+          // appliedCoupon.value é valor fixo em R$
+          disc = Math.round(appliedCoupon.value * 100);
         }
 
-        if (appliedCoupon.maxDiscount && disc > appliedCoupon.maxDiscount) {
-          disc = appliedCoupon.maxDiscount;
+        if (appliedCoupon.maxDiscount != null) {
+          const maxDiscountCents = Math.round(appliedCoupon.maxDiscount * 100);
+          if (disc > maxDiscountCents) disc = maxDiscountCents;
         }
 
         return disc;
@@ -145,3 +148,19 @@ export const useCartStore = create<CartState>()(
     { name: "spacepoint-cart-v3" }
   )
 );
+
+/** Aguarda reidratação do localStorage antes de renderizar valores do carrinho */
+export function useCartHydrated() {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const finish = () => setHydrated(true);
+    const unsub = useCartStore.persist.onFinishHydration(finish);
+    if (useCartStore.persist.hasHydrated()) {
+      finish();
+    }
+    return unsub;
+  }, []);
+
+  return hydrated;
+}

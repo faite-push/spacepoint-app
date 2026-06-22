@@ -6,13 +6,14 @@ import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
+import { Check, ChevronLeft, Loader2, Save, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Toggle } from "@/components/ui/toggle";
+
 import { ImageUpload } from "@/components/admin/shared/image-upload";
 import { bannersApi, type Banner } from "@/lib/admin-api";
 
@@ -69,10 +70,18 @@ export function BannerForm({ banner }: BannerFormProps) {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+
+      <div className="absolute bottom-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="icon" className="h-9 w-9">
-            <Link href="/dashboard/admin/banners" aria-label="Voltar">
+            <Link href="/dashboard/admin/pages/home" aria-label="Voltar">
               <ChevronLeft className="h-4 w-4 text-white" />
             </Link>
           </Button>
@@ -82,6 +91,7 @@ export function BannerForm({ banner }: BannerFormProps) {
             </h1>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" className="px-5 py-4 cursor-pointer" onClick={() => router.push("/dashboard/admin/banners")}>
             Cancelar
@@ -99,73 +109,85 @@ export function BannerForm({ banner }: BannerFormProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
         <div className="space-y-6">
-          <section className="rounded-xl border border-white/10 bg-card p-6 space-y-5">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Arte</h2>
-              <p className="text-xs text-muted-foreground">Imagem que aparecerá na vitrine principal.</p>
+          <section className="rounded-md border border-white/5 bg-transparent">
+            <div className="border-b border-white/5 px-4 py-3">
+              <h2 className="text-sm font-semibold text-white">Informações</h2>
             </div>
-            <div className="space-y-2">
-              <Controller
-                control={form.control}
-                name="imageUrl"
-                render={({ field }) => (
-                  <ImageUpload
-                    value={field.value}
-                    onChange={field.onChange}
-                    aspectRatio="banner"
-                    uploadType="banner"
-                    recommendation="Recomendado: 1920x600px ou formato ultra-wide. (máx. 10MB)"
-                  />
-                )}
-              />
-              {form.formState.errors.imageUrl && (
-                <p className="text-xs text-destructive">{form.formState.errors.imageUrl.message}</p>
-              )}
-            </div>
-          </section>
 
-          <section className="rounded-xl border border-white/10 bg-card p-6 space-y-5">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Link (Opcional)</h2>
-              <p className="text-xs text-muted-foreground">URL para onde o usuário será levado se clicar.</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="linkUrl">URL de redirecionamento</Label>
-              <input
-                id="linkUrl"
-                placeholder="Ex: https://google.com ou /products/123"
-                className="w-full rounded-lg mt-1 border border-white/10 bg-card px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-primary focus:outline-none focus:ring-none transition-all duration-300"
-                {...form.register("linkUrl")}
-              />
-              {form.formState.errors.linkUrl && (
-                <p className="text-xs text-destructive">{form.formState.errors.linkUrl.message}</p>
-              )}
+            <div className="grid grid-cols-1 gap-4 py-4 px-4">
+              <div className="space-y-2">
+                <Label htmlFor="linkUrl">URL de redirecionamento <span className="text-muted-foreground">( Opcional )</span></Label>
+                <Input
+                  id="linkUrl"
+                  placeholder="Ex: https://google.com ou /products/123"
+                  className="w-full mt-0.5"
+                  {...form.register("linkUrl")}
+                />
+                {form.formState.errors.linkUrl && (
+                  <p className="text-xs text-destructive">{form.formState.errors.linkUrl.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Controller
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      aspectRatio="banner"
+                      uploadType="banner"
+                      recommendation="Recomendado: 1920x600px ou formato ultra-wide. (máx. 10MB)"
+                    />
+                  )}
+                />
+                {form.formState.errors.imageUrl && (
+                  <p className="text-xs text-destructive">{form.formState.errors.imageUrl.message}</p>
+                )}
+              </div>
             </div>
           </section>
         </div>
 
         <div className="space-y-6">
-          <section className="rounded-xl border border-white/10 bg-card p-6 space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Status</h2>
-              <p className="text-xs text-muted-foreground">Controle a exibição.</p>
+          <section className="rounded-md border border-white/5 bg-transparent">
+            <div className="border-b border-white/5 px-4 py-3">
+              <h2 className="text-sm font-semibold text-white">Configurações</h2>
             </div>
-            <Controller
-              control={form.control}
-              name="isActive"
-              render={({ field }) => (
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Ativo na vitrine</Label>
-                    <p className="text-xs text-zinc-500">Banners inativos ficam ocultos.</p>
+
+            <div className="px-4 py-3">
+              <Controller
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <div className="flex items-center gap-2">
+                    <Toggle
+                      id="cfg-visible"
+                      size="sm"
+                      pressed={field.value ?? true}
+                      onPressedChange={field.onChange}
+                    >
+                      {field.value ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                    </Toggle>
+
+                    <div className="space-y-0.5">
+                      <Label htmlFor="cfg-visible" className="font-medium text-sm cursor-pointer">
+                        {field.value ? "Ativo na vitrine" : "Inativo na vitrine"}
+                      </Label>
+                      <p className="text-xs text-zinc-500">
+                        {field.value
+                          ? "O banner está ativo na vitrine."
+                          : "O banner está inativo e não aparece na vitrine."}
+                      </p>
+                    </div>
                   </div>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </div>
-              )}
-            />
+                )}
+              />
+            </div>
           </section>
         </div>
       </div>
     </form>
   );
-}
+};

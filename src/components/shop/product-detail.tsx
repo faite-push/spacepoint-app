@@ -14,6 +14,7 @@ import { RichContent } from "@/components/shared/rich-content";
 import { formatPrice, formatPriceLabel } from "@/lib/shop-api";
 import type { Product, ProductVariant } from "@/types/shop";
 import { useCartStore } from "@/store/cart-store";
+import { useWishlistStore } from "@/store/wishlist-store";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "./product-card";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,8 @@ import { cn } from "@/lib/utils";
 export function ProductDetail({ product, relatedProducts = [] }: { product: Product; relatedProducts?: Product[]; }) {
   const router = useRouter();
   const addProduct = useCartStore((s) => s.addProduct);
+  const toggleWishlist = useWishlistStore((s) => s.toggleItem);
+  const isInWishlist = useWishlistStore((s) => s.isInWishlist(product.id));
 
   const [selectedVariantId, setSelectedVariantId] = useState<string | "">(
     product.hasVariants ? (product.variants[0]?.id ?? "") : ""
@@ -55,11 +58,15 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
   };
 
   function handleWishlist() {
-    toast.success("Adicionado à lista de desejos!");
+    const wasIn = isInWishlist;
+    toggleWishlist(product);
+    toast.success(wasIn ? "Removido da lista de desejos" : "Adicionado à lista de desejos!");
   };
-
+  const [mounted, setMounted] = useState(false);
   const [showFloatingBar, setShowFloatingBar] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => {
       const button = document.getElementById("main-buy-button");
       if (button) {
@@ -70,6 +77,8 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const isFavorite = mounted && isInWishlist;
 
   return (
     <div className="pb-24 lg:pb-12 -mt-22 py-6 md:py-12 space-y-6 relative">
@@ -113,9 +122,14 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
 
               <button
                 onClick={handleWishlist}
-                className="flex-shrink-0 flex items-center justify-center cursor-pointer h-10 w-10 rounded-full bg-[#1c1c1c] border border-white/10 text-white/50 hover:text-red-400 hover:border-red-400/30 transition-all"
+                className={cn(
+                  "flex-shrink-0 flex items-center justify-center cursor-pointer h-10 w-10 rounded-full bg-[#1c1c1c] border transition-all",
+                  isFavorite
+                    ? "border-red-400/40 text-red-400"
+                    : "border-white/10 text-white/50 hover:text-red-400 hover:border-red-400/30"
+                )}
               >
-                <Heart className="w-5 h-5" />
+                <Heart className={cn("w-5 h-5", isFavorite && "fill-current")} />
               </button>
             </div>
 

@@ -16,10 +16,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const [category, pageSeo] = await Promise.all([
-    fetchCategoryBySlug(slug),
-    fetchPageSeo("category"),
-  ]);
+  const [category, pageSeo] = await Promise.all([fetchCategoryBySlug(slug), fetchPageSeo("category"),]);
   if (!category) return { title: "Categoria não encontrada" };
 
   const entityMeta = category as { metaTitle?: string | null; metaDescription?: string | null };
@@ -30,13 +27,13 @@ export async function generateMetadata({
         entityMeta.metaDescription ??
         `Compre jogos digitais na categoria ${category.name}.`,
     };
-  }
+  };
 
   return resolvePageMetadata(pageSeo, { name: category.name }, {
     title: `${category.name} | Space Point`,
     description: `Compre jogos digitais na categoria ${category.name}.`,
   });
-}
+};
 
 export default async function CategoryPage({
   params,
@@ -70,7 +67,7 @@ export default async function CategoryPage({
               alt={category.name}
               width={2560}
               height={1080}
-              className="h-auto w-full"
+              className="object-cover select-none pointer-events-none h-auto w-full"
               sizes="100vw"
               priority
             />
@@ -123,4 +120,4 @@ export default async function CategoryPage({
       )}
     </div>
   );
-}
+};

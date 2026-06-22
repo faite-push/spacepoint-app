@@ -1,17 +1,20 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { UploadCloud, X, Loader2 } from "lucide-react";
+import { UploadCloud, X, Loader2, Library } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { API_URL, getCsrfToken } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { MediaLibraryModal } from "./media-library-modal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface ImageUploadProps {
   value?: string | null;
   onChange: (url: string | null) => void;
   recommendation?: string;
-  aspectRatio?: "portrait" | "banner" | "square" | "video" | "auto";
+  aspectRatio?: "portrait" | "banner" | "square" | "video" | "auto" | "product";
   uploadType?: "banner" | "product" | "general";
   className?: string;
   disabled?: boolean;
@@ -22,20 +25,14 @@ const ASPECT = {
   banner: "aspect-[412/90]",
   square: "aspect-square",
   video: "aspect-video",
+  product: "aspect-[190/255]",
   auto: "min-h-[200px] h-auto w-full",
 } as const;
 
-export function ImageUpload({
-  value,
-  onChange,
-  recommendation,
-  aspectRatio = "square",
-  uploadType = "general",
-  className,
-  disabled,
-}: ImageUploadProps) {
+export function ImageUpload({ value, onChange, recommendation, aspectRatio = "square", uploadType = "general", className, disabled, }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -73,7 +70,7 @@ export function ImageUpload({
 
   return (
     <div className={cn("relative w-full", className)}>
-      <input
+      <Input
         ref={inputRef}
         type="file"
         accept="image/*"
@@ -105,7 +102,6 @@ export function ImageUpload({
         {value ? (
           <>
             {aspectRatio === "auto" ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={value}
                 alt="Preview"
@@ -121,17 +117,30 @@ export function ImageUpload({
                 unoptimized
               />
             )}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange(null);
-              }}
-              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
-              aria-label="Remover"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="absolute right-2 top-2 flex flex-col gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(null);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white transition-hover hover:bg-red-500"
+                aria-label="Remover"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLibraryOpen(true);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white transition-hover hover:bg-primary"
+                aria-label="Trocar imagem"
+              >
+                <Library className="h-4 w-4" />
+              </button>
+            </div>
           </>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
@@ -140,16 +149,37 @@ export function ImageUpload({
             ) : (
               <UploadCloud className="h-8 w-8 text-zinc-500" />
             )}
-            <p className="text-sm text-zinc-300">
-              <span className="text-primary">Arraste</span> ou{" "}
-              <span className="text-primary">selecione</span>
-            </p>
+            <div className="flex flex-col gap-1">
+              <p className="text-sm text-zinc-300">
+                <span className="text-primary">Arraste</span> ou{" "}
+                <span className="text-primary">selecione</span>
+              </p>
+              <Button
+                type="button"
+                variant="link"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLibraryOpen(true);
+                }}
+                className="text-xs text-zinc-500 hover:text-primary transition-colors flex items-center justify-center gap-1.5"
+              >
+                Abrir biblioteca
+              </Button>
+            </div>
             {recommendation && (
               <p className="text-xs text-zinc-500">{recommendation}</p>
             )}
           </div>
         )}
       </div>
+
+      <MediaLibraryModal
+        isOpen={libraryOpen}
+        onClose={() => setLibraryOpen(false)}
+        onSelect={(urls) => {
+          if (urls.length > 0) onChange(urls[0]);
+        }}
+      />
     </div>
   );
 }
