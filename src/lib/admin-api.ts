@@ -20,7 +20,6 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       const body = await res.json();
       message = body?.error || message;
     } catch {
-      /* noop */
     }
     throw new Error(message);
   }
@@ -28,8 +27,6 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 204) return undefined as unknown as T;
   return (await res.json()) as T;
 }
-
-// ─── Categories ─────────────────────────────────────────────────────────────
 
 export interface Category {
   id: string;
@@ -81,8 +78,6 @@ export const categoriesApi = {
       method: "DELETE",
     }),
 };
-
-// ─── Products ───────────────────────────────────────────────────────────────
 
 export type DeliveryType = "automatic_lines" | "file" | "manual_chat" | "mixed" | "manual" | "automatic_text";
 
@@ -227,8 +222,6 @@ export const productsApi = {
     ),
 };
 
-// ─── Product Variants ───────────────────────────────────────────────────────
-
 export const variantsApi = {
   list: (productId: string) =>
     request<{ variants: ProductVariant[] }>(`/v2/api/admin/products/${productId}/variants`),
@@ -259,8 +252,6 @@ export const variantsApi = {
       { method: "POST" }
     ),
 };
-
-// ─── Banners ────────────────────────────────────────────────────────────────
 
 export interface Banner {
   id: string;
@@ -300,8 +291,6 @@ export const bannersApi = {
       body: JSON.stringify({ orderedIds }),
     }),
 };
-
-// ─── Site settings ──────────────────────────────────────────────────────────
 
 export type FooterLink = {
   label: string;
@@ -390,6 +379,24 @@ export type SiteConfigRecord = {
   popupCtaLink: string | null;
   popupTrigger: "entry" | "exit" | "delay" | null;
   popupDelay: number | null;
+  checkoutSettings?: CheckoutSettings | null;
+};
+
+export type CheckoutFieldConfig = {
+  key: string;
+  label: string;
+  type: "text" | "email" | "tel" | "number";
+  placeholder: string;
+  required: boolean;
+  enabled: boolean;
+  prefillFromUser: "name" | "email" | null;
+};
+
+export type CheckoutSettings = {
+  termsCheckedByDefault: boolean;
+  prefillUserName: boolean;
+  prefillUserEmail: boolean;
+  fields: CheckoutFieldConfig[];
 };
 
 export type HomeReviewRecord = {
@@ -654,5 +661,10 @@ export const gatewaysApi = {
     request<GatewayConfig>(`/v2/api/admin/gateways/${slug}/toggle`, {
       method: "PATCH",
       body: JSON.stringify({ isActive }),
+    }),
+  toggleMethod: (slug: string, method: "PIX" | "CARD", enabled: boolean) =>
+    request<GatewayConfig>(`/v2/api/admin/gateways/${slug}/toggle-method`, {
+      method: "PATCH",
+      body: JSON.stringify({ method, enabled }),
     }),
 };

@@ -85,6 +85,7 @@ export type PublicSiteConfig = {
   popupCtaLink: string | null;
   popupTrigger: "entry" | "exit" | "delay" | null;
   popupDelay: number | null;
+  checkoutSettings?: import("@/lib/admin-api").CheckoutSettings | null;
 };
 
 export type PublicHomeReview = {

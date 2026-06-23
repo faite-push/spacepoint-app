@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, FolderClosed, BadgeDollarSign, Tag, UserRoundCog, Star, UsersRound, Settings, Globe, Home, PanelBottom, FileText, SlidersHorizontal, Megaphone, MessageSquareQuote, Search, Package, Calendar as CalendarIcon, Wrench, Image as ImageIcon, CreditCard, type LucideIcon, Paintbrush, ReceiptText, } from "lucide-react";
+import { LayoutDashboard, FolderClosed, BadgeDollarSign, Tag, UserRoundCog, Star, UsersRound, Settings, Globe, Home, PanelBottom, FileText, SlidersHorizontal, Megaphone, MessageSquareQuote, Search, Package, Calendar as CalendarIcon, Wrench, Image as ImageIcon, CreditCard, type LucideIcon, Paintbrush, ReceiptText, ShoppingCart, } from "lucide-react";
 import { PiGooglePhotosLogo } from "react-icons/pi";
 
 export type AdminNavItem = {
@@ -34,6 +34,7 @@ export const adminSitePagesGroup: AdminNavGroup = {
   permission: "settings:manage",
   children: [
     { href: "/dashboard/admin/pages/home", icon: Home, label: "Página Inicial" },
+    { href: "/dashboard/admin/pages/checkout", icon: ShoppingCart, label: "Checkout" },
     { href: "/dashboard/admin/pages/global", icon: Paintbrush, label: "Aparência" },
     { href: "/dashboard/admin/pages/institutional", icon: ReceiptText, label: "Páginas Institucionais" },
     { href: "/dashboard/admin/pages/seo", icon: Wrench, label: "Configurações Técnicas" },

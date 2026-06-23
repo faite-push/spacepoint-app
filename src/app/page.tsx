@@ -15,11 +15,7 @@ export default async function Home() {
 
   return (
     <div className="flex w-full flex-col gap-8">
-      <div className="absolute top-0 right-[0%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
-      <div className="absolute top-0 left-[0%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
-
-      <div className="absolute bottom-0 left-[0%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
-      <div className="absolute bottom-0 right-[0%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 top-0 bg-[radial-gradient(65%_50%_at_50%_50%,rgba(168,85,247,0.3)_0%,rgba(6,78,59,0)_100%)]"></div>
 
       {shop?.banners && shop.banners.length > 0 && (
         <BannerSlider banners={shop.banners} />

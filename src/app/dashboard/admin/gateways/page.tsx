@@ -16,6 +16,13 @@ import { cn } from "@/lib/utils";
 import { GatewaysSkeleton } from "@/components/admin/skeletons/GatewaysSkeleton";
 
 
+const GATEWAY_METHODS: Record<string, Array<"PIX" | "CARD">> = {
+  "efi-bank": ["PIX", "CARD"],
+  "mercado-pago": ["PIX", "CARD"],
+  pagbank: ["PIX", "CARD"],
+  stripe: ["CARD"],
+};
+
 const WEBHOOK_PATHS: Record<string, string> = {
   "efi-bank": "/v1/webhooks/efi/pix",
   "mercado-pago": "/v1/webhooks/mercado-pago",
@@ -27,7 +34,7 @@ const GATEWAY_TEMPLATES: GatewayTemplate[] = [
   {
     slug: "efi-bank",
     name: "Efí Bank",
-    description: "PIX nativo via Efí (Gerencianet). Requer certificado .p12.",
+    description: "PIX e cartão via Efí (Gerencianet). Requer certificado .p12.",
     links: {
       signup: "https://sejaefi.com.br",
       support: "https://sejaefi.com.br/central-de-ajuda",
@@ -46,7 +53,7 @@ const GATEWAY_TEMPLATES: GatewayTemplate[] = [
   {
     slug: "mercado-pago",
     name: "Mercado Pago",
-    description: "PIX com aprovação via Mercado Pago.",
+    description: "PIX e cartão via Mercado Pago.",
     links: {
       signup: "https://www.mercadopago.com.br/developers",
       support: "https://www.mercadopago.com.br/developers/pt/support",
@@ -62,7 +69,7 @@ const GATEWAY_TEMPLATES: GatewayTemplate[] = [
   {
     slug: "pagbank",
     name: "PagBank",
-    description: "PIX via API PagBank / PagSeguro.",
+    description: "PIX e cartão via API PagBank / PagSeguro.",
     links: {
       signup: "https://portaldev.pagbank.com.br",
       support: "https://developer.pagbank.com.br/discuss",
@@ -84,7 +91,7 @@ const GATEWAY_TEMPLATES: GatewayTemplate[] = [
   {
     slug: "stripe",
     name: "Stripe",
-    description: "PIX via Stripe (conta com PIX habilitado no Brasil).",
+    description: "Cartão de crédito via Stripe Checkout.",
     links: {
       signup: "https://dashboard.stripe.com/register",
       support: "https://support.stripe.com",
@@ -121,12 +128,41 @@ function isGatewayConfigured(slug: string, config: Record<string, unknown> = {})
   }
 }
 
-function getGatewayMethods(config: Record<string, unknown> = {}) {
-  const raw = Array.isArray(config.paymentMethods) ? config.paymentMethods : ["PIX"];
-  const methods = raw
-    .map((m) => String(m || "").trim().toUpperCase())
-    .filter((m) => ["PIX", "CARD"].includes(m));
-  return methods.length ? Array.from(new Set(methods)) : ["PIX"];
+function getGatewayActiveMethods(
+  slug: string,
+  config: Record<string, unknown> = {},
+  isActive = false
+) {
+  const supported = GATEWAY_METHODS[slug] || ["PIX"];
+  const activeMethods = config.activeMethods as Record<string, boolean> | undefined;
+
+  if (activeMethods && typeof activeMethods === "object") {
+    return {
+      PIX: supported.includes("PIX") && Boolean(activeMethods.PIX),
+      CARD: supported.includes("CARD") && Boolean(activeMethods.CARD),
+    };
+  }
+
+  const legacy = Array.isArray(config.paymentMethods)
+    ? config.paymentMethods.map((m) => String(m).toUpperCase())
+    : [];
+
+  if (isActive && legacy.length) {
+    return {
+      PIX: supported.includes("PIX") && legacy.includes("PIX"),
+      CARD: supported.includes("CARD") && legacy.includes("CARD"),
+    };
+  }
+
+  return { PIX: false, CARD: false };
+}
+
+function formatActiveMethodsLabel(slug: string, config: Record<string, unknown>, isActive: boolean) {
+  const active = getGatewayActiveMethods(slug, config, isActive);
+  const labels: string[] = [];
+  if (active.PIX) labels.push("PIX");
+  if (active.CARD) labels.push("Cartão");
+  return labels.length ? labels.join(" + ") : "Nenhum";
 }
 
 type TabId = "payments" | "rules";
@@ -172,15 +208,15 @@ export default function GatewaysPage() {
     },
   });
 
-  const toggleMutation = useMutation({
-    mutationFn: ({ slug, isActive }: { slug: string; isActive: boolean }) =>
-      gatewaysApi.toggle(slug, isActive),
+  const toggleMethodMutation = useMutation({
+    mutationFn: ({ slug, method, enabled }: { slug: string; method: "PIX" | "CARD"; enabled: boolean }) =>
+      gatewaysApi.toggleMethod(slug, method, enabled),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "gateways"] });
-      toast.success("Gateway atualizado!");
+      toast.success("Método de pagamento atualizado!");
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Erro ao alternar gateway");
+      toast.error(err.message || "Erro ao alternar método");
     },
   });
 
@@ -196,35 +232,12 @@ export default function GatewaysPage() {
     const gateway = gateways.find((g) => g.slug === slug);
     if (!gateway) return;
 
-    const currentMethods = getGatewayMethods(gateway.config);
-    const newMethodsSet = new Set(currentMethods);
-
-    if (enabled) newMethodsSet.add(method);
-    else newMethodsSet.delete(method);
-
-    const finalMethods = Array.from(newMethodsSet);
-    const shouldBeActive = finalMethods.length > 0;
-
-    try {
-      await updateMutation.mutateAsync({
-        slug,
-        payload: {
-          name: gateway.name,
-          config: {
-            ...gateway.config,
-            paymentMethods: finalMethods,
-          },
-          isActive: shouldBeActive,
-        },
-        skipValidation: true,
-      } as any);
-
-      if (gateway.isActive !== shouldBeActive) {
-        await toggleMutation.mutateAsync({ slug, isActive: shouldBeActive });
-      }
-    } catch (error) {
-      console.error("Failed to toggle method:", error);
+    if (!isGatewayConfigured(slug, gateway.config)) {
+      toast.error("Configure o gateway antes de ativar um método");
+      return;
     }
+
+    toggleMethodMutation.mutate({ slug, method, enabled });
   };
 
   const handleOpenConfig = (slug: string) => {
@@ -234,7 +247,6 @@ export default function GatewaysPage() {
     setFormData({
       ...config,
       sandbox: config.sandbox ?? true,
-      paymentMethods: getGatewayMethods(config),
     });
   };
 
@@ -254,7 +266,6 @@ export default function GatewaysPage() {
       ...(existing?.config || {}),
       ...formData,
       sandbox: formData.sandbox !== false,
-      paymentMethods: getGatewayMethods(formData),
     };
   };
 
@@ -286,16 +297,8 @@ export default function GatewaysPage() {
     }
   };
 
-  const handleToggleGateway = (slug: string, isActive: boolean) => {
-    const gateway = gateways.find((g) => g.slug === slug);
-    const isConfigured = isGatewayConfigured(slug, gateway?.config);
-
-    if (!isConfigured) {
-      toast.error("Configure o gateway antes de ativá-lo");
-      return;
-    }
-
-    toggleMutation.mutate({ slug, isActive });
+  const handleToggleGateway = (_slug: string, _isActive: boolean) => {
+    toast.message("Use os toggles Pix/Cartão em cada gateway para ativar métodos.");
   };
 
   return (
@@ -314,9 +317,15 @@ export default function GatewaysPage() {
           {GATEWAY_TEMPLATES.map((template) => {
             const gateway = gateways.find((g) => g.slug === template.slug);
             const config = (gateway?.config || {}) as Record<string, unknown>;
-            const isActive = gateway?.isActive || false;
             const isConfigured = isGatewayConfigured(template.slug, config);
-            const methods = getGatewayMethods(config);
+            const activeMethods = getGatewayActiveMethods(
+              template.slug,
+              config,
+              gateway?.isActive || false
+            );
+            const isActive = activeMethods.PIX || activeMethods.CARD;
+            const supportedMethods = GATEWAY_METHODS[template.slug] || ["PIX"];
+            const methodPending = toggleMethodMutation.isPending || updateMutation.isPending;
 
             return (
               <div
@@ -347,26 +356,28 @@ export default function GatewaysPage() {
                 </div>
 
                 <div className="mt-4 space-y-2 rounded-md border border-white/5 bg-white/[0.02] px-3 py-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FaPix className="h-4 w-4 text-primary" />
-                      <span className="text-sm text-white">Pix</span>
+                  {supportedMethods.includes("PIX") && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FaPix className="h-4 w-4 text-primary" />
+                        <span className="text-sm text-white">Pix</span>
+                      </div>
+                      <Switch
+                        checked={activeMethods.PIX}
+                        disabled={methodPending || !isConfigured}
+                        onCheckedChange={(val) => handleToggleMethod(template.slug, "PIX", val)}
+                      />
                     </div>
-                    <Switch
-                      checked={isActive && methods.includes("PIX")}
-                      disabled={toggleMutation.isPending || updateMutation.isPending || !isConfigured}
-                      onCheckedChange={(val) => handleToggleMethod(template.slug, "PIX", val)}
-                    />
-                  </div>
-                  {template.slug === "stripe" && (
+                  )}
+                  {supportedMethods.includes("CARD") && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <FaCreditCard className="h-4 w-4 text-primary" />
                         <span className="text-sm text-white">Cartão</span>
                       </div>
                       <Switch
-                        checked={isActive && methods.includes("CARD")}
-                        disabled={toggleMutation.isPending || updateMutation.isPending || !isConfigured}
+                        checked={activeMethods.CARD}
+                        disabled={methodPending || !isConfigured}
                         onCheckedChange={(val) => handleToggleMethod(template.slug, "CARD", val)}
                       />
                     </div>
@@ -383,7 +394,9 @@ export default function GatewaysPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground">Método</p>
-                    <p className="mt-1 text-xs font-semibold text-white">{methods.join(" + ")}</p>
+                    <p className="mt-1 text-xs font-semibold text-white">
+                      {formatActiveMethodsLabel(template.slug, config, isActive)}
+                    </p>
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground">Conta</p>
@@ -444,19 +457,19 @@ export default function GatewaysPage() {
             <ul className="space-y-3 text-sm text-zinc-400">
               <li className="flex gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                Apenas um gateway PIX pode ficar ativo por vez.
+                Pix e Cartão são independentes: você pode usar Pix de um gateway e Cartão de outro.
               </li>
               <li className="flex gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                Ao ativar um gateway, os demais são desativados automaticamente.
+                Apenas um gateway pode ficar ativo por método (um Pix e um Cartão por vez).
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                Stripe aceita somente Cartão. Efí, Mercado Pago e PagBank aceitam Pix e Cartão.
               </li>
               <li className="flex gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                 Configure a URL de webhook no painel do provedor para confirmação automática.
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                Use credenciais de sandbox para testes e produção apenas quando for ao ar.
               </li>
             </ul>
           </div>

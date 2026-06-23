@@ -6,20 +6,27 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { ChevronRight, Minus, Plus, Trash2, Ticket, PlusCircle, User, Mail, Zap, ArrowRight, Loader2, ShoppingCart, AlertCircle, Check, Lock, X, CreditCard } from "lucide-react";
+import { BsCreditCard2FrontFill } from "react-icons/bs";
+import { FaPix } from "react-icons/fa6";
+
 import { Tooltip, TooltipContent, TooltipTrigger, } from "@/components/ui/tooltip"
-import { createOrder, fetchCheckoutPaymentOptions, formatPrice, fetchProducts } from "@/lib/shop-api";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useCartStore, useCartHydrated } from "@/store/cart-store";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import type { Product } from "@/types/shop";
-import { FaPix } from "react-icons/fa6";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+
+import { createOrder, fetchCheckoutPaymentOptions, formatPrice, fetchProducts } from "@/lib/shop-api";
+import { fetchSiteConfig } from "@/lib/site-api";
+import type { CheckoutFieldConfig } from "@/lib/admin-api";
+import { useAuth } from "@/context/auth-context";
+import { useCartStore, useCartHydrated } from "@/store/cart-store";
+import type { Product } from "@/types/shop";
 
 export default function CheckoutPage() {
   const { items, total, subtotal, discount, setQuantity, removeItem, clear, applyCoupon, appliedCoupon, removeCoupon } = useCartStore();
+  const { user } = useAuth();
 
   const [status, setStatus] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,12 +36,8 @@ export default function CheckoutPage() {
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"PIX" | "CARD">("PIX");
-
-  const [contactInfo, setContactInfo] = useState({
-    name: "",
-    email: "",
-    robloxName: ""
-  });
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const hydrated = useCartHydrated();
   const paymentOptionsQuery = useQuery({
@@ -42,8 +45,36 @@ export default function CheckoutPage() {
     queryFn: fetchCheckoutPaymentOptions,
   });
 
+  const checkoutConfigQuery = useQuery({
+    queryKey: ["checkout", "site-config"],
+    queryFn: fetchSiteConfig,
+  });
+
+  const checkoutSettings = checkoutConfigQuery.data?.checkoutSettings;
+  const enabledFields = (checkoutSettings?.fields || []).filter((field) => field.enabled);
+
   const availableMethods = paymentOptionsQuery.data?.methods || ["PIX"];
+  const pixAvailable = availableMethods.includes("PIX");
   const cardAvailable = availableMethods.includes("CARD");
+
+  useEffect(() => {
+    if (!checkoutSettings) return;
+
+    setAcceptedTerms(Boolean(checkoutSettings.termsCheckedByDefault));
+
+    const initialValues: Record<string, string> = {};
+    for (const field of checkoutSettings.fields || []) {
+      if (!field.enabled) continue;
+      if (field.prefillFromUser === "name" && checkoutSettings.prefillUserName && user?.name) {
+        initialValues[field.key] = user.name;
+      } else if (field.prefillFromUser === "email" && checkoutSettings.prefillUserEmail && user?.email) {
+        initialValues[field.key] = user.email;
+      } else {
+        initialValues[field.key] = "";
+      }
+    }
+    setFieldValues(initialValues);
+  }, [checkoutSettings, user?.name, user?.email]);
 
   useEffect(() => {
     async function loadRecs() {
@@ -60,10 +91,13 @@ export default function CheckoutPage() {
   }, [items]);
 
   useEffect(() => {
-    if (!cardAvailable && paymentMethod === "CARD") {
+    if (!pixAvailable && paymentMethod === "PIX" && cardAvailable) {
+      setPaymentMethod("CARD");
+    }
+    if (!cardAvailable && paymentMethod === "CARD" && pixAvailable) {
       setPaymentMethod("PIX");
     }
-  }, [cardAvailable, paymentMethod]);
+  }, [cardAvailable, pixAvailable, paymentMethod]);
 
   async function handleApplyCoupon() {
     if (!couponInput) return;
@@ -79,8 +113,24 @@ export default function CheckoutPage() {
     }
   };
 
+  function validateCheckoutFields() {
+    const errors: Record<string, string> = {};
+    for (const field of enabledFields) {
+      const value = String(fieldValues[field.key] || "").trim();
+      if (field.required && !value) {
+        errors[field.key] = `${field.label} é obrigatório`;
+      }
+      if (field.type === "email" && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        errors[field.key] = "E-mail inválido";
+      }
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
   async function submitOrder() {
     if (!acceptedTerms || isSubmitting) return;
+    if (!validateCheckoutFields()) return;
 
     setIsSubmitting(true);
     setStatus("Processando seu pedido seguro...");
@@ -98,7 +148,6 @@ export default function CheckoutPage() {
         }
       );
       clear();
-      // Redireciona para a página de pagamento
       window.location.href = `/checkout/payment/${order.id}?paymentMethod=${paymentMethod}`;
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Erro ao criar pedido");
@@ -123,17 +172,19 @@ export default function CheckoutPage() {
 
         <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
           <div className="space-y-4">
-            <section className="bg-white/[0.01] border border-primary/5 rounded-xl p-6 sm:p-6">
+            <section className="bg-white/[0.01] border border-primary/5 rounded-md p-6 sm:p-6">
               <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
                 Formas de pagamento
               </h2>
+
               <div className="grid gap-4">
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("PIX")}
-                  className="relative group overflow-hidden text-left"
+                  onClick={() => pixAvailable && setPaymentMethod("PIX")}
+                  disabled={!pixAvailable}
+                  className={`relative group select-none overflow-hidden text-left ${!pixAvailable ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
-                  <div className={`relative flex items-center justify-between p-5 rounded-xl border transition-colors ${paymentMethod === "PIX" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-white/[0.02]"}`}>
+                  <div className={`relative flex items-center justify-between p-4 rounded-md cursor-pointer border transition-colors ${paymentMethod === "PIX" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-transparent"}`}>
                     <div className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-md bg-primary/20 flex items-center justify-center">
                         <FaPix className="h-6 w-6 text-primary" />
@@ -145,10 +196,12 @@ export default function CheckoutPage() {
                             <Zap className="h-2.5 w-2.5 fill-current" /> Mais rápido
                           </span>
                         </div>
-                        <p className="text-xs text-zinc-500 font-medium mt-1">Aprovação imediata</p>
+                        <p className="text-xs text-zinc-500 font-medium mt-1">
+                          {pixAvailable ? "Aprovação imediata" : "Ative Pix em um gateway na dashboard"}
+                        </p>
                       </div>
                     </div>
-                    {paymentMethod === "PIX" && <Check className="h-4 w-4 text-primary" />}
+                    {paymentMethod === "PIX" && <Check className="h-5 w-5 text-primary" />}
                   </div>
                 </button>
 
@@ -156,12 +209,12 @@ export default function CheckoutPage() {
                   type="button"
                   onClick={() => cardAvailable && setPaymentMethod("CARD")}
                   disabled={!cardAvailable}
-                  className={`relative group overflow-hidden text-left ${!cardAvailable ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`relative group select-none cursor-pointer overflow-hidden text-left ${!cardAvailable ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
-                  <div className={`relative flex items-center justify-between p-5 rounded-xl border transition-colors ${paymentMethod === "CARD" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-white/[0.02]"}`}>
+                  <div className={`relative flex items-center justify-between p-4 rounded-md border transition-colors ${paymentMethod === "CARD" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-white/[0.02]"}`}>
                     <div className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-md bg-primary/20 flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-primary" />
+                        <BsCreditCard2FrontFill className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -177,34 +230,31 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                     </div>
-                    {paymentMethod === "CARD" && <Check className="h-4 w-4 text-primary" />}
+                    {paymentMethod === "CARD" && <Check className="h-5 w-5 text-primary" />}
                   </div>
                 </button>
               </div>
             </section>
 
-            <section className="bg-white/[0.01] border border-primary/5 rounded-xl p-6 sm:p-6">
+            <section className="bg-white/[0.01] border border-primary/5 rounded-md p-6 sm:p-6">
               <h2 className="text-xl font-bold mb-3">Informações de contato</h2>
               <div className="space-y-4">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-600" />
-                  <Input
-                    placeholder="Nome completo"
-                    value={contactInfo.name}
-                    onChange={(e) => setContactInfo({ ...contactInfo, name: e.target.value })}
-                    className="h-14 pl-12 bg-transparent border-white/5 rounded-lg focus:border-primary/30 focus:bg-white/2 text-white"
+                {enabledFields.map((field) => (
+                  <CheckoutFieldInput
+                    key={field.key}
+                    field={field}
+                    value={fieldValues[field.key] || ""}
+                    error={fieldErrors[field.key]}
+                    onChange={(value) => {
+                      setFieldValues((prev) => ({ ...prev, [field.key]: value }));
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next[field.key];
+                        return next;
+                      });
+                    }}
                   />
-                </div>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-600" />
-                  <Input
-                    type="email"
-                    placeholder="Seu melhor e-mail"
-                    value={contactInfo.email}
-                    onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
-                    className="h-14 pl-12 bg-transparent border-white/5 rounded-lg focus:border-primary/30 focus:bg-white/2 text-white"
-                  />
-                </div>
+                ))}
               </div>
             </section>
 
@@ -219,20 +269,20 @@ export default function CheckoutPage() {
                 htmlFor="terms"
                 className="text-sm font-medium text-zinc-400 cursor-pointer select-none"
               >
-                Eu aceito os <span className="text-white font-bold underline decoration-primary underline-offset-4">termos e condições</span> desta compra.
+                Eu aceito os <span className="text-white font-semibold decoration-primary underline-offset-4">termos e condições</span> desta compra.
               </label>
             </div>
 
             {recommendations.length > 0 && (
-              <div className="mt-8 bg-white/[0.01] rounded-lg p-5 border border-primary/5">
+              <div className="mt-8 bg-white/[0.01] rounded-md p-5 border border-primary/5">
                 <h4 className="text-lg font-bold flex items-center gap-2 mb-4 text-white/90">
-                  <Zap className="h-4 w-4 text-primary" /> Jogos que combinam com você
+                  <Zap className="h-4 w-4 fill-primary text-primary" /> Jogos que combinam com você
                 </h4>
 
                 <div className="grid gap-3">
                   {recommendations.map(rec => (
-                    <div key={rec.id} className="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-2.5 rounded-lg group hover:bg-white/[0.04] transition-colors">
-                      <div className="relative aspect-square h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-white/5 border border-white/5">
+                    <div key={rec.id} className="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-2.5 rounded-md group hover:bg-white/[0.04] transition-colors">
+                      <div className="relative aspect-square h-14 w-14 shrink-0 overflow-hidden rounded-sm bg-white/5 border border-white/5">
                         {rec.imageUrl ? (
                           <Image
                             src={rec.imageUrl}
@@ -302,7 +352,7 @@ export default function CheckoutPage() {
           </div>
 
           <aside className="space-y-3">
-            <div className="bg-white/[0.01] border border-primary/5 rounded-lg p-6 sm:p-8 sticky top-12">
+            <div className="bg-white/[0.01] border border-primary/5 rounded-md p-6 sm:p-8 sticky top-12">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xl font-bold text-white tracking-tight">Resumo do pedido</h2>
                 <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-full border border-emerald-500/20 text-xs font-bold">
@@ -459,7 +509,7 @@ export default function CheckoutPage() {
                           placeholder="Cupom de desconto"
                           value={couponInput}
                           onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }}
-                          className={`h-12 pl-12 bg-transparent border-white/5 rounded-lg focus:border-primary/30 focus:bg-white/2 text-white ${couponError ? "border-red-500/50" : ""}`}
+                          className={`h-12 pl-12 bg-transparent border-white/5 rounded-md focus:border-primary/30 focus:bg-white/2 text-white ${couponError ? "border-red-500/50" : ""}`}
                         />
                       </div>
 
@@ -469,7 +519,7 @@ export default function CheckoutPage() {
                             <Button
                               onClick={handleApplyCoupon}
                               disabled={isApplyingCoupon || !couponInput}
-                              className="p-6 bg-primary font-bold text-white hover:bg-primary/90 rounded-lg"
+                              className="h-12 p-4 bg-primary font-bold text-white hover:bg-primary/90 rounded-md"
                             >
                               {isApplyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                             </Button>
@@ -515,7 +565,7 @@ export default function CheckoutPage() {
                 <Button
                   onClick={submitOrder}
                   disabled={!acceptedTerms || items.length === 0 || isSubmitting}
-                  className="w-full h-12 rounded-lg text-md font-semibold bg-primary hover:bg-primary/90 text-white flex items-center justify-center gap-3 transition-all active:scale-95"
+                  className="w-full h-12 rounded-md text-md font-semibold bg-primary hover:bg-primary/90 text-white flex items-center justify-center gap-3 transition-all active:scale-95"
                 >
                   {isSubmitting ? (
                     <div className="flex items-center gap-3">
@@ -542,4 +592,36 @@ export default function CheckoutPage() {
       </div>
     </div>
   );
-};
+}
+
+function CheckoutFieldInput({
+  field,
+  value,
+  error,
+  onChange,
+}: {
+  field: CheckoutFieldConfig;
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+}) {
+  const Icon = field.type === "email" ? Mail : User;
+
+  return (
+    <div>
+      <div className="relative">
+        <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-600" />
+        <Input
+          type={field.type}
+          placeholder={field.placeholder || field.label}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`h-14 pl-12 bg-transparent border-white/5 rounded-lg focus:border-primary/30 focus:bg-white/2 text-white ${error ? "border-red-500/50" : ""}`}
+        />
+      </div>
+      {error && (
+        <p className="mt-1 text-xs text-red-400 font-medium px-1">{error}</p>
+      )}
+    </div>
+  );
+}

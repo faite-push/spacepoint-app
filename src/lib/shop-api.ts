@@ -25,8 +25,13 @@ export async function fetchOrder(id: string, paymentMethod?: string): Promise<{ 
   return data;
 }
 
-export async function fetchCheckoutPaymentOptions(): Promise<{ gateway: string | null; methods: string[] }> {
-  return apiFetch<{ gateway: string | null; methods: string[] }>("/v2/api/orders/payment-options");
+export async function fetchCheckoutPaymentOptions(): Promise<{
+  gateway: string | null;
+  pixGateway: string | null;
+  cardGateway: string | null;
+  methods: string[];
+}> {
+  return apiFetch("/v2/api/orders/payment-options");
 }
 
 export async function createOrder(
