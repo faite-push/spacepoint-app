@@ -9,6 +9,7 @@ import { HiHeart } from "react-icons/hi2";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { formatPrice, formatPriceLabel } from "@/lib/shop-api";
+import { resolveMediaUrl } from "@/lib/media";
 import { useWishlistStore } from "@/store/wishlist-store";
 import { useCartStore } from "@/store/cart-store";
 import type { Product } from "@/types/shop";
@@ -44,7 +45,7 @@ export function ProductCard({ product }: { product: Product }) {
     setMounted(true);
   }, []);
 
-  const image = product.imageUrl || product.images[0] || "/placeholder.svg";
+  const image = resolveMediaUrl(product.imageUrl || product.images[0]) || "/placeholder.svg";
   const compare = displayComparePrice(product);
   const discount = discountPercent(product.price, compare);
 

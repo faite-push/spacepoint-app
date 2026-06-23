@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichContent } from "@/components/shared/rich-content";
 import { formatPrice, formatPriceLabel } from "@/lib/shop-api";
+import { resolveMediaUrl } from "@/lib/media";
 import type { Product, ProductVariant } from "@/types/shop";
 import { useCartStore } from "@/store/cart-store";
 import { useWishlistStore } from "@/store/wishlist-store";
@@ -36,7 +37,9 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
   }, [product, selectedVariantId]);
 
   const outOfStock = selectedVariant != null ? selectedVariant.stockQuantity <= 0 : !product.hasVariants && (product.stockQuantity ?? 0) <= 0;
-  const displayImage = selectedVariant?.imageUrl || product.imageUrl || product.images[0] || "/placeholder.svg";
+  const displayImage = resolveMediaUrl(
+    selectedVariant?.imageUrl || product.imageUrl || product.images[0]
+  ) || "/placeholder.svg";
   const comparePrice = selectedVariant?.comparePrice ?? product.comparePrice;
   const displayPrice = selectedVariant?.price ?? product.price;
 

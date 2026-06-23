@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
 import type { ShopBannerRow } from "@/lib/site-api";
+import { resolveMediaUrl } from "@/lib/media";
 
 export function BannerSlider({ 
   banners, 
@@ -75,7 +76,9 @@ export function BannerSlider({
   return (
     <div className="w-[100vw] relative left-1/2 -translate-x-1/2 overflow-hidden max-w-[1580px] mx-auto px-4 sm:px-6 lg:px-[2rem] -mt-28 rounded-2xl">
       <div ref={sliderRef} className="keen-slider h-full rounded-2xl">
-        {banners.map((b) => (
+        {banners.map((b) => {
+          const imageUrl = resolveMediaUrl(b.imageUrl) || "/placeholder.svg";
+          return (
           <div
             key={b.id}
             className="keen-slider__slide flex justify-center shrink-0 w-full min-w-full rounded-2xl overflow-hidden relative"
@@ -83,7 +86,7 @@ export function BannerSlider({
             {b.linkUrl ? (
               <Link href={b.linkUrl} className="block w-full h-auto relative group">
                 <Image
-                  src={b.imageUrl}
+                  src={imageUrl}
                   alt="Banner"
                   width={2560}
                   height={1080}
@@ -95,7 +98,7 @@ export function BannerSlider({
             ) : (
               <div className="block w-full h-auto relative group">
                 <Image
-                  src={b.imageUrl}
+                  src={imageUrl}
                   alt="Banner"
                   width={2560}
                   height={1080}
@@ -105,7 +108,8 @@ export function BannerSlider({
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );
