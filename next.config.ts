@@ -38,6 +38,11 @@ const nextConfig: NextConfig = {
         port: "5000",
         pathname: "/cdn/**",
       },
+      {
+        protocol: "https",
+        hostname: "spacepoint.shop",
+        pathname: "/cdn/**",
+      },
       ...(apiImagePattern ? [apiImagePattern] : []),
       {
         protocol: "https",

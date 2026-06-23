@@ -1,3 +1,5 @@
+import { getApiHeaders } from "@/lib/api";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export type FooterLink = {
@@ -153,6 +155,10 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
     const response = await fetch(url, {
       ...options,
       signal: controller.signal,
+      headers: {
+        ...getApiHeaders(),
+        ...(options.headers || {}),
+      },
     });
     clearTimeout(id);
     return response;
@@ -167,7 +173,6 @@ export async function fetchSiteConfig(): Promise<PublicSiteConfig | null> {
     const isClient = typeof window !== "undefined";
     const r = await fetchWithTimeout(`${API_URL}/v2/api/site-config`, {
       ...(isClient ? {} : { next: { revalidate: 60 } }),
-      headers: isClient ? { "ngrok-skip-browser-warning": "true" } : undefined,
     });
     if (!r.ok) return null;
     return r.json();

@@ -1,4 +1,4 @@
-import { API_URL, getCsrfToken } from "./api";
+import { API_URL, getCsrfToken, getApiHeaders } from "./api";
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const method = (init.method ?? "GET").toUpperCase();
@@ -9,6 +9,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...getApiHeaders(),
       ...(isMutation ? { "X-CSRF-Token": getCsrfToken() } : {}),
       ...(init.headers || {}),
     },

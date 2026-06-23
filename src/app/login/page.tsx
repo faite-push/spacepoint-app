@@ -7,7 +7,7 @@ import { FaDiscord } from "react-icons/fa";
 import { Mail, Lock, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
-import { setCsrfToken } from "@/lib/api";
+import { setCsrfToken, getApiHeaders } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -57,7 +57,7 @@ function LoginContent() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-code`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getApiHeaders() },
         body: JSON.stringify({ email }),
       });
 
@@ -84,7 +84,7 @@ function LoginContent() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-code`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getApiHeaders() },
         body: JSON.stringify({ email, code }),
         credentials: "include",
       });

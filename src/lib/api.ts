@@ -1,5 +1,16 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+/** Header exigido pelo ngrok free para evitar página HTML de aviso (quebra CORS e imagens). */
+export function getApiHeaders(extra?: HeadersInit): HeadersInit {
+  const needsNgrokBypass =
+    typeof window !== "undefined" || (API_URL && /ngrok/i.test(API_URL));
+
+  return {
+    ...(needsNgrokBypass ? { "ngrok-skip-browser-warning": "true" } : {}),
+    ...(extra || {}),
+  };
+}
+
 /** Cache em memória — necessário quando API e frontend estão em domínios diferentes. */
 let csrfTokenCache = '';
 
@@ -45,7 +56,7 @@ export async function apiFetch<T = unknown>(
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(typeof window !== 'undefined' ? { 'ngrok-skip-browser-warning': 'true' } : {}),
+        ...getApiHeaders(),
         ...(isMutation ? { 'X-CSRF-Token': getCsrfToken() } : {}),
         ...options.headers,
       },

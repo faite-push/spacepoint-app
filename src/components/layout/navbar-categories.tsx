@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import { API_URL } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface NavCategory {
@@ -18,14 +18,14 @@ interface NavCategory {
 }
 
 async function fetchNavbarCategories(): Promise<NavCategory[]> {
-  const res = await fetch(`${API_URL}/v2/api/categories`, {
-    credentials: "include",
-  });
-  if (!res.ok) return [];
-  const data = (await res.json()) as { categories: NavCategory[] };
-  return (data.categories ?? []).filter(
-    (c) => !c.parentId && c.isActive && c.showInNavbar
-  );
+  try {
+    const data = await apiFetch<{ categories: NavCategory[] }>("/v2/api/categories");
+    return (data.categories ?? []).filter(
+      (c) => !c.parentId && c.isActive && c.showInNavbar
+    );
+  } catch {
+    return [];
+  }
 }
 
 export function NavbarCategoriesDesktop() {
