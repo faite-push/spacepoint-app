@@ -1,9 +1,21 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+/** Cache em memória — necessário quando API e frontend estão em domínios diferentes. */
+let csrfTokenCache = '';
+
+export function setCsrfToken(token: string) {
+  csrfTokenCache = token;
+}
+
+export function clearCsrfToken() {
+  csrfTokenCache = '';
+}
+
 /**
- * Lê o csrf_token do cookie (não-httpOnly, legível pelo JS).
+ * Lê o CSRF token do cache (cross-origin) ou do cookie (same-origin).
  */
 export function getCsrfToken(): string {
+  if (csrfTokenCache) return csrfTokenCache;
   if (typeof document === 'undefined') return '';
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : '';
@@ -33,6 +45,7 @@ export async function apiFetch<T = unknown>(
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        ...(typeof window !== 'undefined' ? { 'ngrok-skip-browser-warning': 'true' } : {}),
         ...(isMutation ? { 'X-CSRF-Token': getCsrfToken() } : {}),
         ...options.headers,
       },

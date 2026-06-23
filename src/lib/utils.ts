@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { getCsrfToken as getTokenFromApi } from "@/lib/api"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -13,9 +14,5 @@ export function formatPrice(price: number) {
 }
 
 export function getCsrfToken(): string {
-  if (typeof document === 'undefined') return '';
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; csrf_token=`);
-  if (parts.length === 2) return parts.pop()?.split(';').shift() || '';
-  return '';
+  return getTokenFromApi();
 }

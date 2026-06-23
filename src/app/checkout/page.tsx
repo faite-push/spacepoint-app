@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 
 import { createOrder, fetchCheckoutPaymentOptions, formatPrice, fetchProducts } from "@/lib/shop-api";
 import { fetchSiteConfig } from "@/lib/site-api";
+import { DEFAULT_CHECKOUT_SETTINGS } from "@/lib/checkout-defaults";
 import type { CheckoutFieldConfig } from "@/lib/admin-api";
 import { useAuth } from "@/context/auth-context";
 import { useCartStore, useCartHydrated } from "@/store/cart-store";
@@ -26,7 +27,7 @@ import type { Product } from "@/types/shop";
 
 export default function CheckoutPage() {
   const { items, total, subtotal, discount, setQuantity, removeItem, clear, applyCoupon, appliedCoupon, removeCoupon } = useCartStore();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [status, setStatus] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,8 +51,8 @@ export default function CheckoutPage() {
     queryFn: fetchSiteConfig,
   });
 
-  const checkoutSettings = checkoutConfigQuery.data?.checkoutSettings;
-  const enabledFields = (checkoutSettings?.fields || []).filter((field) => field.enabled);
+  const checkoutSettings = checkoutConfigQuery.data?.checkoutSettings ?? DEFAULT_CHECKOUT_SETTINGS;
+  const enabledFields = (checkoutSettings.fields || []).filter((field) => field.enabled);
 
   const availableMethods = paymentOptionsQuery.data?.methods || ["PIX"];
   const pixAvailable = availableMethods.includes("PIX");
@@ -129,7 +130,7 @@ export default function CheckoutPage() {
   }
 
   async function submitOrder() {
-    if (!acceptedTerms || isSubmitting) return;
+    if (!acceptedTerms || isSubmitting || authLoading) return;
     if (!validateCheckoutFields()) return;
 
     setIsSubmitting(true);
@@ -343,7 +344,7 @@ export default function CheckoutPage() {
             <div className="lg:hidden">
               <Button
                 onClick={submitOrder}
-                disabled={!acceptedTerms || items.length === 0 || isSubmitting}
+                disabled={!acceptedTerms || items.length === 0 || isSubmitting || authLoading}
                 className="w-full h-12 rounded-lg text-md font-semibold bg-primary hover:bg-primary/90 text-white flex items-center justify-center gap-3 transition-all active:scale-95"
               >
                 {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : `Pagar ${hydrated ? formatPrice(total()) : "R$ 0,00"}`}
@@ -564,7 +565,7 @@ export default function CheckoutPage() {
               <div className="hidden lg:block mt-8">
                 <Button
                   onClick={submitOrder}
-                  disabled={!acceptedTerms || items.length === 0 || isSubmitting}
+                  disabled={!acceptedTerms || items.length === 0 || isSubmitting || authLoading}
                   className="w-full h-12 rounded-md text-md font-semibold bg-primary hover:bg-primary/90 text-white flex items-center justify-center gap-3 transition-all active:scale-95"
                 >
                   {isSubmitting ? (

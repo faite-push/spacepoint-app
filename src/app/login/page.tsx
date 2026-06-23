@@ -7,6 +7,7 @@ import { FaDiscord } from "react-icons/fa";
 import { Mail, Lock, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
+import { setCsrfToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -93,6 +94,8 @@ function LoginContent() {
       if (!res.ok) {
         throw new Error(data.error || "Código inválido");
       }
+
+      if (data.csrfToken) setCsrfToken(data.csrfToken);
 
       router.push("/");
       router.refresh();

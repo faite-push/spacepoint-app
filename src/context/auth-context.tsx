@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, setCsrfToken, clearCsrfToken } from "@/lib/api";
 
 export interface AuthUser {
   id: string;
@@ -30,10 +30,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const data = await apiFetch<AuthUser>("/v2/api/request/me");
-      setUser(data);
+      const data = await apiFetch<AuthUser & { csrfToken?: string }>("/v2/api/request/me");
+      const { csrfToken, ...user } = data;
+      if (csrfToken) setCsrfToken(csrfToken);
+      setUser(user);
     } catch {
       setUser(null);
+      clearCsrfToken();
     } finally {
       setLoading(false);
     }
@@ -44,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await apiFetch("/logout");
     } catch {
     } finally {
+      clearCsrfToken();
       setUser(null);
     }
   }, []);

@@ -164,8 +164,10 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
 
 export async function fetchSiteConfig(): Promise<PublicSiteConfig | null> {
   try {
+    const isClient = typeof window !== "undefined";
     const r = await fetchWithTimeout(`${API_URL}/v2/api/site-config`, {
-      next: { revalidate: 60 },
+      ...(isClient ? {} : { next: { revalidate: 60 } }),
+      headers: isClient ? { "ngrok-skip-browser-warning": "true" } : undefined,
     });
     if (!r.ok) return null;
     return r.json();
