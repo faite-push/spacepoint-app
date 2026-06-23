@@ -19,19 +19,28 @@ export async function fetchMyOrders(): Promise<Order[]> {
   return data.orders;
 }
 
-export async function fetchOrder(id: string): Promise<{ order: Order; paymentData?: any }> {
-  const data = await apiFetch<{ order: Order; paymentData?: any }>(`/v2/api/orders/${id}`);
+export async function fetchOrder(id: string, paymentMethod?: string): Promise<{ order: Order; paymentData?: any }> {
+  const query = paymentMethod ? `?paymentMethod=${encodeURIComponent(paymentMethod)}` : "";
+  const data = await apiFetch<{ order: Order; paymentData?: any }>(`/v2/api/orders/${id}${query}`);
   return data;
+}
+
+export async function fetchCheckoutPaymentOptions(): Promise<{ gateway: string | null; methods: string[] }> {
+  return apiFetch<{ gateway: string | null; methods: string[] }>("/v2/api/orders/payment-options");
 }
 
 export async function createOrder(
   items: Array<{ productId: string; variantId?: string | null; quantity: number }>,
-  opts?: { couponCode?: string | null }
+  opts?: { couponCode?: string | null; paymentMethod?: string }
 ): Promise<Order> {
   const data = await apiFetch<{ order: Order }>("/v2/api/orders", {
     method: "POST",
     headers: { "Idempotency-Key": generateIdempotencyKey() },
-    body: JSON.stringify({ items, couponCode: opts?.couponCode ?? null }),
+    body: JSON.stringify({
+      items,
+      couponCode: opts?.couponCode ?? null,
+      paymentMethod: opts?.paymentMethod ?? "PIX",
+    }),
   });
   return data.order;
 }

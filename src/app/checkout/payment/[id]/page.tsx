@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
@@ -25,11 +26,13 @@ interface PageProps {
 
 export default function PaymentPage({ params }: PageProps) {
   const { id } = use(params);
+  const searchParams = useSearchParams();
+  const paymentMethod = (searchParams.get("paymentMethod") || "PIX").toUpperCase();
   const [copied, setCopied] = useState(false);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["order", id],
-    queryFn: () => fetchOrder(id),
+    queryKey: ["order", id, paymentMethod],
+    queryFn: () => fetchOrder(id, paymentMethod),
     refetchInterval: (query) => {
       const status = query.state.data?.order?.status;
       return (status === "PAID" || status === "DELIVERED" || status === "CANCELLED") ? false : 3000;
@@ -225,9 +228,13 @@ export default function PaymentPage({ params }: PageProps) {
             ) : (
               <div className="space-y-6">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-white">Pagamento via PIX</h2>
+                  <h2 className="text-2xl font-bold text-white">
+                    {paymentData?.type === "CARD" ? "Pagamento via Cartão" : "Pagamento via PIX"}
+                  </h2>
                   <p className="text-sm text-muted-foreground">
-                    Escaneie o QR Code ou copie o código PIX para realizar o pagamento.
+                    {paymentData?.type === "CARD"
+                      ? "Clique no botão abaixo para concluir o pagamento com cartão em ambiente seguro."
+                      : "Escaneie o QR Code ou copie o código PIX para realizar o pagamento."}
                   </p>
                 </div>
 
@@ -262,6 +269,23 @@ export default function PaymentPage({ params }: PageProps) {
                         </div>
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {paymentData?.type === "CARD" && (
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground mb-1">Valor a pagar</p>
+                      <div className="text-3xl font-bold text-white">{formatPrice(order.total)}</div>
+                    </div>
+                    <Button
+                      asChild
+                      className="h-12 w-full rounded-md bg-primary hover:bg-primary/90"
+                    >
+                      <a href={paymentData.checkoutUrl} target="_blank" rel="noopener noreferrer">
+                        Ir para pagamento com cartão
+                      </a>
+                    </Button>
                   </div>
                 )}
 

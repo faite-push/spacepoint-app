@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 
-import { ChevronRight, Minus, Plus, Trash2, Ticket, PlusCircle, User, Mail, Zap, ArrowRight, Loader2, ShoppingCart, AlertCircle, Check, Lock, X } from "lucide-react";
+import { ChevronRight, Minus, Plus, Trash2, Ticket, PlusCircle, User, Mail, Zap, ArrowRight, Loader2, ShoppingCart, AlertCircle, Check, Lock, X, CreditCard } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, } from "@/components/ui/tooltip"
-import { createOrder, formatPrice, fetchProducts } from "@/lib/shop-api";
+import { createOrder, fetchCheckoutPaymentOptions, formatPrice, fetchProducts } from "@/lib/shop-api";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,6 +28,7 @@ export default function CheckoutPage() {
   const [couponInput, setCouponInput] = useState("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponError, setCouponError] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"PIX" | "CARD">("PIX");
 
   const [contactInfo, setContactInfo] = useState({
     name: "",
@@ -35,6 +37,13 @@ export default function CheckoutPage() {
   });
 
   const hydrated = useCartHydrated();
+  const paymentOptionsQuery = useQuery({
+    queryKey: ["checkout", "payment-options"],
+    queryFn: fetchCheckoutPaymentOptions,
+  });
+
+  const availableMethods = paymentOptionsQuery.data?.methods || ["PIX"];
+  const cardAvailable = availableMethods.includes("CARD");
 
   useEffect(() => {
     async function loadRecs() {
@@ -49,6 +58,12 @@ export default function CheckoutPage() {
     }
     loadRecs();
   }, [items]);
+
+  useEffect(() => {
+    if (!cardAvailable && paymentMethod === "CARD") {
+      setPaymentMethod("PIX");
+    }
+  }, [cardAvailable, paymentMethod]);
 
   async function handleApplyCoupon() {
     if (!couponInput) return;
@@ -77,11 +92,14 @@ export default function CheckoutPage() {
           variantId: item.variantId,
           quantity: item.quantity,
         })),
-        { couponCode: appliedCoupon?.code ?? null }
+        {
+          couponCode: appliedCoupon?.code ?? null,
+          paymentMethod,
+        }
       );
       clear();
       // Redireciona para a página de pagamento
-      window.location.href = `/checkout/payment/${order.id}`;
+      window.location.href = `/checkout/payment/${order.id}?paymentMethod=${paymentMethod}`;
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Erro ao criar pedido");
       setIsSubmitting(false);
@@ -110,8 +128,12 @@ export default function CheckoutPage() {
                 Formas de pagamento
               </h2>
               <div className="grid gap-4">
-                <div className="relative group overflow-hidden pointer-events-none select-none">
-                  <div className="relative flex items-center justify-between p-5 rounded-xl border border-primary/10 bg-primary/5 cursor-pointer">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("PIX")}
+                  className="relative group overflow-hidden text-left"
+                >
+                  <div className={`relative flex items-center justify-between p-5 rounded-xl border transition-colors ${paymentMethod === "PIX" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-white/[0.02]"}`}>
                     <div className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-md bg-primary/20 flex items-center justify-center">
                         <FaPix className="h-6 w-6 text-primary" />
@@ -126,8 +148,38 @@ export default function CheckoutPage() {
                         <p className="text-xs text-zinc-500 font-medium mt-1">Aprovação imediata</p>
                       </div>
                     </div>
+                    {paymentMethod === "PIX" && <Check className="h-4 w-4 text-primary" />}
                   </div>
-                </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cardAvailable && setPaymentMethod("CARD")}
+                  disabled={!cardAvailable}
+                  className={`relative group overflow-hidden text-left ${!cardAvailable ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <div className={`relative flex items-center justify-between p-5 rounded-xl border transition-colors ${paymentMethod === "CARD" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-white/[0.02]"}`}>
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-md bg-primary/20 flex items-center justify-center">
+                        <CreditCard className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white">Cartão</span>
+                          {!cardAvailable && (
+                            <span className="text-[10px] bg-white/10 text-zinc-300 px-2 py-0.5 rounded-full font-bold">
+                              Indisponível no gateway ativo
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-500 font-medium mt-1">
+                          {cardAvailable ? "Pague com cartão de crédito" : "Ative Cartão na configuração do gateway"}
+                        </p>
+                      </div>
+                    </div>
+                    {paymentMethod === "CARD" && <Check className="h-4 w-4 text-primary" />}
+                  </div>
+                </button>
               </div>
             </section>
 

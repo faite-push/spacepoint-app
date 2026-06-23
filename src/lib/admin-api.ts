@@ -627,11 +627,24 @@ export interface GatewayConfig {
 
 export const gatewaysApi = {
   list: () => request<{ gateways: GatewayConfig[] }>("/v2/api/admin/gateways"),
-  validate: (slug: string, config: Record<string, unknown>) =>
-    request<{ valid: boolean; message: string }>(`/v2/api/admin/gateways/${slug}/validate`, {
+  validate: async (slug: string, config: Record<string, unknown>) => {
+    const res = await fetch(`${API_URL}/v2/api/admin/gateways/${slug}/validate`, {
       method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": getCsrfToken(),
+      },
       body: JSON.stringify({ config }),
-    }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(body?.error || "Credenciais inválidas") as Error & { enforceSandbox?: boolean };
+      err.enforceSandbox = body?.enforceSandbox === true;
+      throw err;
+    }
+    return body as { valid: boolean; message: string; enforceSandbox?: boolean };
+  },
   update: (slug: string, payload: { name: string; config: any; isActive?: boolean }) =>
     request<GatewayConfig>(`/v2/api/admin/gateways/${slug}`, {
       method: "PUT",

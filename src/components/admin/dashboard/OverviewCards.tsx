@@ -82,7 +82,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
                   <TrendIcon className="h-3.5 w-3.5" />
                   {Math.abs(card.change).toFixed(1)}%
                 </div>
-                <span className="text-[10px] text-white/40">
+                <span className="text-[11px] text-white/40">
                   {isUp ? "+" : "-"} {card.formattedChange}
                 </span>
               </div>
