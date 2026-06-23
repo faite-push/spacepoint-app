@@ -8,7 +8,7 @@ import { X, User, LayoutDashboard, Package, Heart, LogOut, ChevronDown, } from "
 import { NavbarCategoriesDesktop, NavbarCategoriesMobile } from "./navbar-categories";
 import type { PublicSiteConfig } from "@/lib/site-api";
 import { FaBasketShopping } from "react-icons/fa6";
-import { useCartStore } from "@/store/cart-store";
+import { useCartStore, useCartHydrated } from "@/store/cart-store";
 import { TbLayoutDashboardFilled } from "react-icons/tb";
 import { BiSolidUser } from "react-icons/bi";
 import { BsBookmarkHeartFill } from "react-icons/bs";
@@ -20,6 +20,7 @@ import { HiMenuAlt2 } from "react-icons/hi";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function Navbar({ siteConfig }: { siteConfig?: PublicSiteConfig | null }) {
+  const cartHydrated = useCartHydrated();
   const count = useCartStore((state) => state.items.length);
   const { user, logout, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -84,7 +85,7 @@ export function Navbar({ siteConfig }: { siteConfig?: PublicSiteConfig | null })
               className="relative flex h-10 w-10 items-center cursor-pointer justify-center rounded-full bg-[#ffffff05] border-1 border-dashed border-white/30 text-white transition-all duration-300 md:border-white/30 group active:scale-95 md:hover:bg-primary"
             >
               <FaBasketShopping className="h-5 w-5 text-white/90" />
-              {count > 0 && (
+              {cartHydrated && count > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#A855F7]">
                   {count}
                 </span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -29,13 +30,19 @@ async function fetchNavbarCategories(): Promise<NavCategory[]> {
 }
 
 export function NavbarCategoriesDesktop() {
+  const [mounted, setMounted] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["public", "navbar-categories"],
     queryFn: fetchNavbarCategories,
     staleTime: 5 * 60_000,
+    enabled: mounted,
   });
 
-  if (isLoading) {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || isLoading) {
     return (
       <div className="hidden bg-primary md:block transition-all duration-300">
         <div className="mx-auto flex h-11 max-w-7xl items-center justify-center gap-6 px-4">
@@ -106,13 +113,19 @@ export function NavbarCategoriesDesktop() {
 // ─── Mobile ──────────────────────────────────────────────────────────────────
 
 export function NavbarCategoriesMobile() {
+  const [mounted, setMounted] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["public", "navbar-categories"],
     queryFn: fetchNavbarCategories,
     staleTime: 5 * 60_000,
+    enabled: mounted,
   });
 
-  if (isLoading) {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || isLoading) {
     return (
       <div className="space-y-2 py-1">
         {[1, 2, 3, 4].map((i) => (

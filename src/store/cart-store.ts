@@ -145,7 +145,7 @@ export const useCartStore = create<CartState>()(
       },
       removeCoupon: () => set({ appliedCoupon: null }),
     }),
-    { name: "spacepoint-cart-v3" }
+    { name: "spacepoint-cart-v3", skipHydration: true }
   )
 );
 
@@ -156,6 +156,7 @@ export function useCartHydrated() {
   useEffect(() => {
     const finish = () => setHydrated(true);
     const unsub = useCartStore.persist.onFinishHydration(finish);
+    void useCartStore.persist.rehydrate();
     if (useCartStore.persist.hasHydrated()) {
       finish();
     }

@@ -54,9 +54,11 @@ export default async function RootLayout({
     <html
       lang="pt-BR"
       className={`${GeistSans.variable} ${GeistMono.variable} ${chakra.variable} h-full antialiased dark`}
+      suppressHydrationWarning
     >
       <body
         className={`${GeistSans.className} min-h-full flex flex-col bg-background text-foreground`}
+        suppressHydrationWarning
       >
         <Providers>
           <AuthProvider>

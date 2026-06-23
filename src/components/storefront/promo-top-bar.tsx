@@ -9,17 +9,21 @@ import { Button } from "../ui/button";
 const STORAGE_KEY = "sp_topbar_dismissed";
 
 export function PromoTopBar({ config }: { config?: PublicSiteConfig | null }) {
-  const [dismissed, setDismissed] = useState(true);
+  const dismissible = config?.topBarDismissible ?? true;
+  const [dismissed, setDismissed] = useState(dismissible);
 
   useEffect(() => {
     if (!config?.topBarEnabled || !config.topBarText?.trim()) return;
-    if (!config.topBarDismissible) {
+    if (!dismissible) {
       setDismissed(false);
       return;
     }
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    setDismissed(stored === "1");
-  }, [config]);
+    try {
+      setDismissed(sessionStorage.getItem(STORAGE_KEY) === "1");
+    } catch {
+      setDismissed(false);
+    }
+  }, [config, dismissible]);
 
   if (!config?.topBarEnabled || !config.topBarText?.trim() || dismissed) {
     return null;
