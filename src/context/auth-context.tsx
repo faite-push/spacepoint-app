@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { setCsrfToken, clearCsrfToken, API_URL, getApiHeaders } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 export interface AuthUser {
   id: string;
