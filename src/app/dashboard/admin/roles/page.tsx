@@ -418,7 +418,7 @@ export default function RolesPage() {
                         {(provided, snapshot) => (
                           <TableRow
                             ref={provided.innerRef}
-                            {...provided.draggableProps}
+                            {...(provided.draggableProps as any)}
                             className={cn(
                               "border-white/5 transition-colors cursor-pointer select-none",
                               snapshot.isDragging ? "bg-[#111111] opacity-50 shadow-2xl scale-[1.01]" : "hover:bg-white/[0.02]"

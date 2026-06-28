@@ -570,11 +570,15 @@ export interface OrderItemDetail {
 export interface AdminOrder {
   id: string;
   status: string;
+  subtotal: number;
+  discount: number;
   total: number;
   customerName: string;
   customerEmail: string;
   customerImage?: string;
   paymentMethod: string;
+  couponCode?: string;
+  checkoutData?: Record<string, any>;
   createdAt: string;
   paidAt: string | null;
   itemsCount: number;
@@ -667,5 +671,156 @@ export const gatewaysApi = {
     request<GatewayConfig>(`/v2/api/admin/gateways/${slug}/toggle-method`, {
       method: "PATCH",
       body: JSON.stringify({ method, enabled }),
+    }),
+};
+
+// ─── Chat System ───────────────────────────────────────────────────────────────
+
+export interface ChatMessage {
+  id: string;
+  chatId: string;
+  senderId: string;
+  content: string;
+  type: "TEXT" | "IMAGE" | "SYSTEM" | "AUTOMATED" | "ORDER_APPROVED" | "DELIVERY";
+  fileUrl: string | null;
+  createdAt: string;
+}
+
+export interface ChatLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface Chat {
+  id: string;
+  orderId: string;
+  status: "OPEN" | "CLOSED" | "ARCHIVED";
+  isResolved?: boolean;
+  unreadCount?: number;
+  rating: number | null;
+  ratingComment: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastAdminReadAt?: string | null;
+  messages: ChatMessage[];
+  labels: ChatLabel[];
+  order: {
+    id: string;
+    status: string;
+    subtotal: number;
+    discount: number;
+    total: number;
+    paymentMethod: string | null;
+    createdAt: string;
+    paidAt: string | null;
+    payments?: Array<{
+      id: string;
+      externalId: string | null;
+      provider: string | null;
+      createdAt: string;
+    }>;
+    user: {
+      name: string | null;
+      email: string | null;
+      image: string | null;
+    };
+    items: Array<{
+      id: string;
+      quantity: number;
+      unitPrice: number;
+      variantName: string | null;
+      product: {
+        name: string;
+        imageUrl: string | null;
+        deliveryType?: DeliveryType;
+      };
+      variant?: {
+        name: string;
+        deliveryType?: DeliveryType;
+      } | null;
+      codes?: Array<{
+        id: string;
+        code: string;
+        deliveredAt: string | null;
+        status: string;
+      }>;
+    }>;
+  };
+  userStats?: {
+    totalSpent: number;
+    ordersCount: number;
+    itemsCount: number;
+  };
+}
+
+export interface ChatMacro {
+  id: string;
+  shortcut: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const chatApi = {
+  getByOrder: (orderId: string) => request<Chat>(`/v2/api/chats/order/${orderId}`),
+  sendMessage: (chatId: string, payload: { content: string; type?: string; fileUrl?: string }) =>
+    request<ChatMessage>(`/v2/api/chats/${chatId}/messages`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  list: (params?: { search?: string; status?: string; labelId?: string; page?: number; sortBy?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set("search", params.search);
+    if (params?.status) qs.set("status", params.status);
+    if (params?.labelId) qs.set("labelId", params.labelId);
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.sortBy) qs.set("sortBy", params.sortBy);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{ chats: Chat[]; total: number; page: number; totalPages: number }>(`/v2/api/chats${suffix}`);
+  },
+  updateLabels: (chatId: string, labelIds: string[]) =>
+    request<Chat>(`/v2/api/chats/${chatId}/labels`, {
+      method: "PUT",
+      body: JSON.stringify({ labelIds }),
+    }),
+  updateStatus: (chatId: string, payload: { status?: string; rating?: number; ratingComment?: string; isResolved?: boolean }) =>
+    request<Chat>(`/v2/api/chats/${chatId}/status`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  listLabels: () => request<{ labels: ChatLabel[] }>("/v2/api/chats/labels"),
+  createLabel: (name: string, color: string) =>
+    request<ChatLabel>("/v2/api/chats/labels", {
+      method: "POST",
+      body: JSON.stringify({ name, color }),
+    }),
+  deleteLabel: (id: string) =>
+    request<{ success: boolean }>(`/v2/api/chats/labels/${id}`, {
+      method: "DELETE",
+    }),
+  listMacros: () => request<{ macros: ChatMacro[] }>("/v2/api/chats/macros"),
+  createMacro: (shortcut: string, content: string) =>
+    request<ChatMacro>("/v2/api/chats/macros", {
+      method: "POST",
+      body: JSON.stringify({ shortcut, content }),
+    }),
+  deleteMacro: (id: string) =>
+    request<{ success: boolean }>(`/v2/api/chats/macros/${id}`, {
+      method: "DELETE",
+    }),
+  updateMacro: (id: string, shortcut: string, content: string) =>
+    request<ChatMacro>(`/v2/api/chats/macros/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ shortcut, content }),
+    }),
+  markAsRead: (chatId: string) =>
+    request<{ success: boolean; lastAdminReadAt: string }>(`/v2/api/chats/${chatId}/read`, {
+      method: "PATCH",
+    }),
+  deliverItem: (chatId: string, itemId: string, payload?: { content?: string; mode?: 'text' | 'lines'; useStock?: boolean }) =>
+    request<Chat>(`/v2/api/chats/${chatId}/items/${itemId}/deliver`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
     }),
 };

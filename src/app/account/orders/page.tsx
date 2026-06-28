@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { Copy, ExternalLink, Loader2, Package, ShoppingBag } from "lucide-react";
-import { toast } from "sonner";
+
+import { FaBasketShopping } from "react-icons/fa6";
+
+import { OrderStatusBadge } from "../_components/order-status-badge";
+import { Button } from "@/components/ui/button";
 
 import { fetchMyOrders, formatPrice } from "@/lib/shop-api";
 import type { Order } from "@/types/shop";
-import { OrderStatusBadge } from "../_components/order-status-badge";
-import { Button } from "@/components/ui/button";
+
+import { OrderSkeleton } from "../_components/account-skeletons";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", {
@@ -21,133 +24,119 @@ function formatDate(iso: string) {
   });
 }
 
-function copyCode(code: string) {
-  navigator.clipboard.writeText(code);
-  toast.success("Código copiado!");
-}
-
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchMyOrders()
-      .then(setOrders)
+      .then((allOrders) => {
+        const paidOrders = allOrders.filter((order) =>
+          ["PAID", "DELIVERED"].includes(order.status.toUpperCase())
+        );
+        setOrders(paidOrders);
+      })
       .catch(() => setOrders([]))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8">
+    <div className="relative space-y-4">
+      <div className="absolute top-0 right-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+      <div className="absolute bottom-0 left-[-10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+
       <div>
-        <h1 className="text-3xl font-black text-white tracking-tight">Meus Pedidos</h1>
-        <p className="text-zinc-500 mt-1">Acompanhe compras e acesse seus códigos digitais.</p>
+        <h1 className="text-2xl font-bold text-white">Meus Pedidos</h1>
+        <p className="text-muted-foreground">Acompanhe suas compras e acesse detalhes.</p>
       </div>
 
-      {orders.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-12 text-center">
-          <Package className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-          <h2 className="text-lg font-bold text-white mb-2">Nenhum pedido ainda</h2>
-          <p className="text-sm text-zinc-500 mb-6">Suas compras aparecerão aqui após o checkout.</p>
-          <Button asChild className="rounded-xl">
-            <Link href="/">
-              <ShoppingBag className="h-4 w-4 mr-2" />
-              Ir para a loja
-            </Link>
+      {loading ? (
+        <div className="space-y-3">
+          <OrderSkeleton />
+          <OrderSkeleton />
+          <OrderSkeleton />
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="rounded-md border-2 border-dashed border-white/5 bg-black/10 p-12 text-center">
+          <FaBasketShopping className="text-muted-foreground h-12 w-12 mx-auto mb-2" />
+          <h2 className="text-lg font-bold text-white">Nenhum pedido confirmado</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Seus pedidos pagos ou entregues aparecerão aqui.
+          </p>
+          <Button asChild variant="default" size="lg" className="px-6 py-4">
+            <Link href="/">Ir para a loja</Link>
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {orders.map((order) => (
-            <article
-              key={order.id}
-              className="rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 border-b border-white/5">
-                <div className="space-y-1">
-                  <p className="text-xs text-zinc-500 font-mono">#{order.id.slice(0, 12)}…</p>
-                  <p className="text-sm text-zinc-400">{formatDate(order.createdAt)}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <OrderStatusBadge status={order.status} />
-                  <span className="text-lg font-black text-white">{formatPrice(order.total)}</span>
-                  {order.status === "PENDING" && (
-                    <Button asChild size="sm" className="rounded-lg">
-                      <Link href={`/checkout/payment/${order.id}`}>
-                        Pagar <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-5 space-y-4">
-                {order.items.map((item) => {
-                  const image = item.product.imageUrl || item.product.images?.[0];
-                  return (
-                    <div key={item.id} className="flex gap-4">
-                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white/5 border border-white/5">
-                        {image && (
-                          <Image src={image} alt={item.product.name} fill className="object-cover" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <Link
-                          href={`/product/${item.product.slug}`}
-                          className="font-bold text-white hover:text-primary transition-colors line-clamp-1"
-                        >
-                          {item.product.name}
-                          {item.variantName ? ` — ${item.variantName}` : ""}
-                        </Link>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          Qtd: {item.quantity} • {formatPrice(item.unitPrice)} cada
-                        </p>
-
-                        {item.codes.length > 0 && (
-                          <div className="mt-3 space-y-2">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">
-                              Seus códigos
-                            </p>
-                            {item.codes.map((c) => (
-                              <div
-                                key={c.code}
-                                className="flex items-center gap-2 rounded-lg bg-black/40 border border-white/5 px-3 py-2"
-                              >
-                                <code className="flex-1 text-xs font-mono text-zinc-300 break-all">
-                                  {c.code}
-                                </code>
-                                <button
-                                  type="button"
-                                  onClick={() => copyCode(c.code)}
-                                  className="shrink-0 p-1.5 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white"
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-bold text-white">
-                          {formatPrice(item.unitPrice * item.quantity)}
-                        </p>
-                      </div>
+        <ScrollArea className="h-[500px] pr-4 scrollbar-thin">
+          <div className="space-y-3">
+            {orders.map((order) => {
+              const totalItems = order.items.reduce((acc, item) => acc + item.quantity, 0);
+              return (
+                <article
+                  key={order.id}
+                  className="rounded-md border border-white/5 bg-black/10 hover:bg-white/[0.02] transition-colors p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 flex-1">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">ID do Pedido</p>
+                      <p className="text-sm font-mono text-white/90">#{order.id.slice(0, 8)}</p>
                     </div>
-                  );
-                })}
-              </div>
-            </article>
-          ))}
-        </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Status</p>
+                      <OrderStatusBadge status={order.status} />
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Data</p>
+                      <p className="text-sm text-white/90">{formatDate(order.createdAt)}</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Pagamento</p>
+                      <p className="text-sm text-white/90 font-medium capitalize">
+                        {order.paymentMethod || "Pix"}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Itens</p>
+                      <p className="text-sm text-white/90">
+                        {totalItems} {totalItems === 1 ? "item" : "itens"}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Cupom</p>
+                      <p className="text-sm text-white/90 lowercase">
+                        {order.couponCode || "Nenhum cupom"}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1 flex flex-col">
+                      <p className="text-xs font-medium text-muted-foreground">Total</p>
+                      <span className="text-sm font-medium text-white">
+                        {formatPrice(order.total)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0">
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="default"
+                      className="rounded-md py-4 px-5 w-full md:w-auto"
+                    >
+                      <Link href={`/account/orders/${order.id}`}>Ver detalhes</Link>
+                    </Button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </ScrollArea>
       )}
     </div>
   );

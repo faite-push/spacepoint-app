@@ -146,6 +146,7 @@ export default function CheckoutPage() {
         {
           couponCode: appliedCoupon?.code ?? null,
           paymentMethod,
+          checkoutData: fieldValues,
         }
       );
       clear();

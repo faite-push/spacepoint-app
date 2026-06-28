@@ -55,7 +55,7 @@ export function HomeUnifiedSettings() {
           const isActive = activeTab === tab.id;
           return (
             <Tooltip key={tab.id}>
-              <TooltipTrigger render={
+              <TooltipTrigger asChild>
                 <button
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-md cursor-pointer transition-all duration-200 ${isActive
@@ -65,7 +65,6 @@ export function HomeUnifiedSettings() {
                   <Icon className={`h-4 w-4`} />
                   {tab.label}
                 </button>
-              }>
               </TooltipTrigger>
               <TooltipContent side="bottom" align="center">
                 <p>{tab.description}</p>

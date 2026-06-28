@@ -36,7 +36,7 @@ export async function fetchCheckoutPaymentOptions(): Promise<{
 
 export async function createOrder(
   items: Array<{ productId: string; variantId?: string | null; quantity: number }>,
-  opts?: { couponCode?: string | null; paymentMethod?: string }
+  opts?: { couponCode?: string | null; paymentMethod?: string; checkoutData?: any }
 ): Promise<Order> {
   const data = await apiFetch<{ order: Order }>("/v2/api/orders", {
     method: "POST",
@@ -45,6 +45,7 @@ export async function createOrder(
       items,
       couponCode: opts?.couponCode ?? null,
       paymentMethod: opts?.paymentMethod ?? "PIX",
+      checkoutData: opts?.checkoutData ?? null,
     }),
   });
   return data.order;

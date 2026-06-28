@@ -332,7 +332,7 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
                   {(dragProvided, snapshot) => (
                     <div
                       ref={dragProvided.innerRef}
-                      {...dragProvided.draggableProps}
+                      {...(dragProvided.draggableProps as any)}
                       className={cn(
                         "flex items-center gap-3 rounded-xl border border-white/10 bg-[#0A0A0A] p-4",
                         snapshot.isDragging && "border-[#9333EA]/50"

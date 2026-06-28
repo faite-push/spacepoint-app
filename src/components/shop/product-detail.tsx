@@ -99,12 +99,12 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
           </>
         )}
         <ChevronRight className="h-4 w-4" />
-        <span className="text-white/80 truncate max-w-auto sm:max-w-none">{product.name}</span>
+        <span className="text-white/80 truncate max-w-[130px] sm:max-w-none">{product.name}</span>
       </nav>
 
-      <div className="rounded-xl border border-white/5 bg-[#111111]/30 p-5 md:p-8 backdrop-blur-md">
+      <div className="rounded-lg border border-white/5 bg-[#111111]/30 p-5 md:p-8 backdrop-blur-md">
         <div className="grid gap-8 md:gap-12 lg:grid-cols-[400px_1fr]">
-          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-white/5 bg-[#0a0a0a]">
+          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border border-white/5 bg-[#0a0a0a]">
             <Image
               src={displayImage}
               alt={product.name}
@@ -136,7 +136,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
               </button>
             </div>
 
-            <div className="flex flex-col gap-2.5 mb-6">
+            <div className="hidden md:flex flex-col gap-2.5 mb-6">
               <div className="flex items-center gap-2.5 text-[14px] text-white/80 font-medium tracking-wide">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/70">
                   <Check className="h-3.5 w-3.5" />
@@ -211,9 +211,9 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
             </div>
 
             {product.hasVariants && (
-              <div className="mb-6 rounded-lg border border-white/5 bg-transparent p-4 shadow-inner">
+              <div className="mb-6 rounded-md border border-white/5 bg-transparent p-4 shadow-inner">
                 <div className="flex justify-between items-center mb-3">
-                  <p className="text-sm font-semibold text-white/70 tracking-wide">Escolha a Variante</p>
+                  <p className="text-sm font-semibold text-white/70">Escolha a Variante</p>
                   {selectedVariant && selectedVariant.stockQuantity < 10 && selectedVariant.stockQuantity > 0 && (
                     <span className="text-xs font-bold text-orange-400 bg-orange-400/10 px-2.5 py-0.5 rounded-md border border-orange-400/20">
                       🔥 Últimas unidades
@@ -230,7 +230,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
                           key={v.id}
                           onClick={() => setSelectedVariantId(v.id)}
                           className={cn(
-                            "flex flex-col cursor-pointer rounded-xl p-2.5 sm:p-3 border transition-all duration-200 w-full text-left relative overflow-hidden group",
+                            "flex flex-col cursor-pointer rounded-md p-2.5 sm:p-3 border transition-all duration-200 w-full text-left relative overflow-hidden group",
                             active
                               ? "border-[#a855f7] bg-[#a855f7]/10 ring-1 ring-[#a855f7]/50"
                               : "border-white/10 bg-transparent hover:bg-white/[0.03] hover:border-white/20"
@@ -333,11 +333,11 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-row sm:flex-row gap-2">
                 <Button
                   onClick={handleBuyNow}
                   variant="default"
-                  className="flex-2 w-full sm:w-2/4 h-16 py-4 md:h-14 font-medium rounded-xl bg-[#a855f7] hover:bg-[#9333ea] text-white transition-colors shadow-[0_0_20px_rgba(168,85,247,0.15)] focus:ring-4 focus:ring-[#a855f7]/30 border border-t-white/20 border-b-black/20"
+                  className="flex-2 w-full sm:w-2/4 h-12 py-4 md:h-14 rounded-lg"
                   disabled={outOfStock || (product.hasVariants && !selectedVariant)}
                 >
                   Comprar agora
@@ -346,12 +346,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
                 <Button
                   variant="outline"
                   onClick={handleAdd}
-                  className={cn(
-                    "flex-1 w-full sm:w-1/2 h-16 py-4 md:h-14 font-medium rounded-xl border-white/10 bg-[#1c1c1c] text-white transition-colors",
-                    outOfStock || (product.hasVariants && !selectedVariant)
-                      ? "opacity-50"
-                      : "hover:bg-[#252525] hover:text-white"
-                  )}
+                  className={cn("flex-1 w-full sm:w-1/2 h-14 py-4 md:h-14 rounded-lg", outOfStock || (product.hasVariants && !selectedVariant) ? "opacity-50" : "hover:bg-[#252525] hover:text-white")}
                   disabled={outOfStock || (product.hasVariants && !selectedVariant)}
                 >
                   Adicionar ao Carrinho
@@ -363,7 +358,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-        <div className="flex items-center gap-4 rounded-2xl border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
+        <div className="flex items-center gap-4 rounded-lg border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-blue-500/20 text-cyan-400">
             <Zap className="h-6 w-6" />
           </div>
@@ -373,7 +368,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
           </div>
         </div>
 
-        <div className="flex items-center gap-4 rounded-2xl border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
+        <div className="flex items-center gap-4 rounded-lg border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400/20 to-teal-500/20 text-emerald-400">
             <ShieldCheck className="h-6 w-6" />
           </div>
@@ -383,7 +378,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
           </div>
         </div>
 
-        <div className="flex items-center gap-4 rounded-2xl border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
+        <div className="flex items-center gap-4 rounded-lg border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#a855f7]/20 to-purple-600/20 text-[#a855f7]">
             <CreditCard className="h-6 w-6" />
           </div>
@@ -394,15 +389,15 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
         </div>
       </div>
 
-      <div className="rounded-3xl border border-white/[0.04] bg-[#ffffff02] p-6 lg:p-8 mt-6">
+      <div className="rounded-lg border border-white/[0.04] bg-[#ffffff02] p-6 lg:p-8 mt-6">
         <h2 className="mb-6 text-2xl font-bold text-white tracking-wide">Descrição</h2>
         {(() => {
           const desc = selectedVariant?.description || product.description;
-          
+
           if (desc && typeof desc === "object") {
             return <RichContent content={desc} />;
           }
-          
+
           if (typeof desc === "string" && desc.trim().length > 0) {
             return (
               <div className="text-white/70 leading-relaxed whitespace-pre-wrap font-medium">

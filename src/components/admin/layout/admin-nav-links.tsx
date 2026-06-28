@@ -4,10 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { adminMainNavItems, adminSitePagesGroup, adminConfigNavItems, isAdminNavActive, isAdminGroupActive, type AdminNavItem, } from "./admin-nav-config";
+import { adminMainNavItems, adminSitePagesGroup, adminConfigNavItems, adminServiceNavItem, isAdminNavActive, isAdminGroupActive, type AdminNavItem, } from "./admin-nav-config";
 import { ChevronDown, ChevronRight, Store } from "lucide-react";
+import { IoArrowRedoOutline } from "react-icons/io5";
 import { usePermission } from "@/providers/PermissionProvider";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { chatApi } from "@/lib/admin-api";
 
 function NavLink({ item, pathname, nested = false, onNavigate, }: { item: AdminNavItem; pathname: string; nested?: boolean; onNavigate?: () => void; }) {
   const Icon = item.icon;
@@ -85,6 +88,47 @@ function NavGroupMenu({ pathname, onNavigate, }: { pathname: string; onNavigate?
   );
 }
 
+function ServiceLink({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  const { hasPermission } = usePermission();
+  const item = adminServiceNavItem;
+  const Icon = item.icon;
+  const isActive = isAdminNavActive(pathname, item.href);
+
+  const { data } = useQuery({
+    queryKey: ["admin", "unread-chats-count"],
+    queryFn: async () => {
+      const res = await chatApi.list({ status: "OPEN" });
+      const unreadCount = res.chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+      return unreadCount;
+    },
+    refetchInterval: 10000,
+    enabled: hasPermission(item.permission || ""),
+  });
+
+  if (item.permission && !hasPermission(item.permission)) return null;
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      className={cn(
+        "flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-colors relative",
+        isActive
+          ? "bg-white/10 text-white"
+          : "text-zinc-400 hover:bg-white/5 hover:text-white"
+      )}
+    >
+      <Icon className="h-5 w-5 shrink-0" />
+      <span className="flex-1 font-medium">{item.label}</span>
+      {data !== undefined && data > 0 && (
+        <span className="flex h-5 min-w-5 px-1 items-center justify-center rounded-full bg-[#ff493f] text-xs font-medium text-white">
+          {data > 99 ? "99+" : data}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 export function AdminNavLinks({ collapsed = false, onNavigate, className, }: { collapsed?: boolean; onNavigate?: () => void; className?: string; }) {
   const pathname = usePathname();
   const { hasPermission } = usePermission();
@@ -123,13 +167,15 @@ export function AdminNavLinks({ collapsed = false, onNavigate, className, }: { c
         </>
       )}
 
-      <div className="absolute inset-x-0 px-2 bottom-2 border-t border-white/5 pt-3">
+      <div className="absolute inset-x-0 px-2 bottom-2 border-t border-white/5 pt-3 space-y-1">
+        <ServiceLink pathname={pathname} onNavigate={onNavigate} />
+        
         <Link
           href="/"
           onClick={onNavigate}
           className="flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
         >
-          <Store className="h-5 w-5 shrink-0" />
+          <IoArrowRedoOutline className="h-5 w-5 shrink-0" />
           <span>Ver Loja</span>
         </Link>
       </div>

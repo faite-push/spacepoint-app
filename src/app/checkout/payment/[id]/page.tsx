@@ -149,15 +149,15 @@ export default function PaymentPage({ params }: PageProps) {
 
   if (error || !data) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-6 bg-[#050505] p-6 text-center">
-        <div className="h-20 w-20 rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+      <div className="flex max-h-screen flex-col items-center justify-center gap-6 bg-transparent p-6 text-center">
+        <div className="h-20 w-20 rounded-md bg-red-500/10 flex items-center justify-center">
           <AlertCircle className="h-10 w-10 text-red-500" />
         </div>
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-white">Pedido não encontrado</h1>
           <p className="text-zinc-500 max-w-xs">Não conseguimos localizar as informações deste pagamento.</p>
         </div>
-        <Button asChild variant="outline" className="rounded-2xl border-white/10">
+        <Button asChild variant="outline" className="rounded-md px-6 py-4 border-white/10">
           <Link href="/">Voltar para a loja</Link>
         </Button>
       </div>

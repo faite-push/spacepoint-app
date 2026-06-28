@@ -239,7 +239,7 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
 
                     <div className="flex items-center gap-3">
                       <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger asChild>
                           <Button
                             type="button"
                             variant="ghost"

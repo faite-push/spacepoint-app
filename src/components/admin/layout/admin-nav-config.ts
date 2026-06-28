@@ -1,6 +1,8 @@
 import React from "react";
 import { LayoutDashboard, FolderClosed, BadgeDollarSign, Tag, UserRoundCog, Star, UsersRound, Settings, Globe, Home, PanelBottom, FileText, SlidersHorizontal, Megaphone, MessageSquareQuote, Search, Package, Calendar as CalendarIcon, Wrench, Image as ImageIcon, CreditCard, type LucideIcon, Paintbrush, ReceiptText, ShoppingCart, } from "lucide-react";
 import { PiGooglePhotosLogo } from "react-icons/pi";
+import { IoChatbubblesOutline } from "react-icons/io5";
+import { RiCustomerService2Fill } from "react-icons/ri";
 
 export type AdminNavItem = {
   href: string;
@@ -27,6 +29,13 @@ export const adminMainNavItems: AdminNavItem[] = [
   { href: "/dashboard/admin/reviews", icon: Star, label: "Avaliações", permission: "analytics:view" },
 ];
 
+export const adminServiceNavItem: AdminNavItem = {
+  href: "/dashboard/admin/chats",
+  icon: RiCustomerService2Fill,
+  label: "Space Chat",
+  permission: "orders:view",
+};
+
 export const adminSitePagesGroup: AdminNavGroup = {
   id: "site-pages",
   icon: Globe,
@@ -37,7 +46,6 @@ export const adminSitePagesGroup: AdminNavGroup = {
     { href: "/dashboard/admin/pages/checkout", icon: ShoppingCart, label: "Checkout" },
     { href: "/dashboard/admin/pages/global", icon: Paintbrush, label: "Aparência" },
     { href: "/dashboard/admin/pages/institutional", icon: ReceiptText, label: "Páginas Institucionais" },
-    { href: "/dashboard/admin/pages/seo", icon: Wrench, label: "Configurações Técnicas" },
   ],
 };
 

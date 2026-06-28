@@ -72,7 +72,13 @@ export type Order = {
   id: string;
   status: string;
   total: number;
+  subtotal?: number;
+  discount?: number;
+  paymentMethod?: string;
+  couponCode?: string | null;
+  checkoutData?: Record<string, string> | null;
   createdAt: string;
+  updatedAt?: string;
   paidAt: string | null;
   items: OrderItem[];
 };

@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { User, Package, Heart, Loader2 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+
+import { Loader2 } from "lucide-react";
+import { BiSolidUser } from "react-icons/bi";
+import { FaBasketShopping } from "react-icons/fa6";
+import { BsBookmarkHeartFill } from "react-icons/bs";
 
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/account", label: "Minha Conta", icon: User, exact: true },
-  { href: "/account/orders", label: "Meus Pedidos", icon: Package },
-  { href: "/account/wishlist", label: "Lista de Desejos", icon: Heart },
+  { href: "/account", label: "Minha Conta", icon: BiSolidUser, exact: true },
+  { href: "/account/orders", label: "Meus Pedidos", icon: FaBasketShopping },
+  { href: "/account/wishlist", label: "Lista de Desejos", icon: BsBookmarkHeartFill },
 ];
 
 export function AccountShell({ children }: { children: React.ReactNode }) {
@@ -32,15 +36,17 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
-  }
+  };
 
   if (!user) return null;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 md:py-12">
+    <div className="mx-auto max-w-7xl -mt-15">
       <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
-        <aside className="space-y-6">
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5">
+        <aside className="max-h-[600px] space-y-2 rounded-md border border-white/5 bg-transparent">
+          <div className="absolute top-10 left-[10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+
+          <div className="p-4 border-b border-white/5">
             <div className="flex items-center gap-3">
               {user.image ? (
                 <Image
@@ -48,21 +54,21 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
                   alt={user.name || "Avatar"}
                   width={48}
                   height={48}
-                  className="h-12 w-12 rounded-full object-cover border border-white/10"
+                  className="h-12 w-12 rounded-full object-cover select-none pointer-events-none border border-white/10"
                 />
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">
-                  <User className="h-6 w-6" />
+                  <BiSolidUser className="h-6 w-6" />
                 </div>
               )}
               <div className="min-w-0">
-                <p className="font-bold text-white truncate">{user.name || "Usuário"}</p>
-                <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                <p className="font-bold text-white">{user.name || "Usuário"}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
             </div>
           </div>
 
-          <nav className="rounded-2xl border border-white/5 bg-white/[0.02] p-2 space-y-1">
+          <nav className="p-2 space-y-1">
             {NAV.map((item) => {
               const active = item.exact
                 ? pathname === item.href
@@ -73,7 +79,7 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-md px-4 py-3 text-sm font-medium transition-colors",
                     active
                       ? "bg-primary/15 text-primary"
                       : "text-zinc-400 hover:bg-white/5 hover:text-white"

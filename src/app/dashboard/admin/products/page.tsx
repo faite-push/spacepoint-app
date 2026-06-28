@@ -29,8 +29,7 @@ function PortalAware({ provided, snapshot, portalEl, children, }: { provided: Dr
   const element = (
     <div
       ref={provided.innerRef}
-      {...provided.draggableProps}
-      style={provided.draggableProps.style}
+      {...(provided.draggableProps as any)}
     >
       {children}
     </div>
@@ -507,14 +506,13 @@ export default function UnifiedInventoryPage() {
           <PortalAware provided={provided} snapshot={snapshot} portalEl={portalEl}>
             <div className="flex flex-col">
               <div
-                {...provided.dragHandleProps}
                 className={cn(
                   "group flex items-center justify-between gap-4 py-3 transition-colors", snapshot.isDragging ? "bg-[#111] rounded-md border border-white/10" : "bg-transparent hover:bg-black/20"
                 )}
                 style={{ paddingLeft: `${indent * 6 + 16}px`, paddingRight: "16px" }}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="text-white/60 shrink-0 cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 sm:flex p-1">
+                  <div {...provided.dragHandleProps} className="text-white/60 shrink-0 cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 sm:flex p-1">
                     <TbGridDots className="h-5 w-5" />
                   </div>
 

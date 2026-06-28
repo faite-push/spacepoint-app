@@ -205,7 +205,7 @@ function CategoryRow({ category, depth, index, expanded, onToggle, onEdit, onDel
   return (
     <Draggable draggableId={category.id} index={index}>
       {(dragProv) => (
-        <div ref={dragProv.innerRef} {...dragProv.draggableProps}>
+        <div ref={dragProv.innerRef} {...(dragProv.draggableProps as any)}>
           <div
             className="lg:hidden border-b border-white/5 px-3 py-3 transition-colors hover:bg-white/5"
             style={{ marginLeft: depth * 12 }}

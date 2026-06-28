@@ -166,7 +166,7 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
                     {variants.map((v, index) => (
                       <Draggable key={v.id} draggableId={v.id} index={index}>
                         {(drag, snapshot) => (
-                          <div ref={drag.innerRef} {...drag.draggableProps} className={cn("flex items-center gap-3 px-6 py-4 bg-transparent hover:bg-black/20 transition-colors group", snapshot.isDragging && "rounded-md border border-white/10")}>
+                          <div ref={drag.innerRef} {...(drag.draggableProps as any)} className={cn("flex items-center gap-3 px-6 py-4 bg-transparent hover:bg-black/20 transition-colors group", snapshot.isDragging && "rounded-md border border-white/10")}>
                             <div
                               {...drag.dragHandleProps}
                               className="text-white/60 shrink-0 cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 p-1"

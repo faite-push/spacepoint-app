@@ -143,7 +143,7 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
                       {localBanners.map((banner, index) => (
                         <Draggable key={banner.id} draggableId={banner.id} index={index}>
                           {(provided, snapshot) => (
-                            <div ref={provided.innerRef} {...provided.draggableProps} className={cn("flex flex-col sm:flex-row sm:items-center gap-4 p-4 transition-colors hover:bg-white/[0.02]", snapshot.isDragging && "bg-[#111] shadow-2xl ring-1 ring-white/10 z-50 rounded-lg")}>
+                            <div ref={provided.innerRef} {...(provided.draggableProps as any)} className={cn("flex flex-col sm:flex-row sm:items-center gap-4 p-4 transition-colors hover:bg-white/[0.02]", snapshot.isDragging && "bg-[#111] shadow-2xl ring-1 ring-white/10 z-50 rounded-lg")}>
                               <div {...provided.dragHandleProps} className="flex items-center justify-center w-8 h-8 rounded-md text-white/75 hover:text-white cursor-grab active:cursor-grabbing self-start sm:self-auto shrink-0">
                                 <TbGridDots className="h-5 w-5" />
                               </div>
@@ -191,7 +191,7 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
                               <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 mt-4 sm:mt-0">
                                 <Can I="settings:manage">
                                   <Tooltip>
-                                    <TooltipTrigger render={
+                                    <TooltipTrigger asChild>
                                       <Button
                                         variant="ghost"
                                         size="icon"
@@ -200,14 +200,13 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
                                       >
                                         <Pencil className="h-4 w-4" />
                                       </Button>
-                                    }>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>Editar banner</p>
                                     </TooltipContent>
                                   </Tooltip>
                                   <Tooltip>
-                                    <TooltipTrigger render={
+                                    <TooltipTrigger asChild>
                                       <Button
                                         variant="destructive"
                                         size="icon"
@@ -215,7 +214,6 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
                                       >
                                         <Trash2 className="h-4 w-4" />
                                       </Button>
-                                    }>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>Excluir banner</p>

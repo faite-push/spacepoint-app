@@ -236,7 +236,7 @@ export default function OrdersPage() {
                 <TableHead className="p-4 pl-6 text-sm font-medium text-white/50">Pedido</TableHead>
                 <TableHead className="p-4 text-sm font-medium text-white/50">Cliente</TableHead>
                 <TableHead className="p-4 text-sm font-medium text-white/50">Total</TableHead>
-                <TableHead className="p-4 text-sm font-medium text-white/50">Entrega</TableHead>
+                <TableHead className="p-4 text-sm font-medium text-white/50">Método</TableHead>
                 <TableHead className="p-4 text-sm font-medium text-white/50">Status</TableHead>
                 <TableHead className="p-4 text-sm font-medium text-white/50">Data</TableHead>
                 <TableHead className="p-4 text-sm font-medium text-white/50 text-right pr-6">Ações</TableHead>
@@ -464,6 +464,20 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
                   </div>
                 </section>
 
+                {order.checkoutData && Object.entries(order.checkoutData).length > 0 && (
+                  <section>
+                    <h4 className="text-sm font-medium text-white mb-1">Dados do Checkout</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.entries(order.checkoutData).map(([key, value]) => (
+                        <div key={key} className="bg-card p-3 rounded-md border border-white/5">
+                          <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">{key}</p>
+                          <p className="text-sm text-white/90 font-medium">{String(value)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
                 <section className="space-y-4">
                   <h4 className="text-sm font-medium text-white mb-1">Itens do Pedido ( {order.items?.length || 0}x )</h4>
                   <div className="select-none flex-col items-center space-y-4 gap-4 bg-card p-4 rounded-md border border-white/5">
@@ -494,10 +508,27 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
                       <span className="text-zinc-500">Subtotal</span>
                       <span className="text-white">{formatBRL(order.total)}</span>
                     </div>
-                    <div className="flex justify-between text-sm font-bold">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-zinc-500">Desconto</span>
+                      <span className="text-white">{formatBRL(order.discount)}</span>
+                    </div>
+                     <div className="flex justify-between text-sm font-bold">
                       <span className="text-white">Total</span>
                       <span className="text-primary text-lg">{formatBRL(order.total)}</span>
                     </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-6 pt-2">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground mr-2">Pagamento</span>
+                      <span className="text-xs text-white bg-white/5 px-2 py-1 rounded border border-white/5 font-medium uppercase tracking-wider">{order.paymentMethod || "Não informado"}</span>
+                    </div>
+                    {order.couponCode && (
+                      <div className="flex flex-col">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground mr-2">Cupom</span>
+                        <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 font-bold uppercase tracking-wider">{order.couponCode}</span>
+                      </div>
+                    )}
                   </div>
                 </section>
 
