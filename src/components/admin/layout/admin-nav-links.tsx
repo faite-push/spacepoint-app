@@ -54,7 +54,7 @@ function NavGroupMenu({ pathname, onNavigate, }: { pathname: string; onNavigate?
   }, [groupActive]);
 
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

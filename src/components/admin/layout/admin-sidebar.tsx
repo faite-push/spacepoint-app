@@ -9,13 +9,15 @@ export function AdminSidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-50 hidden h-screen w-64 flex-col border-r border-white/5 bg-[#111111] lg:flex"
+        "fixed left-0 top-0 z-50 hidden h-screen w-64 flex-col border-r border-white/5 bg-transparent backdrop-blur-lg lg:flex"
       )}
     >
-      <div className="flex h-20 items-center justify-between border-b border-white/5 px-4">
+      <div className="absolute top-[-20%] right-[-30%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-white/10 rounded-full blur-[120px] -z-10 pointer-events-none" />
+    
+      <div className="flex h-20 items-center justify-between px-4">
         <Link
-          href="/dashboard/admin"
-          className="mx-auto flex items-center gap-2 overflow-hidden"
+          href="/"
+          className="flex items-center justify-center gap-2 overflow-hidden"
           aria-label="Space Point Admin"
         >
           <Image
@@ -23,7 +25,7 @@ export function AdminSidebar() {
             alt="Space Point"
             width={140}
             height={44}
-            className="mr-2 h-auto w-auto object-contain"
+            className="mr-2 h-auto w-auto object-contain select-none pointer-events-none"
             priority
           />
         </Link>

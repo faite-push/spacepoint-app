@@ -7,6 +7,7 @@ import { FooterReviews } from "@/components/home/footer-reviews";
 import { PromoTopBar } from "@/components/storefront/promo-top-bar";
 import { MaintenanceGate } from "@/components/storefront/maintenance-gate";
 import { ConversionPopup } from "@/components/home/conversion-popup";
+import { StorefrontPlugins } from "@/components/storefront/storefront-plugins";
 import type { PublicHomeReview, PublicSiteConfig } from "@/lib/site-api";
 
 export function SiteShell({ children, siteConfig, homeReviews = [], }: { children: React.ReactNode; siteConfig?: PublicSiteConfig | null; homeReviews?: PublicHomeReview[]; }) {
@@ -24,6 +25,7 @@ export function SiteShell({ children, siteConfig, homeReviews = [], }: { childre
 
   return (
     <MaintenanceGate config={siteConfig}>
+      <StorefrontPlugins config={siteConfig?.pluginsConfig} />
       <ConversionPopup config={siteConfig} />
       <PromoTopBar config={siteConfig} />
       {!isMaintenance && <Navbar siteConfig={siteConfig} />}

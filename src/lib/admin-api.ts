@@ -384,6 +384,7 @@ export type SiteConfigRecord = {
   chatPreChatQuestions: string | null;
   chatWelcomeMessage: string | null;
   chatAutomatedMessages: string | null;
+  pluginsConfig?: PluginsConfig | null;
   checkoutSettings?: CheckoutSettings | null;
 };
 
@@ -796,8 +797,32 @@ export interface AdminClient {
   createdAt: string;
   ordersCount: number;
   totalSpent: number;
+  totalItemsCount: number;
+  totalDiscounts: number;
   recentOrders?: Array<{ id: string; total: number; status: string; createdAt: string }>;
 }
+
+export type PluginField = {
+  key: string;
+  label: string;
+  placeholder?: string;
+};
+
+export type PluginDefinition = {
+  id: string;
+  name: string;
+  description: string;
+  category: 'marketing' | 'atendimento' | 'metricas';
+  fields: PluginField[];
+  logoUrl?: string;
+};
+
+export type PluginInstallState = {
+  enabled: boolean;
+  config: Record<string, string>;
+};
+
+export type PluginsConfig = Record<string, PluginInstallState>;
 
 export interface ChatReview extends Chat {
   order: Chat['order'];

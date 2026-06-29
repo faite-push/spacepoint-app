@@ -88,6 +88,7 @@ export type PublicSiteConfig = {
   popupTrigger: "entry" | "exit" | "delay" | null;
   popupDelay: number | null;
   checkoutSettings?: import("@/lib/admin-api").CheckoutSettings | null;
+  pluginsConfig?: import("@/lib/admin-api").PluginsConfig | null;
 };
 
 export type PublicHomeReview = {

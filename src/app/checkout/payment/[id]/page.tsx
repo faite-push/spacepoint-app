@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useRef, useState, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import { fetchOrder, formatPrice } from "@/lib/shop-api";
+import { trackStorefrontPurchase } from "@/lib/storefront-plugin-events";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -29,6 +30,7 @@ export default function PaymentPage({ params }: PageProps) {
   const searchParams = useSearchParams();
   const paymentMethod = (searchParams.get("paymentMethod") || "PIX").toUpperCase();
   const [copied, setCopied] = useState(false);
+  const purchaseTrackedRef = useRef(false);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["order", id, paymentMethod],
@@ -40,15 +42,25 @@ export default function PaymentPage({ params }: PageProps) {
   });
 
   useEffect(() => {
-    if (data?.order?.status === "PAID" || data?.order?.status === "DELIVERED") {
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ["#A855F7", "#D8B4FE", "#FFFFFF"]
+    const order = data?.order;
+    const isPaid = order?.status === "PAID" || order?.status === "DELIVERED";
+    if (!isPaid || !order) return;
+
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ["#A855F7", "#D8B4FE", "#FFFFFF"],
+    });
+
+    if (!purchaseTrackedRef.current) {
+      purchaseTrackedRef.current = true;
+      trackStorefrontPurchase({
+        orderId: order.id,
+        value: order.total,
       });
     }
-  }, [data?.order?.status]);
+  }, [data?.order]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
