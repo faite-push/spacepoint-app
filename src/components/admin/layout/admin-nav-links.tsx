@@ -9,8 +9,9 @@ import { ChevronDown, ChevronRight, Store } from "lucide-react";
 import { IoArrowRedoOutline } from "react-icons/io5";
 import { usePermission } from "@/providers/PermissionProvider";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { chatApi } from "@/lib/admin-api";
+import { useSocket } from "@/context/socket-context";
 
 function NavLink({ item, pathname, nested = false, onNavigate, }: { item: AdminNavItem; pathname: string; nested?: boolean; onNavigate?: () => void; }) {
   const Icon = item.icon;
@@ -90,6 +91,8 @@ function NavGroupMenu({ pathname, onNavigate, }: { pathname: string; onNavigate?
 
 function ServiceLink({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const { hasPermission } = usePermission();
+  const queryClient = useQueryClient();
+  const { socket, isConnected } = useSocket();
   const item = adminServiceNavItem;
   const Icon = item.icon;
   const isActive = isAdminNavActive(pathname, item.href);
@@ -101,9 +104,25 @@ function ServiceLink({ pathname, onNavigate }: { pathname: string; onNavigate?: 
       const unreadCount = res.chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
       return unreadCount;
     },
-    refetchInterval: 10000,
+    refetchInterval: isConnected ? false : 10000,
     enabled: hasPermission(item.permission || ""),
   });
+
+  useEffect(() => {
+    if (!socket || !hasPermission(item.permission || "")) return;
+
+    const refresh = () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "unread-chats-count"] });
+    };
+
+    socket.on("new_message_alert", refresh);
+    socket.on("chat_list_update", refresh);
+
+    return () => {
+      socket.off("new_message_alert", refresh);
+      socket.off("chat_list_update", refresh);
+    };
+  }, [socket, queryClient, item.permission, hasPermission]);
 
   if (item.permission && !hasPermission(item.permission)) return null;
 

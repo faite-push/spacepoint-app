@@ -380,6 +380,10 @@ export type SiteConfigRecord = {
   popupCtaLink: string | null;
   popupTrigger: "entry" | "exit" | "delay" | null;
   popupDelay: number | null;
+  chatPreChatEnabled: boolean | null;
+  chatPreChatQuestions: string | null;
+  chatWelcomeMessage: string | null;
+  chatAutomatedMessages: string | null;
   checkoutSettings?: CheckoutSettings | null;
 };
 
@@ -683,23 +687,38 @@ export interface ChatMessage {
   content: string;
   type: "TEXT" | "IMAGE" | "SYSTEM" | "AUTOMATED" | "ORDER_APPROVED" | "DELIVERY";
   fileUrl: string | null;
+  isPinned?: boolean;
   createdAt: string;
+}
+
+export interface ChatLabelReference {
+  id: string;
+  type: 'PRODUCT' | 'CATEGORY' | 'VARIANT';
+  referenceId: string;
+  label?: string;
 }
 
 export interface ChatLabel {
   id: string;
   name: string;
   color: string;
+  references?: ChatLabelReference[];
 }
 
 export interface Chat {
   id: string;
   orderId: string;
   status: "OPEN" | "CLOSED" | "ARCHIVED";
+  isArchived?: boolean;
   isResolved?: boolean;
-  unreadCount?: number;
   rating: number | null;
   ratingComment: string | null;
+  ratingTags?: string[] | null;
+  isAnonymousRating?: boolean;
+  assignedToId?: string | null;
+  assignedTo?: { id: string; name: string | null; email: string | null; image: string | null } | null;
+  firstAdminResponseAt?: string | null;
+  unreadCount?: number;
   createdAt: string;
   updatedAt: string;
   lastAdminReadAt?: string | null;
@@ -714,13 +733,19 @@ export interface Chat {
     paymentMethod: string | null;
     createdAt: string;
     paidAt: string | null;
+    adminNotes?: string | null;
+    clientIp?: string | null;
+    userAgent?: string | null;
     payments?: Array<{
       id: string;
       externalId: string | null;
       provider: string | null;
+      status: string;
+      amount?: number;
       createdAt: string;
     }>;
     user: {
+      id: string;
       name: string | null;
       email: string | null;
       image: string | null;
@@ -758,11 +783,28 @@ export interface ChatMacro {
   id: string;
   shortcut: string;
   content: string;
+  category?: string;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface AdminClient {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  createdAt: string;
+  ordersCount: number;
+  totalSpent: number;
+  recentOrders?: Array<{ id: string; total: number; status: string; createdAt: string }>;
+}
+
+export interface ChatReview extends Chat {
+  order: Chat['order'];
+}
+
 export const chatApi = {
+  getById: (chatId: string) => request<Chat>(`/v2/api/chats/${chatId}`),
   getByOrder: (orderId: string) => request<Chat>(`/v2/api/chats/order/${orderId}`),
   sendMessage: (chatId: string, payload: { content: string; type?: string; fileUrl?: string }) =>
     request<ChatMessage>(`/v2/api/chats/${chatId}/messages`, {
@@ -784,36 +826,69 @@ export const chatApi = {
       method: "PUT",
       body: JSON.stringify({ labelIds }),
     }),
-  updateStatus: (chatId: string, payload: { status?: string; rating?: number; ratingComment?: string; isResolved?: boolean }) =>
+  updateStatus: (chatId: string, payload: { status?: string; rating?: number; ratingComment?: string; isResolved?: boolean; isArchived?: boolean }) =>
     request<Chat>(`/v2/api/chats/${chatId}/status`, {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
   listLabels: () => request<{ labels: ChatLabel[] }>("/v2/api/chats/labels"),
-  createLabel: (name: string, color: string) =>
+  createLabel: (payload: { name: string; color: string; references?: { type: 'PRODUCT' | 'CATEGORY' | 'VARIANT'; referenceId: string }[] }) =>
     request<ChatLabel>("/v2/api/chats/labels", {
       method: "POST",
-      body: JSON.stringify({ name, color }),
+      body: JSON.stringify(payload),
+    }),
+  updateLabel: (id: string, payload: { name?: string; color?: string; references?: { type: 'PRODUCT' | 'CATEGORY' | 'VARIANT'; referenceId: string }[] }) =>
+    request<ChatLabel>(`/v2/api/chats/labels/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
     }),
   deleteLabel: (id: string) =>
     request<{ success: boolean }>(`/v2/api/chats/labels/${id}`, {
       method: "DELETE",
     }),
   listMacros: () => request<{ macros: ChatMacro[] }>("/v2/api/chats/macros"),
-  createMacro: (shortcut: string, content: string) =>
+  createMacro: (shortcut: string, content: string, category?: string) =>
     request<ChatMacro>("/v2/api/chats/macros", {
       method: "POST",
-      body: JSON.stringify({ shortcut, content }),
+      body: JSON.stringify({ shortcut, content, category }),
     }),
   deleteMacro: (id: string) =>
     request<{ success: boolean }>(`/v2/api/chats/macros/${id}`, {
       method: "DELETE",
     }),
-  updateMacro: (id: string, shortcut: string, content: string) =>
+  updateMacro: (id: string, shortcut: string, content: string, category?: string) =>
     request<ChatMacro>(`/v2/api/chats/macros/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ shortcut, content }),
+      body: JSON.stringify({ shortcut, content, category }),
     }),
+  assignChat: (chatId: string, assignedToId: string | null) =>
+    request<Chat>(`/v2/api/chats/${chatId}/assign`, {
+      method: "PATCH",
+      body: JSON.stringify({ assignedToId }),
+    }),
+  togglePinMessage: (chatId: string, messageId: string) =>
+    request<ChatMessage>(`/v2/api/chats/${chatId}/messages/${messageId}/pin`, { method: "PATCH" }),
+  submitRating: (chatId: string, payload: { rating: number; ratingComment?: string; ratingTags?: string[]; isAnonymous?: boolean }) =>
+    request<Chat>(`/v2/api/chats/${chatId}/rating`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  reopenChat: (chatId: string) =>
+    request<Chat>(`/v2/api/chats/${chatId}/reopen`, { method: "POST" }),
+  listClients: (params?: { search?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set("search", params.search);
+    if (params?.page) qs.set("page", String(params.page));
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{ clients: AdminClient[]; total: number; page: number; totalPages: number }>(`/v2/api/admin/clients${suffix}`);
+  },
+  listReviews: (params?: { page?: number; minRating?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.minRating) qs.set("minRating", String(params.minRating));
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{ reviews: ChatReview[]; total: number; page: number; totalPages: number; averageRating: number }>(`/v2/api/admin/chat-reviews${suffix}`);
+  },
   markAsRead: (chatId: string) =>
     request<{ success: boolean; lastAdminReadAt: string }>(`/v2/api/chats/${chatId}/read`, {
       method: "PATCH",

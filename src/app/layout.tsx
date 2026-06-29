@@ -6,6 +6,7 @@ import "@/styles/globals.css";
 import { SiteShell } from "@/components/site-shell";
 import { AnalyticsVisit } from "@/components/shared/analytics-visit";
 import { AuthProvider } from "@/context/auth-context";
+import { SocketProvider } from "@/context/socket-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Providers } from "@/components/shared/providers";
 import { fetchSiteConfig, fetchHomeReviews, fetchPageSeo } from "@/lib/site-api";
@@ -62,12 +63,14 @@ export default async function RootLayout({
       >
         <Providers>
           <AuthProvider>
-            <TooltipProvider delay={200}>
-              <AnalyticsVisit />
-              <SiteShell siteConfig={siteConfig} homeReviews={homeReviews}>
-                {children}
-              </SiteShell>
-            </TooltipProvider>
+            <SocketProvider>
+              <TooltipProvider delay={200}>
+                <AnalyticsVisit />
+                <SiteShell siteConfig={siteConfig} homeReviews={homeReviews}>
+                  {children}
+                </SiteShell>
+              </TooltipProvider>
+            </SocketProvider>
           </AuthProvider>
         </Providers>
       </body>

@@ -2,108 +2,153 @@
 
 import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { MessageSquare, ShoppingBag } from 'lucide-react';
 
-import { chatApi, type Chat } from '@/lib/admin-api';
+import { chatApi } from '@/lib/admin-api';
 import { playNotificationSound } from '@/lib/notification-sound';
 import { usePermission } from '@/providers/PermissionProvider';
+import { useSocket } from '@/context/socket-context';
 
 const CHATS_PATH = '/dashboard/admin/chats';
-const POLL_INTERVAL = 5000;
 
-function getCustomerName(chat: Chat) {
-  return chat.order?.user?.name || chat.order?.user?.email || 'Cliente';
+type ChatMessagePreview = {
+  id: string;
+  content: string;
+  senderId: string;
+  type?: string;
+};
+
+type AlertPayload = {
+  chatId: string;
+  message?: ChatMessagePreview;
+  type?: 'new_chat';
+  orderId?: string;
+  customerName?: string;
+};
+
+function isCustomerMessage(msg?: ChatMessagePreview) {
+  if (!msg) return false;
+  return (
+    msg.senderId !== 'ADMIN' &&
+    msg.senderId !== 'SYSTEM' &&
+    msg.type !== 'ORDER_APPROVED' &&
+    msg.type !== 'AUTOMATED' &&
+    msg.type !== 'DELIVERY'
+  );
 }
 
 export function AdminChatNotifications() {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { hasPermission } = usePermission();
+  const { socket, isConnected } = useSocket();
 
-  const initialized = useRef(false);
+  const volumeRef = useRef(0.8);
   const knownChatIds = useRef(new Set<string>());
   const lastMessageIds = useRef(new Map<string, string>());
-  const volumeRef = useRef(0.8);
+  const seeded = useRef(false);
 
-  const isOnChatsPage = pathname === CHATS_PATH;
+  const isOnChatsPage = pathname.startsWith(CHATS_PATH);
+  const isOnChatsPageRef = useRef(isOnChatsPage);
+  useEffect(() => { isOnChatsPageRef.current = isOnChatsPage; }, [isOnChatsPage]);
+
   const canView = hasPermission('orders:view');
 
+  // Fallback seed when WS is disconnected
   const { data } = useQuery({
     queryKey: ['admin', 'chat-notifications'],
     queryFn: () => chatApi.list({ status: 'OPEN', sortBy: 'activity' }),
-    refetchInterval: POLL_INTERVAL,
+    refetchInterval: isConnected ? false : 8000,
     enabled: canView,
+    staleTime: isConnected ? Infinity : 0,
   });
 
   useEffect(() => {
-    if (!data?.chats || !canView) return;
+    if (!data?.chats || !canView || seeded.current) return;
+    data.chats.forEach((chat) => {
+      knownChatIds.current.add(chat.id);
+      if (chat.messages?.[0]) {
+        lastMessageIds.current.set(chat.id, chat.messages[0].id);
+      }
+    });
+    seeded.current = true;
+  }, [data?.chats, canView]);
 
-    const chats = data.chats;
+  useEffect(() => {
+    if (!socket || !canView) return;
 
-    if (!initialized.current) {
-      chats.forEach((chat) => {
-        knownChatIds.current.add(chat.id);
-        if (chat.messages?.[0]) {
-          lastMessageIds.current.set(chat.id, chat.messages[0].id);
-        }
+    const showToast = (
+      title: string,
+      description: string,
+      icon: React.ReactNode,
+      actionLabel = 'Abrir chat',
+      targetChatId?: string
+    ) => {
+      if (isOnChatsPageRef.current) return;
+      playNotificationSound(volumeRef.current);
+      toast(title, {
+        description,
+        icon,
+        action: {
+          label: actionLabel,
+          onClick: () => router.push(targetChatId ? `${CHATS_PATH}/chat/${targetChatId}` : CHATS_PATH),
+        },
+        duration: 8000,
       });
-      initialized.current = true;
-      return;
-    }
+    };
 
-    for (const chat of chats) {
-      const latestMsg = chat.messages?.[0];
+    const handleNewMessageAlert = (payload: AlertPayload) => {
+      const { chatId, message, type, orderId, customerName } = payload;
 
-      if (!knownChatIds.current.has(chat.id)) {
-        knownChatIds.current.add(chat.id);
-        if (latestMsg) {
-          lastMessageIds.current.set(chat.id, latestMsg.id);
-        }
-
-        if (!isOnChatsPage) {
-          playNotificationSound(volumeRef.current);
-          toast('Nova compra recebida', {
-            description: `${getCustomerName(chat)} — Pedido #${chat.orderId.slice(-8)}`,
-            icon: <ShoppingBag className="h-4 w-4 text-primary" />,
-            action: {
-              label: 'Ver atendimento',
-              onClick: () => router.push(CHATS_PATH),
-            },
-            duration: 8000,
-          });
-        }
-        continue;
+      if (type === 'new_chat') {
+        queryClient.invalidateQueries({ queryKey: ['admin', 'chats'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'unread-chats-count'] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['admin', 'unread-chats-count'] });
       }
 
-      if (!latestMsg) continue;
+      const customer = customerName || 'Cliente';
 
-      const prevId = lastMessageIds.current.get(chat.id);
-      if (prevId === latestMsg.id) continue;
-
-      lastMessageIds.current.set(chat.id, latestMsg.id);
-
-      const isCustomerMessage =
-        latestMsg.senderId !== 'ADMIN' &&
-        latestMsg.senderId !== 'SYSTEM' &&
-        latestMsg.type !== 'ORDER_APPROVED' &&
-        latestMsg.type !== 'AUTOMATED';
-
-      if (isCustomerMessage && !isOnChatsPage) {
-        playNotificationSound(volumeRef.current);
-        toast('Nova mensagem no atendimento', {
-          description: `${getCustomerName(chat)}: ${latestMsg.content.slice(0, 80)}${latestMsg.content.length > 80 ? '...' : ''}`,
-          icon: <MessageSquare className="h-4 w-4 text-blue-400" />,
-          action: {
-            label: 'Abrir chat',
-            onClick: () => router.push(CHATS_PATH),
-          },
-          duration: 8000,
-        });
+      if (type === 'new_chat') {
+        if (knownChatIds.current.has(chatId)) return;
+        knownChatIds.current.add(chatId);
+        queryClient.setQueryData<number>(['admin', 'unread-chats-count'], (old) => (old ?? 0) + 1);
+        queryClient.invalidateQueries({ queryKey: ['admin', 'chats'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'unread-chats-count'] });
+        showToast(
+          'Nova compra recebida',
+          `${customer}${orderId ? ` — Pedido #${orderId.slice(-8)}` : ''}`,
+          <ShoppingBag className="h-4 w-4 text-primary" />,
+          'Ver atendimento',
+          chatId
+        );
+        return;
       }
-    }
-  }, [data?.chats, canView, isOnChatsPage, router]);
+
+      if (!message || !isCustomerMessage(message)) return;
+
+      const prevId = lastMessageIds.current.get(chatId);
+      if (prevId === message.id) return;
+      lastMessageIds.current.set(chatId, message.id);
+
+      showToast(
+        'Nova mensagem no atendimento',
+        `${customer}: ${message.content.slice(0, 80)}${message.content.length > 80 ? '...' : ''}`,
+        <MessageSquare className="h-4 w-4 text-blue-400" />,
+        'Abrir chat',
+        chatId
+      );
+    };
+
+    socket.on('new_message_alert', handleNewMessageAlert);
+
+    return () => {
+      socket.off('new_message_alert', handleNewMessageAlert);
+    };
+  }, [socket, canView, router, queryClient]);
 
   return null;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, Check, ChevronDown, ChevronUp, Trash2, X, Box, Tag, Layers, Package, Folder } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,12 @@ export function ReferenceSelectorDialog({ open, onOpenChange, initialReferences,
   const [search, setSearch] = useState("");
   const [selectedRefs, setSelectedRefs] = useState<Reference[]>(initialReferences);
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (open) {
+      setSelectedRefs(initialReferences);
+    }
+  }, [open, initialReferences]);
 
   const { data: catData } = useQuery({
     queryKey: ["admin", "categories", "flat"],

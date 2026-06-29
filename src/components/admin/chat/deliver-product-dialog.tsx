@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -57,17 +57,13 @@ export function DeliverProductDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#111] border-white/10 max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-white">{dialogTitle}</DialogTitle>
-          <p className="text-sm text-zinc-500">
-            {editMode
-              ? 'Edite todos os produtos'
-              : `Adicione os produtos que deseja entregar (${pendingCount} pendente${pendingCount !== 1 ? 's' : ''})`}
-          </p>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{editMode ? 'Edite todos os produtos' : `Adicione os produtos que deseja entregar (${pendingCount} pendente${pendingCount !== 1 ? 's' : ''})`}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4">
           {!editMode && isAutomatic && (
             <label className="flex items-start gap-3 rounded-md border border-white/10 p-4 cursor-pointer hover:bg-white/[0.02]">
               <input
@@ -92,20 +88,14 @@ export function DeliverProductDialog({
                 <button
                   type="button"
                   onClick={() => setMode('text')}
-                  className={cn(
-                    'flex-1 py-2.5 text-sm font-medium transition-colors',
-                    mode === 'text' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-white'
-                  )}
+                  className={cn('flex-1 py-2.5 cursor-pointer text-sm font-medium transition-colors', mode === 'text' ? 'bg-white/10 text-white' : 'text-muted-foreground')}
                 >
                   Texto
                 </button>
                 <button
                   type="button"
                   onClick={() => setMode('lines')}
-                  className={cn(
-                    'flex-1 py-2.5 text-sm font-medium transition-colors',
-                    mode === 'lines' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-white'
-                  )}
+                  className={cn('flex-1 py-2.5 cursor-pointer text-sm font-medium transition-colors', mode === 'lines' ? 'bg-white/10 text-white' : 'text-muted-foreground')}
                 >
                   Linhas
                 </button>
@@ -113,7 +103,7 @@ export function DeliverProductDialog({
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-2 mt-1">
             {mode === 'lines' ? (
               <div className="flex rounded-md border border-white/10 overflow-hidden min-h-[160px]">
                 <div className="bg-white/[0.03] px-3 py-3 text-xs text-zinc-600 font-mono select-none border-r border-white/10">
@@ -126,7 +116,7 @@ export function DeliverProductDialog({
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Digite um produto por linha..."
-                  className="flex-1 min-h-[160px] border-0 bg-transparent resize-none focus-visible:ring-0 rounded-none font-mono text-sm"
+                  className="flex-1 min-h-[160px] border-0 bg-transparent resize-none rounded-none font-mono"
                 />
               </div>
             ) : (
@@ -145,7 +135,7 @@ export function DeliverProductDialog({
           </div>
 
           <Button
-            className="w-full h-11 bg-white text-black hover:bg-white/90 font-semibold"
+            className="w-full h-10 bg-blue-500 hover:bg-blue-500/80 text-black font-medium"
             onClick={handleConfirm}
             disabled={isLoading || (!isAutomatic && !content.trim())}
           >

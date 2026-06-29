@@ -1,10 +1,11 @@
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatPrice } from '@/lib/shop-api';
 
 export interface OrderApprovedPayload {
   title: string;
   description: string;
-  products: Array<{ name: string; imageUrl: string | null }>;
+  products: Array<{ name: string; imageUrl: string | null; quantity: number; unitPrice: number }>;
 }
 
 export interface DeliveryPayload {
@@ -21,7 +22,6 @@ export function parseOrderApproved(content: string): OrderApprovedPayload | null
     const parsed = JSON.parse(content);
     if (parsed?.title && parsed?.products) return parsed as OrderApprovedPayload;
   } catch {
-    // not JSON
   }
   return null;
 }
@@ -30,36 +30,36 @@ export function parseDelivery(content: string): DeliveryPayload | null {
   try {
     const parsed = JSON.parse(content);
     if (parsed?.productName && parsed?.deliveryContent) return parsed as DeliveryPayload;
-  } catch {
-    // not JSON
-  }
+  } catch { }
   return null;
 }
 
-export function OrderApprovedCard({
-  payload,
-  className,
-}: {
-  payload: OrderApprovedPayload;
-  className?: string;
-}) {
+export function OrderApprovedCard({ payload, className, }: { payload: OrderApprovedPayload; className?: string; }) {
   return (
-    <div className={cn('rounded-md border border-blue-500/20 bg-blue-500/10 p-4 max-w-sm', className)}>
-      <p className="text-sm font-semibold text-blue-300">{payload.title}</p>
-      <p className="text-xs text-blue-400/80 mt-1">{payload.description}</p>
+    <div className={cn('rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 max-w-sm', className)}>
+      <p className="text-sm font-semibold text-blue-500">{payload.title}</p>
+      <p className="text-xs text-muted-foreground">{payload.description}</p>
       <div className="mt-3 space-y-2">
         {payload.products.map((product, i) => (
           <div key={i} className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-md bg-white/5 border border-white/10 overflow-hidden flex-shrink-0">
+            <div className="h-10 w-10 rounded bg-white/5 border border-white/10 overflow-hidden flex-shrink-0">
               {product.imageUrl ? (
-                <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover select-none pointer-events-none" />
               ) : (
                 <div className="h-full w-full flex items-center justify-center">
                   <Package className="h-4 w-4 text-zinc-600" />
                 </div>
               )}
             </div>
-            <p className="text-xs text-white/90 line-clamp-2">{product.name}</p>
+              <div className="flex flex-col gap-1">
+              <p className="text-xs text-white/90 line-clamp-2">{product.name}</p>
+              {product.unitPrice != null && Number.isFinite(Number(product.unitPrice)) && (
+                <p className="text-xs text-white/90">
+                  Preço: {formatPrice(product.unitPrice)}
+                  {product.quantity > 1 ? ` · Qtd: ${product.quantity}` : ''}
+                </p>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -67,27 +67,17 @@ export function OrderApprovedCard({
   );
 }
 
-export function DeliveryCard({
-  payload,
-  className,
-}: {
-  payload: DeliveryPayload;
-  className?: string;
-}) {
+export function DeliveryCard({ payload, className, }: { payload: DeliveryPayload; className?: string; }) {
   return (
-    <div className={cn('rounded-md border border-emerald-500/30 bg-[#0d1f17] p-4 max-w-sm border-l-4 border-l-emerald-500', className)}>
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-[10px] font-medium text-zinc-400 uppercase">Mensagem</span>
-        <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">BOT</span>
-      </div>
-      <p className="text-sm font-semibold text-white">{payload.title || 'Produto entregue'}</p>
+    <div className={cn('rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 max-w-sm', className)}>
+      <p className="text-sm font-semibold text-blue-500">{payload.title || 'Produto entregue'}</p>
       {payload.description && (
-        <p className="text-xs text-zinc-400 mt-1">{payload.description}</p>
+        <p className="text-xs text-muted-foreground">{payload.description}</p>
       )}
       <div className="flex items-center gap-2 mt-3">
-        <div className="h-10 w-10 rounded-md bg-white/5 border border-white/10 overflow-hidden flex-shrink-0">
+        <div className="h-10 w-10 rounded bg-white/5 border border-white/10 overflow-hidden flex-shrink-0">
           {payload.productImageUrl ? (
-            <img src={payload.productImageUrl} alt={payload.productName} className="h-full w-full object-cover" />
+            <img src={payload.productImageUrl} alt={payload.productName} className="h-full w-full object-cover select-none pointer-events-none" />
           ) : (
             <div className="h-full w-full flex items-center justify-center">
               <Package className="h-4 w-4 text-zinc-600" />

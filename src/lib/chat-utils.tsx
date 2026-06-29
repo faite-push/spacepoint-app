@@ -1,16 +1,23 @@
 import type { Chat } from '@/lib/admin-api';
 import React from 'react';
 import { BiImage } from 'react-icons/bi';
+import { PiCheckSquareFill } from "react-icons/pi";
+import { BiSolidPackage } from "react-icons/bi";
 
 export function getUnreadCount(chat: Chat): number {
   if (chat.unreadCount !== undefined) return chat.unreadCount;
-  if (!chat.messages?.length) return 0;
+  if (!chat.messages?.length) {
+    return !chat.lastAdminReadAt ? 1 : 0;
+  }
 
   const customerMessages = chat.messages.filter(
     (m) => m.senderId !== 'ADMIN' && m.senderId !== 'SYSTEM'
   );
 
-  if (!chat.lastAdminReadAt) return customerMessages.length;
+  if (!chat.lastAdminReadAt) {
+    if (customerMessages.length > 0) return customerMessages.length;
+    return 1;
+  }
 
   return customerMessages.filter(
     (m) => new Date(m.createdAt) > new Date(chat.lastAdminReadAt!)
@@ -55,8 +62,23 @@ export function getPreviewText(content: string, type?: string): React.ReactNode 
       </span>
     );
   }
-  if (type === 'ORDER_APPROVED') return '✅ Pedido Aprovado';
-  if (type === 'DELIVERY') return '📦 Produto entregue';
+  if (type === 'ORDER_APPROVED') {
+    return (
+      <span className="flex items-center gap-1">
+        <PiCheckSquareFill className="h-4 w-4 shrink-0 text-emerald-500" />
+        Pedido Aprovado
+      </span>
+    );
+  }
+
+  if (type === 'DELIVERY') {
+    return (
+      <span className="flex items-center gap-1">
+        <BiSolidPackage className="h-4 w-4 shrink-0 text-blue-500" />
+        Produto entregue
+      </span>
+    );
+  }
   if (type === 'AUTOMATED') return content.slice(0, 60);
   return content.slice(0, 80);
 }
