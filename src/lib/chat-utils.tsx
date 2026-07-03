@@ -53,7 +53,7 @@ export function mergeChatData(old: Chat | undefined, updated: Partial<Chat>): Ch
     ...old,
     ...updated,
     messages: updated.messages?.length ? updated.messages : (old.messages ?? []),
-    order: mergeOrderData(old.order, updated.order),
+    order: mergeOrderData(old.order, updated.order) ?? old.order,
     labels: updated.labels ?? old.labels,
     assignedTo: updated.assignedTo ?? old.assignedTo,
     userStats: updated.userStats ?? old.userStats,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense, type CSSProperties } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -281,10 +281,13 @@ function RolesSidebar({
                   index={index}
                   isDragDisabled={role.isProtected}
                 >
-                  {(dragProvided, snapshot) => (
+                  {(dragProvided, snapshot) => {
+                    const { style, ...draggableProps } = dragProvided.draggableProps;
+                    return (
                     <div
                       ref={dragProvided.innerRef}
-                      {...dragProvided.draggableProps}
+                      {...draggableProps}
+                      style={style as CSSProperties}
                       className={cn(
                         "group flex items-center gap-2 rounded-lg px-2 py-2.5 transition-colors",
                         selectedId === role.id
@@ -326,7 +329,8 @@ function RolesSidebar({
                         </Can>
                       )}
                     </div>
-                  )}
+                    );
+                  }}
                 </Draggable>
               ))}
               {provided.placeholder}
@@ -452,8 +456,8 @@ function RolesPageContent() {
     reorderMutation.mutate(items.map((r, i) => ({ id: r.id, sortOrder: i })));
   };
 
-  const grouped = permissionsData?.grouped ?? {};
-  const filteredGrouped = useMemo(() => {
+  const grouped = (permissionsData?.grouped ?? {}) as Record<string, Permission[]>;
+  const filteredGrouped = useMemo((): Record<string, Permission[]> => {
     if (!permSearch.trim()) return grouped;
     const q = permSearch.toLowerCase();
     const result: Record<string, Permission[]> = {};
