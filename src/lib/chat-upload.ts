@@ -5,6 +5,7 @@ export async function uploadChatImage(file: File): Promise<string | null> {
 
   const fd = new FormData();
   fd.append('file', file);
+  fd.append('scope', 'chat');
 
   try {
     const res = await fetch(`${API_URL}/v1/cdn/upload/chat`, {

@@ -3,29 +3,20 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Save, Trash2, Pencil } from "lucide-react";
-import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+
+import { Loader2, Plus, Save, Trash2, Pencil, PlusCircle } from "lucide-react";
 import { TbGridDots } from "react-icons/tb";
 
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
+import { ImageUpload } from "@/components/admin/shared/image-upload";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ImageUpload } from "@/components/admin/shared/image-upload";
-import {
-  homeReviewsApi,
-  siteSettingsApi,
-  type HomeReviewRecord,
-  type SiteConfigRecord,
-} from "@/lib/admin-api";
+
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import { homeReviewsApi, siteSettingsApi, type HomeReviewRecord, type SiteConfigRecord, } from "@/lib/admin-api";
 import { cn } from "@/lib/utils";
 
 type ReviewForm = {
@@ -191,7 +182,7 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
       {!hideHeader && (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-white lg:text-3xl">
+            <h1 className="text-xl font-bold tracking-tight text-white lg:text-2xl">
               Avaliações na home
             </h1>
             <p className="text-sm text-muted-foreground mt-1 lg:text-base">
@@ -206,9 +197,9 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
             {saveConfigMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Save className="h-4 w-4" />
+              <Save className="h-4 w-4 hidden" />
             )}
-            Salvar seção
+            Salvar Alterações
           </Button>
         </div>
       )}
@@ -223,15 +214,15 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
             {saveConfigMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Save className="h-4 w-4" />
+              <Save className="h-4 w-4 hidden" />
             )}
-            Salvar seção
+            Salvar Alterações
           </Button>
         </div>
       )}
 
-      <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6 space-y-4">
-        <div className="flex items-center justify-between rounded-lg border border-white/10 bg-[#111] px-4 py-3">
+      <div className="rounded-md border border-white/5 bg-transparent p-4 space-y-4">
+        <div className="flex items-center justify-between rounded-md border border-white/5 bg-transparent px-4 py-3">
           <div>
             <p className="text-sm font-medium text-white">Exibir na home</p>
             <p className="text-xs text-zinc-500">Oculta o bloco inteiro quando desativado.</p>
@@ -244,30 +235,29 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label className="text-zinc-300">Badge</Label>
+            <Label className="text-muted-foreground">Badge</Label>
             <Input
               value={configForm.homeReviewsBadgeLabel ?? ""}
               onChange={(e) => setConfig("homeReviewsBadgeLabel", e.target.value)}
               placeholder="Google Reviews"
-              className="bg-[#111] border-white/10"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-300">Título da seção</Label>
+            <Label className="text-muted-foreground">Título da seção</Label>
             <Input
               value={configForm.homeReviewsTitle ?? ""}
               onChange={(e) => setConfig("homeReviewsTitle", e.target.value)}
               placeholder="O que nossos clientes dizem"
-              className="bg-[#111] border-white/10"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-300">Nota média exibida</Label>
+            <Label className="text-muted-foreground">Nota média exibida</Label>
             <Input
               type="number"
               min={0}
               max={5}
               step={0.1}
+              placeholder="4.5"
               value={configForm.homeReviewsAverageRating ?? ""}
               onChange={(e) =>
                 setConfig(
@@ -275,14 +265,14 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
                   e.target.value === "" ? null : Number(e.target.value)
                 )
               }
-              className="bg-[#111] border-white/10"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-300">Total de avaliações (texto)</Label>
+            <Label className="text-muted-foreground">Total de avaliações (texto)</Label>
             <Input
               type="number"
               min={0}
+              placeholder="100"
               value={configForm.homeReviewsTotalCount ?? ""}
               onChange={(e) =>
                 setConfig(
@@ -290,36 +280,34 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
                   e.target.value === "" ? null : Number(e.target.value)
                 )
               }
-              className="bg-[#111] border-white/10"
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label className="text-zinc-300">URL Google Maps</Label>
-            <Input
-              value={configForm.homeReviewsGoogleMapsUrl ?? ""}
-              onChange={(e) => setConfig("homeReviewsGoogleMapsUrl", e.target.value)}
-              className="bg-[#111] border-white/10"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-300">Texto do link</Label>
+            <Label className="text-muted-foreground">URL Google Maps</Label>
+            <Input
+              placeholder="https://maps.app.goo.gl/..."
+              value={configForm.homeReviewsGoogleMapsUrl ?? ""}
+              onChange={(e) => setConfig("homeReviewsGoogleMapsUrl", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-muted-foreground">Texto do link</Label>
             <Input
               value={configForm.homeReviewsLinkLabel ?? ""}
               onChange={(e) => setConfig("homeReviewsLinkLabel", e.target.value)}
               placeholder="Ver todas"
-              className="bg-[#111] border-white/10"
             />
           </div>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+        <h2 className="font-semibold text-white">
           Depoimentos
         </h2>
-        <Button size="sm" className="gap-2" onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          Nova avaliação
+        <Button size="lg" onClick={openCreate}>
+          <PlusCircle className="h-4 w-4" />
+          Adicionar Avaliação
         </Button>
       </div>
 
@@ -334,8 +322,8 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
                       ref={dragProvided.innerRef}
                       {...(dragProvided.draggableProps as any)}
                       className={cn(
-                        "flex items-center gap-3 rounded-xl border border-white/10 bg-[#0A0A0A] p-4",
-                        snapshot.isDragging && "border-[#9333EA]/50"
+                        "flex items-center gap-3 rounded-md border border-white/5 bg-transparent p-4",
+                        snapshot.isDragging && "border-primary/50"
                       )}
                     >
                       <span
@@ -392,7 +380,6 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
               <Input
                 value={reviewForm.name}
                 onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
-                className="bg-[#111] border-white/10"
               />
             </div>
             <div className="space-y-2">
@@ -401,7 +388,6 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
                 value={reviewForm.comment}
                 onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
                 rows={3}
-                className="bg-[#111] border-white/10"
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -415,7 +401,6 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
                   onChange={(e) =>
                     setReviewForm({ ...reviewForm, rating: Number(e.target.value) || 5 })
                   }
-                  className="bg-[#111] border-white/10"
                 />
               </div>
               <div className="space-y-2">
@@ -424,7 +409,6 @@ export function HomeReviewsSettings({ hideHeader = false }: { hideHeader?: boole
                   value={reviewForm.dateLabel}
                   onChange={(e) => setReviewForm({ ...reviewForm, dateLabel: e.target.value })}
                   placeholder="há 2 semanas"
-                  className="bg-[#111] border-white/10"
                 />
               </div>
             </div>

@@ -30,6 +30,7 @@ const categorySchema = z.object({
   imageUrl: z.string().nullable().optional(),
   bannerUrl: z.string().nullable().optional(),
   showInNavbar: z.boolean().optional(),
+  showInFooter: z.boolean().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.coerce.number().int().min(0).optional(),
 });
@@ -63,6 +64,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
       imageUrl: category.imageUrl,
       bannerUrl: category.bannerUrl,
       showInNavbar: category.showInNavbar,
+      showInFooter: category.showInFooter ?? false,
       isActive: category.isActive,
       sortOrder: category.sortOrder,
     } : {
@@ -71,6 +73,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
       imageUrl: null,
       bannerUrl: null,
       showInNavbar: false,
+      showInFooter: false,
       isActive: true,
       sortOrder: 0,
     },
@@ -264,6 +267,37 @@ export function CategoryForm({ category }: CategoryFormProps) {
                       </Label>
                       <p className="text-xs text-white/50">
                         Controla se a categoria aparece no menu superior da loja.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              />
+
+              <Controller
+                control={form.control}
+                name="showInFooter"
+                render={({ field }) => (
+                  <div className="flex items-center gap-4 rounded-md">
+                    <Toggle
+                      id="show-footer"
+                      variant="default"
+                      size="sm"
+                      pressed={field.value ?? false}
+                      onPressedChange={field.onChange}
+                    >
+                      {field.value ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </Toggle>
+
+                    <div>
+                      <Label htmlFor="show-footer" className="cursor-pointer">
+                        {field.value ? "Exibindo no Footer" : "Oculto no Footer"}
+                      </Label>
+                      <p className="text-xs text-white/50">
+                        Controla se a categoria aparece na coluna de categorias do footer.
                       </p>
                     </div>
                   </div>

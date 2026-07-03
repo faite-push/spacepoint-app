@@ -28,13 +28,15 @@ export function AdminShell({ user, children }: AdminShellProps) {
   }, [pathname]);
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a]">
+    <div className="flex min-h-screen w-full overflow-x-hidden bg-[#0a0a0a]">
       <AdminSidebar />
       <AdminMobileNav open={mobileNavOpen} onOpenChange={setMobileNavOpen} />
 
-      <div className="flex min-w-0 flex-1 flex-col lg:ml-64">
+      <div className="flex min-w-0 w-full flex-1 flex-col lg:ml-64">
         <AdminHeader user={user} onOpenMenu={() => setMobileNavOpen(true)} />
-        <main className="min-w-0 flex-1 overflow-x-hidden p-4 pb-8 lg:p-6">{children}</main>
+        <main className="min-w-0 w-full flex-1 px-3 py-4 pb-6 sm:px-4 lg:px-6 lg:py-6 lg:pb-8">
+          {children}
+        </main>
       </div>
     </div>
   );

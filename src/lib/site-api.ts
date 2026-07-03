@@ -88,6 +88,7 @@ export type PublicSiteConfig = {
   popupTrigger: "entry" | "exit" | "delay" | null;
   popupDelay: number | null;
   checkoutSettings?: import("@/lib/admin-api").CheckoutSettings | null;
+  reviewsSettings?: import("@/lib/admin-api").ReviewsSettings | null;
   pluginsConfig?: import("@/lib/admin-api").PluginsConfig | null;
 };
 
@@ -146,6 +147,12 @@ export type ShopHomePayload = {
   categories?: ShopCategoryRow[];
   uncategorized?: ShopCaseRow[];
   featured?: Product[];
+  sections?: Array<{
+    id: string;
+    title: string;
+    subtitle: string | null;
+    products: Product[];
+  }>;
   banners?: ShopBannerRow[];
 };
 
@@ -190,6 +197,19 @@ export async function fetchHomeReviews(): Promise<PublicHomeReview[]> {
     if (!r.ok) return [];
     const data = await r.json();
     return data.reviews ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchFooterCategories(): Promise<FooterLink[]> {
+  try {
+    const r = await fetchWithTimeout(`${API_URL}/v2/api/categories/footer`, {
+      next: { revalidate: 60 },
+    });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return data.categories ?? [];
   } catch {
     return [];
   }

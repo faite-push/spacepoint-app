@@ -155,59 +155,6 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
                 </div>
                 <span>Entrega Instantânea e Fácil</span>
               </div>
-
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button className="flex items-center cursor-pointer gap-2 text-[13px] text-primary/90 hover:text-primary/70 font-bold w-fit mt-1 transition-colors">
-                    Entenda como funciona as Licenças Primária e Secundária
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="bg-primary/10 backdrop-blur-md border-white/10 text-white max-w-6xl max-h-[85vh] overflow-y-hidden">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-bold text-white tracking-wide">Como Funcionam os Jogos Digitais na Space Point BR?</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3 text-white/70 text-sm leading-relaxed mt-4">
-                    <p>A compra de jogos digitais está cada vez mais popular, e a Space Point BR oferece uma forma segura, prática e acessível para você aproveitar seus títulos favoritos. Todos os jogos comprados na loja são de versão Brasileira e legendados em português (se disponível na PS Store).</p>
-
-                    <div className="space-y-2">
-                      <h3 className="font-bold text-white text-base">Como Funciona a Entrega?</h3>
-                      <p>Após a compra, você receberá um login e senha para criar um usuário no seu videogame. Esse usuário permitirá acesso à biblioteca para efetuar o download do jogo adquirido.</p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4 space-y-2">
-                        <h4 className="font-bold text-primary">1. Licença Primária</h4>
-                        <ul className="space-y-1">
-                          <li className="flex items-start gap-1"><CircleCheck className="text-primary/80 w-5 h-5" /> <strong>Acesso pelo seu perfil pessoal:</strong> Jogue diretamente no seu usuário principal.</li>
-                          <li className="flex items-start gap-1"><CircleCheck className="text-primary/80 w-5 h-5" /> <strong>Jogo online e offline:</strong> Funciona normalmente, até sem internet.</li>
-                          <li className="flex items-start gap-1"><CircleCheck className="text-primary/80 w-5 h-5" /> <strong>Experiência completa:</strong> Troféus e direitos de uma compra feita na PSN.</li>
-                          <li className="text-white/50 mt-2 text-xs"><strong className="text-primary/80">Exclusivo ao console:</strong> A conta deve ser utilizada apenas no console em que foi ativada (PS4 ou PS5). Caso mude do Ps4 para O Ps5, necessário que entre em contato com o suporte da loja para solicitar aquisição de uma nova compra para o Ps5. A versão de Ps4 segue com garantia vitalicia para o Console ao qual comprou, ou, caso necessário, podendo ser retirada do console inicial para outro PS4. ( Não sendo possível ativação em um PS5, pois as licenças são vendidas separadas ).</li>
-                        </ul>
-                      </div>
-
-                      <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4 space-y-2">
-                        <h4 className="font-bold text-primary">2. Licença Secundária</h4>
-                        <ul className="space-y-1">
-                          <li className="flex items-start gap-1"><BadgeDollarSign className="text-primary/80 w-5 h-5" /> <strong>Custo-benefício:</strong> Muito mais em conta. Jogue pelo perfil enviado.</li>
-                          <li className="flex items-start gap-1"><CircleCheck className="text-primary/80 w-5 h-5" /> <strong>Online:</strong> Necessário conexão com internet para validar a licença e jogar.</li>
-                          <li className="text-white/50 mt-2 text-xs">Assim como a primária, exclusivo à geração (PS4 ou PS5). Não use dados em dezenas de consoles para evitar bloqueios.</li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h3 className="font-bold text-white text-base">Termos e Regras Importantes:</h3>
-                      <p>Trabalhamos apenas com jogos originais adquiridos da PSN Store. Conta vitalícia (o jogo é seu para sempre sem prazo para bloqueio) e zero risco de banimento.</p>
-                      <ul className="list-disc pl-5 mt-2 space-y-1 text-red-300">
-                        <li>Não altere os dados da conta (login, senha, ID ou configurações).</li>
-                        <li>Não ative a verificação em duas etapas.</li>
-                        <li>Não compartilhe a conta com terceiros.</li>
-                      </ul>
-                      <p className="text-xs mt-2 text-red-400 font-bold">⚠ Caso alguma dessas regras seja desrespeitada, a conta perde a garantia vitalícia instantaneamente.</p>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </div>
 
             {product.hasVariants && (

@@ -53,7 +53,7 @@ export function GlobalSettings({ hideHeader = false }: { hideHeader?: boolean })
         <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
       </div>
     );
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -73,24 +73,7 @@ export function GlobalSettings({ hideHeader = false }: { hideHeader?: boolean })
             {saveMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Save className="h-4 w-4" />
-            )}
-            Salvar alterações
-          </Button>
-        </div>
-      )}
-
-      {hideHeader && (
-        <div className="flex justify-end mb-4">
-          <Button
-            className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto"
-            disabled={saveMutation.isPending}
-            onClick={() => saveMutation.mutate()}
-          >
-            {saveMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
+              <Save className="h-4 w-4 hidden" />
             )}
             Salvar alterações
           </Button>
@@ -99,12 +82,31 @@ export function GlobalSettings({ hideHeader = false }: { hideHeader?: boolean })
 
       <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6 space-y-8">
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Identidade</h2>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Identidade</h2>
+            {hideHeader && (
+              <div className="flex justify-end mb-4">
+                <Button
+                  className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto"
+                  disabled={saveMutation.isPending}
+                  onClick={() => saveMutation.mutate()}
+                >
+                  {saveMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 hidden" />
+                  )}
+                  Salvar alterações
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-zinc-300">Nome da loja</Label>
               <Input
                 value={form.storeName ?? ""}
+                placeholder="Nome da loja"
                 onChange={(e) => set("storeName", e.target.value)}
                 className="bg-[#111] border-white/10"
               />

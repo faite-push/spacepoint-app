@@ -34,19 +34,9 @@ function LinkColumn({ title, items }: { title: string; items: ResolvedFooterConf
       </ul>
     </div>
   );
-}
+};
 
-export function FooterContent({
-  footer,
-  isHome = false,
-  compact = false,
-  onNewsletterSubmit,
-}: {
-  footer: ResolvedFooterConfig;
-  isHome?: boolean;
-  compact?: boolean;
-  onNewsletterSubmit?: (email: string) => void;
-}) {
+export function FooterContent({ footer, isHome = false, compact = false, onNewsletterSubmit, }: { footer: ResolvedFooterConfig; isHome?: boolean; compact?: boolean; onNewsletterSubmit?: (email: string) => void; }) {
   const paddingTop = isHome ? footer.paddingTopHome : footer.paddingTopDefault;
   const socials = [
     { href: footer.socialFacebook, icon: FaFacebookF, label: "Facebook" },

@@ -1,55 +1,53 @@
 "use client";
 
-import { ptBR } from "date-fns/locale";
 import { useState } from "react";
+import { format } from "date-fns";
 
-import { CalendarDays, Calendar as CalendarIcon, Clock } from "lucide-react";
-import { PiCalendarDotsDuotone } from "react-icons/pi";
-import { format, subDays, startOfDay } from "date-fns";
-
-type DateRange = { from?: Date; to?: Date };
+import { CalendarDays } from "lucide-react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import {
+  getRangeForPreset,
+  PRESET_LABELS,
+  type DateRangePreset,
+} from "@/lib/date-range-presets";
+
+type DateRange = { from?: Date; to?: Date };
 
 interface DateRangeFilterProps {
   onRangeChange: (range: { from: Date; to: Date }) => void;
+  defaultPreset?: Exclude<DateRangePreset, "custom">;
 }
 
-export function DateRangeFilter({ onRangeChange }: DateRangeFilterProps) {
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 7),
-    to: new Date(),
-  });
-  const [label, setLabel] = useState("Últimos 7 dias");
+function getDisplayLabel(preset: DateRangePreset, date?: DateRange): string {
+  if (preset === "custom" && date?.from) {
+    return date.to
+      ? `${format(date.from, "dd/MM")} - ${format(date.to, "dd/MM")}`
+      : format(date.from, "dd/MM");
+  }
 
-  const handleSelectPreset = (preset: string) => {
-    let from = new Date();
-    let to = new Date();
+  if (preset !== "custom") {
+    return PRESET_LABELS[preset];
+  }
 
-    switch (preset) {
-      case "today":
-        from = startOfDay(new Date());
-        setLabel("Hoje");
-        break;
-      case "7d":
-        from = subDays(new Date(), 7);
-        setLabel("Últimos 7 dias");
-        break;
-      case "30d":
-        from = subDays(new Date(), 30);
-        setLabel("Últimos 30 dias");
-        break;
-      case "all":
-        from = new Date(2025, 0, 1);
-        setLabel("Todo o período");
-        break;
-    }
+  return PRESET_LABELS["7d"];
+}
 
-    const range = { from, to };
+export function DateRangeFilter({
+  onRangeChange,
+  defaultPreset = "7d",
+}: DateRangeFilterProps) {
+  const initialRange = getRangeForPreset(defaultPreset);
+  const [preset, setPreset] = useState<DateRangePreset>(defaultPreset);
+  const [date, setDate] = useState<DateRange>(initialRange);
+
+  const handleSelectPreset = (value: Exclude<DateRangePreset, "custom">) => {
+    const range = getRangeForPreset(value);
+    setPreset(value);
     setDate(range);
     onRangeChange(range);
   };
@@ -57,26 +55,29 @@ export function DateRangeFilter({ onRangeChange }: DateRangeFilterProps) {
   return (
     <div className="flex items-center gap-2">
       <Popover>
-        <PopoverTrigger className={cn(
-          buttonVariants({ variant: "outline" }),
-          "justify-start font-medium bg-card border-white/5 h-10 px-4 rounded-md hover:bg-white/5",
-          !date && "text-muted-foreground"
-        )}>
+        <PopoverTrigger
+          className={cn(
+            buttonVariants({ variant: "outline" }),
+            "justify-start font-medium bg-card border-white/5 h-10 px-4 rounded-md hover:bg-white/5",
+            !date && "text-muted-foreground"
+          )}
+        >
           <CalendarDays className="mr-1 h-4.5 w-4.5 text-white/70" />
           <span className="text-sm font-medium text-white/70">
-            {label === "Personalizado" && date?.from
-              ? date.to
-                ? `${format(date.from, "dd/MM")} - ${format(date.to, "dd/MM")}`
-                : format(date.from, "dd/MM")
-              : label}
+            {getDisplayLabel(preset, date)}
           </span>
         </PopoverTrigger>
 
         <PopoverContent className="w-auto p-4 bg-background border-white/10 rounded-md" align="start">
           <div className="space-y-4">
-            <Select onValueChange={handleSelectPreset}>
+            <Select
+              value={preset === "custom" ? undefined : preset}
+              onValueChange={(value) =>
+                handleSelectPreset(value as Exclude<DateRangePreset, "custom">)
+              }
+            >
               <SelectTrigger className="w-full bg-background border cursor-pointer border-white/5 hover:border-primary/70 focus:border-primary/70 focus:ring-none h-10 rounded-sm px-4 text-sm font-medium transition-all duration-200">
-                <SelectValue placeholder={label} />
+                <SelectValue placeholder="Selecionar período" />
               </SelectTrigger>
               <SelectContent className="bg-background p-1 border-white/10 rounded-sm">
                 <SelectItem value="today" className="text-sm px-3 cursor-pointer">Hoje</SelectItem>
@@ -89,14 +90,11 @@ export function DateRangeFilter({ onRangeChange }: DateRangeFilterProps) {
             <Calendar
               mode="range"
               selected={date}
-              onSelect={(newDate: any) => {
-                setDate(newDate);
-                const d = newDate as any;
-                if (d?.from) {
-                  setLabel("Personalizado");
-                  if (d.to) {
-                    onRangeChange({ from: d.from, to: d.to });
-                  }
+              onSelect={(newDate) => {
+                setDate(newDate ?? undefined);
+                if (newDate?.from && newDate.to) {
+                  setPreset("custom");
+                  onRangeChange({ from: newDate.from, to: newDate.to });
                 }
               }}
               className="rounded-xl"

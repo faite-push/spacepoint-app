@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import { Chakra_Petch } from "next/font/google";
+
 import "@/styles/globals.css";
 import { SiteShell } from "@/components/site-shell";
 import { AnalyticsVisit } from "@/components/shared/analytics-visit";
@@ -9,13 +10,21 @@ import { AuthProvider } from "@/context/auth-context";
 import { SocketProvider } from "@/context/socket-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Providers } from "@/components/shared/providers";
-import { fetchSiteConfig, fetchHomeReviews, fetchPageSeo } from "@/lib/site-api";
+import { fetchSiteConfig, fetchHomeReviews, fetchPageSeo, fetchFooterCategories } from "@/lib/site-api";
+import { fetchStoreReviews } from "@/lib/store-reviews-api";
+import { getGoogleSiteVerificationFromPlugins } from "@/lib/google-site-verification";
 
 const chakra = Chakra_Petch({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-chakra",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const [config, homeSeo] = await Promise.all([
@@ -31,9 +40,12 @@ export async function generateMetadata(): Promise<Metadata> {
     homeSeo?.metaDescription?.trim() ||
     config?.metaDescription?.trim() ||
     "Jogos digitais originais para PlayStation com entrega segura e instantânea.";
+  const googleVerification = getGoogleSiteVerificationFromPlugins(config?.pluginsConfig);
+
   return {
     title,
     description,
+    ...(googleVerification ? { verification: { google: googleVerification } } : {}),
     ...(homeSeo?.ogImageUrl ? { openGraph: { images: [homeSeo.ogImageUrl] } } : {}),
     ...(config?.faviconUrl?.trim()
       ? { icons: { icon: config.faviconUrl } }
@@ -41,14 +53,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const [siteConfig, homeReviews] = await Promise.all([
+export default async function RootLayout({ children, }: Readonly<{ children: React.ReactNode; }>) {
+  const [siteConfig, homeReviews, storeReviews, footerCategoryLinks] = await Promise.all([
     fetchSiteConfig(),
     fetchHomeReviews(),
+    fetchStoreReviews(),
+    fetchFooterCategories(),
   ]);
 
   return (
@@ -58,7 +68,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body
-        className={`${GeistSans.className} min-h-full flex flex-col bg-background text-foreground`}
+        className={`${GeistSans.className} min-h-full w-full flex flex-col bg-background text-foreground`}
         suppressHydrationWarning
       >
         <Providers>
@@ -66,7 +76,12 @@ export default async function RootLayout({
             <SocketProvider>
               <TooltipProvider delay={200}>
                 <AnalyticsVisit />
-                <SiteShell siteConfig={siteConfig} homeReviews={homeReviews}>
+                <SiteShell
+                  siteConfig={siteConfig}
+                  homeReviews={homeReviews}
+                  storeReviews={storeReviews}
+                  footerCategoryLinks={footerCategoryLinks}
+                >
                   {children}
                 </SiteShell>
               </TooltipProvider>

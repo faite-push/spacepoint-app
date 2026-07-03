@@ -42,7 +42,7 @@ export function CartSheet({ children, siteConfig }: { children: React.ReactEleme
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger render={children} />
-      <SheetContent className="flex min-w-full flex-col sm:min-w-[520px] bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/5 text-white">
+      <SheetContent className="flex min-w-full flex-col sm:min-w-[520px] bg-background/95 backdrop-blur-lg border-white/5 text-white">
         <SheetHeader className="px-6 pb-4">
           <div className="flex flex-col items-start justify-between">
             <SheetTitle className="text-xl font-bold text-white">
@@ -60,8 +60,8 @@ export function CartSheet({ children, siteConfig }: { children: React.ReactEleme
               <div className="space-y-2 px-6">
                 <div className="space-y-3">
                   {items.map((item) => (
-                    <div key={item.cartKey} className="group flex items-center gap-4 p-4 transition-all bg-white/[0.02] hover:bg-white/[0.04] rounded-xl border border-white/5">
-                      <div className="relative aspect-square h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-white/5 border border-white/5">
+                    <div key={item.cartKey} className="group flex items-center gap-4 p-4 transition-all bg-transparent backdrop-blur-lg hover:bg-background/95 rounded-md border border-white/5">
+                      <div className="relative aspect-square h-16 w-16 shrink-0 overflow-hidden rounded-sm bg-white/5 border border-white/5">
                         {item.image ? (
                           <Tooltip>
                             <TooltipTrigger
@@ -188,10 +188,10 @@ export function CartSheet({ children, siteConfig }: { children: React.ReactEleme
             <div className="space-y-4 px-6 pt-6 border-t rounded-t-xl border-white/5 pb-8 bg-background">
               <div className="flex flex-col gap-2">
                 {appliedCoupon ? (
-                  <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                  <div className="flex items-center justify-between p-3 bg-primary/10 border border-primary/20 rounded-md">
                     <div className="flex px-2 items-center gap-2">
-                      <Ticket className="h-4 w-4 text-emerald-400" />
-                      <span className="text-sm font-bold text-emerald-400">
+                      <Ticket className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-bold text-primary">
                         Cupom {appliedCoupon.code} está ativado
                       </span>
                     </div>
@@ -199,10 +199,9 @@ export function CartSheet({ children, siteConfig }: { children: React.ReactEleme
                       <TooltipTrigger
                         render={
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
                             onClick={removeCoupon}
-                            className="text-[10px] font-bold text-white/40 hover:text-white transition-colors"
                           />
                         }
                       >
@@ -247,20 +246,20 @@ export function CartSheet({ children, siteConfig }: { children: React.ReactEleme
               </div>
 
               <div className="space-y-2">
-                <div className="flex justify-between text-xs font-medium">
-                  <span className="text-white/40 tracking-widest">Subtotal</span>
-                  <span className="text-white font-bold">{formatPrice(subtotal())}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/40">Subtotal</span>
+                  <span className="text-white font-medium">{formatPrice(subtotal())}</span>
                 </div>
                 {discount() > 0 && (
-                  <div className="flex justify-between text-xs font-medium">
-                    <span className="text-white/40 tracking-widest">Desconto</span>
-                    <span className="text-emerald-400 font-bold">- {formatPrice(discount())}</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white/40">Desconto</span>
+                    <span className="text-emerald-400 font-medium">- {formatPrice(discount())}</span>
                   </div>
                 )}
-                <Separator className="my-2 bg-white/5" />
+                <Separator className="my-1 bg-white/5" />
                 <div className="flex justify-between items-end">
-                  <span className="text-sm font-bold text-white/60">Valor Total</span>
-                  <span className="text-3xl font-bold text-white tracking-tighter">
+                  <span className="text-lg text-white/60">Valor Total</span>
+                  <span className="text-2xl font-semibold text-white">
                     {formatPrice(total())}
                   </span>
                 </div>

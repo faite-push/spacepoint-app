@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 
-import { ChevronRight, Minus, Plus, Trash2, Ticket, PlusCircle, User, Mail, Zap, ArrowRight, Loader2, ShoppingCart, AlertCircle, Check, Lock, X, CreditCard } from "lucide-react";
+import { ChevronRight, Minus, Plus, Trash2, Ticket, PlusCircle, User, Mail, Zap, ArrowRight, Loader2, ShoppingCart, AlertCircle, Check, Lock, X, CreditCard, Phone, Truck } from "lucide-react";
 import { BsCreditCard2FrontFill } from "react-icons/bs";
 import { FaPix } from "react-icons/fa6";
 
@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 
 import { createOrder, fetchCheckoutPaymentOptions, formatPrice, fetchProducts } from "@/lib/shop-api";
 import { fetchSiteConfig } from "@/lib/site-api";
-import { DEFAULT_CHECKOUT_SETTINGS } from "@/lib/checkout-defaults";
+import { DEFAULT_CHECKOUT_SETTINGS, resolveEffectiveCheckoutFields, formatCpfInput, formatPhoneInput } from "@/lib/checkout-defaults";
 import type { CheckoutFieldConfig } from "@/lib/admin-api";
 import { useAuth } from "@/context/auth-context";
 import { useCartStore, useCartHydrated } from "@/store/cart-store";
@@ -37,13 +37,14 @@ export default function CheckoutPage() {
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"PIX" | "CARD">("PIX");
+  const [deliveryOption, setDeliveryOption] = useState<"standard" | "express">("standard");
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const hydrated = useCartHydrated();
   const paymentOptionsQuery = useQuery({
-    queryKey: ["checkout", "payment-options"],
-    queryFn: fetchCheckoutPaymentOptions,
+    queryKey: ["checkout", "payment-options", paymentMethod],
+    queryFn: () => fetchCheckoutPaymentOptions(paymentMethod),
   });
 
   const checkoutConfigQuery = useQuery({
@@ -52,7 +53,11 @@ export default function CheckoutPage() {
   });
 
   const checkoutSettings = checkoutConfigQuery.data?.checkoutSettings ?? DEFAULT_CHECKOUT_SETTINGS;
-  const enabledFields = (checkoutSettings.fields || []).filter((field) => field.enabled);
+  const requiredFieldKeys = paymentOptionsQuery.data?.requiredFieldsByMethod?.[paymentMethod] || paymentOptionsQuery.data?.requiredCustomerFields || [];
+  const enabledFields = resolveEffectiveCheckoutFields(checkoutSettings, requiredFieldKeys);
+  const deliverySettings = checkoutSettings.deliveryOptions ?? DEFAULT_CHECKOUT_SETTINGS.deliveryOptions!;
+  const deliveryFee = deliveryOption === "express" && deliverySettings.enabled ? deliverySettings.expressFeeCents : 0;
+  const orderTotal = total() + deliveryFee;
 
   const availableMethods = paymentOptionsQuery.data?.methods || ["PIX"];
   const pixAvailable = availableMethods.includes("PIX");
@@ -124,6 +129,10 @@ export default function CheckoutPage() {
       if (field.type === "email" && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
         errors[field.key] = "E-mail inválido";
       }
+      if ((field.key === "cpf" || field.type === "cpf") && value) {
+        const digits = value.replace(/\D/g, "");
+        if (digits.length !== 11) errors[field.key] = "CPF inválido";
+      }
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -147,6 +156,7 @@ export default function CheckoutPage() {
           couponCode: appliedCoupon?.code ?? null,
           paymentMethod,
           checkoutData: fieldValues,
+          deliveryOption,
         }
       );
       clear();
@@ -160,87 +170,128 @@ export default function CheckoutPage() {
   return (
     <div className="pb-24 lg:pb-12 -mt-32 py-6 md:py-12 relative">
       <div className="absolute top-0 right-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+      <div className="absolute top-0 left-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
       <div className="absolute bottom-0 left-[-10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+      <div className="absolute bottom-0 right-[-10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
 
       <div className="relative z-10 max-w-7xl mx-auto">
-        <header className="mb-8">
+        <header className="mb-4">
           <div className="flex items-center gap-2 text-sm text-zinc-500 font-medium mb-4">
             <Link href="/" className="hover:text-white transition-colors">Início</Link>
             <ChevronRight className="h-4 w-4" />
             <span className="text-zinc-300">Checkout</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tight">Finalizar Compra</h1>
+          <h1 className="text-4xl font-black">Finalizar Compra</h1>
         </header>
 
         <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
           <div className="space-y-4">
-            <section className="bg-white/[0.01] border border-primary/5 rounded-md p-6 sm:p-6">
-              <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
-                Formas de pagamento
-              </h2>
+            <div className="grid grid-cols-2 bg-white/[0.01] border border-primary/5 rounded-md p-6 sm:p-6 gap-4">
+              <section className="">
+                <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+                  Formas de pagamento
+                </h2>
 
-              <div className="grid gap-4">
-                <button
-                  type="button"
-                  onClick={() => pixAvailable && setPaymentMethod("PIX")}
-                  disabled={!pixAvailable}
-                  className={`relative group select-none overflow-hidden text-left ${!pixAvailable ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  <div className={`relative flex items-center justify-between p-4 rounded-md cursor-pointer border transition-colors ${paymentMethod === "PIX" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-transparent"}`}>
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-md bg-primary/20 flex items-center justify-center">
-                        <FaPix className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white">Pix</span>
-                          <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                            <Zap className="h-2.5 w-2.5 fill-current" /> Mais rápido
-                          </span>
+                <div className="grid gap-4">
+                  <button
+                    type="button"
+                    onClick={() => pixAvailable && setPaymentMethod("PIX")}
+                    disabled={!pixAvailable}
+                    className={`relative group select-none overflow-hidden text-left ${!pixAvailable ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <div className={`relative flex items-center justify-between p-4 rounded-md cursor-pointer border transition-colors ${paymentMethod === "PIX" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-transparent"}`}>
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-md bg-primary/20 flex items-center justify-center">
+                          <FaPix className="h-6 w-6 text-primary" />
                         </div>
-                        <p className="text-xs text-zinc-500 font-medium mt-1">
-                          {pixAvailable ? "Aprovação imediata" : "Ative Pix em um gateway na dashboard"}
-                        </p>
-                      </div>
-                    </div>
-                    {paymentMethod === "PIX" && <Check className="h-5 w-5 text-primary" />}
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => cardAvailable && setPaymentMethod("CARD")}
-                  disabled={!cardAvailable}
-                  className={`relative group select-none cursor-pointer overflow-hidden text-left ${!cardAvailable ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  <div className={`relative flex items-center justify-between p-4 rounded-md border transition-colors ${paymentMethod === "CARD" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-white/[0.02]"}`}>
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-md bg-primary/20 flex items-center justify-center">
-                        <BsCreditCard2FrontFill className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white">Cartão</span>
-                          {!cardAvailable && (
-                            <span className="text-[10px] bg-white/10 text-zinc-300 px-2 py-0.5 rounded-full font-bold">
-                              Indisponível no gateway ativo
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white">Pix</span>
+                            <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                              <Zap className="h-2.5 w-2.5 fill-current" /> Mais rápido
                             </span>
-                          )}
+                          </div>
+                          <p className="text-xs text-zinc-500 font-medium mt-1">
+                            {pixAvailable ? "Aprovação imediata" : "Ative Pix em um gateway na dashboard"}
+                          </p>
                         </div>
-                        <p className="text-xs text-zinc-500 font-medium mt-1">
-                          {cardAvailable ? "Pague com cartão de crédito" : "Ative Cartão na configuração do gateway"}
-                        </p>
                       </div>
+                      {paymentMethod === "PIX" && <Check className="h-5 w-5 text-primary" />}
                     </div>
-                    {paymentMethod === "CARD" && <Check className="h-5 w-5 text-primary" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => cardAvailable && setPaymentMethod("CARD")}
+                    disabled={!cardAvailable}
+                    className={`relative group select-none cursor-pointer overflow-hidden text-left ${!cardAvailable ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <div className={`relative flex items-center justify-between p-4 rounded-md border transition-colors ${paymentMethod === "CARD" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-transparent"}`}>
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-md bg-primary/20 flex items-center justify-center">
+                          <BsCreditCard2FrontFill className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white">Cartão</span>
+                          </div>
+                          <p className="text-xs text-zinc-500 font-medium mt-1">
+                            {cardAvailable ? "Pague com cartão de crédito" : "Metodo de pagamento não disponível"}
+                          </p>
+                        </div>
+                      </div>
+                      {paymentMethod === "CARD" && <Check className="h-5 w-5 text-primary" />}
+                    </div>
+                  </button>
+                </div>
+              </section>
+
+              {deliverySettings.enabled && (
+                <section className="">
+                  <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+                    Tipo de entrega
+                  </h2>
+                  <div className="grid gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryOption("standard")}
+                      className="text-left cursor-pointer"
+                    >
+                      <div className={`flex items-center justify-between p-4 rounded-md border transition-colors ${deliveryOption === "standard" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-transparent"}`}>
+                        <div>
+                          <p className="font-bold text-white">{deliverySettings.standardLabel}</p>
+                          <p className="text-xs text-zinc-500 font-medium mt-1">{deliverySettings.standardDescription}</p>
+                        </div>
+                        <div className="text-sm font-bold text-emerald-400">Grátis</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryOption("express")}
+                      className="text-left cursor-pointer"
+                    >
+                      <div className={`flex items-center justify-between p-4 rounded-md border transition-colors ${deliveryOption === "express" ? "border-primary/20 bg-primary/10" : "border-white/10 bg-transparent"}`}>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-white">{deliverySettings.expressLabel}</p>
+                            <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                              <Zap className="h-2.5 w-2.5 fill-current" /> Mais rápido
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-500 font-medium mt-1">{deliverySettings.expressDescription}</p>
+                        </div>
+                        <div className="text-sm font-bold text-white">+ {formatPrice(deliverySettings.expressFeeCents)}</div>
+                      </div>
+                    </button>
                   </div>
-                </button>
-              </div>
-            </section>
+                </section>
+              )}
+            </div>
 
             <section className="bg-white/[0.01] border border-primary/5 rounded-md p-6 sm:p-6">
               <h2 className="text-xl font-bold mb-3">Informações de contato</h2>
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 {enabledFields.map((field) => (
                   <CheckoutFieldInput
                     key={field.key}
@@ -259,21 +310,6 @@ export default function CheckoutPage() {
                 ))}
               </div>
             </section>
-
-            <div className="flex items-center space-x-3 px-2">
-              <Checkbox
-                id="terms"
-                checked={acceptedTerms}
-                onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
-                className="h-5 w-5 rounded-md border-zinc-700 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-              />
-              <label
-                htmlFor="terms"
-                className="text-sm font-medium text-zinc-400 cursor-pointer select-none"
-              >
-                Eu aceito os <span className="text-white font-semibold decoration-primary underline-offset-4">termos e condições</span> desta compra.
-              </label>
-            </div>
 
             {recommendations.length > 0 && (
               <div className="mt-8 bg-white/[0.01] rounded-md p-5 border border-primary/5">
@@ -348,7 +384,7 @@ export default function CheckoutPage() {
                 disabled={!acceptedTerms || items.length === 0 || isSubmitting || authLoading}
                 className="w-full h-12 rounded-lg text-md font-semibold bg-primary hover:bg-primary/90 text-white flex items-center justify-center gap-3 transition-all active:scale-95"
               >
-                {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : `Pagar ${hydrated ? formatPrice(total()) : "R$ 0,00"}`}
+                {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : `Pagar ${hydrated ? formatPrice(orderTotal) : "R$ 0,00"}`}
               </Button>
             </div>
           </div>
@@ -474,23 +510,22 @@ export default function CheckoutPage() {
 
               <div className="mb-4">
                 {appliedCoupon ? (
-                  <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-primary/10 border border-primary/20 rounded-md">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-                        <Ticket className="h-4 w-4 text-emerald-500" />
+                      <div className="h-8 w-8 bg-primary/20 rounded-md flex items-center justify-center">
+                        <Ticket className="h-4 w-4 text-primary" />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-emerald-400">Cupom {appliedCoupon.code} está ativado!</div>
+                        <div className="text-xs font-bold text-primary">Cupom {appliedCoupon.code} está ativado!</div>
                       </div>
                     </div>
                     <Tooltip>
                       <TooltipTrigger
                         render={
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             onClick={removeCoupon}
-                            size="icon"
-                            className="text-[10px] font-bold text-white/40 hover:text-white transition-colors">
+                            size="icon">
                             <X className="h-4 w-4" />
                           </Button>
                         }
@@ -544,21 +579,27 @@ export default function CheckoutPage() {
               </div>
 
               <div className="space-y-2">
-                <div className="flex justify-between text-xs font-medium">
-                  <span className="text-white/40 tracking-widest">Subtotal</span>
-                  <span className="text-white font-bold">{hydrated ? formatPrice(subtotal()) : "R$ 0,00"}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/40">Subtotal</span>
+                  <span className="text-white font-medium">{hydrated ? formatPrice(subtotal()) : "R$ 0,00"}</span>
                 </div>
                 {hydrated && discount() > 0 && (
-                  <div className="flex justify-between text-xs font-medium">
-                    <span className="text-white/40 tracking-widest">Desconto</span>
-                    <span className="text-emerald-400 font-bold">- {formatPrice(discount())}</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white/40">Desconto</span>
+                    <span className="text-emerald-400 font-medium">- {formatPrice(discount())}</span>
                   </div>
                 )}
-                <Separator className="my-2 bg-white/5" />
+                {hydrated && deliveryFee > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white/40">Entrega expressa</span>
+                    <span className="text-white font-medium">+ {formatPrice(deliveryFee)}</span>
+                  </div>
+                )}
+                <Separator className="my-1 bg-white/5" />
                 <div className="flex justify-between items-end">
-                  <span className="text-sm font-bold text-white/60">Valor Total</span>
-                  <span className="text-3xl font-bold text-white tracking-tighter">
-                    {hydrated ? formatPrice(total()) : "R$ 0,00"}
+                  <span className="text-lg text-white/60">Valor Total</span>
+                  <span className="text-2xl font-semibold text-white">
+                    {hydrated ? formatPrice(orderTotal) : "R$ 0,00"}
                   </span>
                 </div>
               </div>
@@ -576,7 +617,7 @@ export default function CheckoutPage() {
                     </div>
                   ) : (
                     <>
-                      <span>Pagar {hydrated ? formatPrice(total()) : "R$ 0,00"}</span>
+                      <span>Pagar {hydrated ? formatPrice(orderTotal) : "R$ 0,00"}</span>
                       <ArrowRight className="h-5 w-5" />
                     </>
                   )}
@@ -589,6 +630,21 @@ export default function CheckoutPage() {
                 </div>
               )}
             </div>
+
+            <div className="flex items-center space-x-3 px-2">
+              <Checkbox
+                id="terms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                className="h-5 w-5 rounded cursor-pointer border-zinc-700 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              />
+              <label
+                htmlFor="terms"
+                className="text-sm font-medium text-zinc-400 cursor-pointer select-none"
+              >
+                Eu aceito os <span className="text-white font-semibold decoration-primary underline-offset-4">termos e condições</span> desta compra.
+              </label>
+            </div>
           </aside>
         </div>
       </div>
@@ -596,34 +652,39 @@ export default function CheckoutPage() {
   );
 }
 
-function CheckoutFieldInput({
-  field,
-  value,
-  error,
-  onChange,
-}: {
-  field: CheckoutFieldConfig;
-  value: string;
-  error?: string;
-  onChange: (value: string) => void;
-}) {
-  const Icon = field.type === "email" ? Mail : User;
+function CheckoutFieldInput({ field, value, error, onChange, }: { field: CheckoutFieldConfig; value: string; error?: string; onChange: (value: string) => void; }) {
+  const Icon = field.type === "email" ? Mail : field.key === "phone" || field.type === "tel" ? Phone : User;
+
+  function handleChange(raw: string) {
+    if (field.key === "cpf" || field.type === "cpf") {
+      onChange(formatCpfInput(raw));
+      return;
+    }
+    if (field.key === "phone" || field.type === "tel") {
+      onChange(formatPhoneInput(raw));
+      return;
+    }
+    onChange(raw);
+  }
 
   return (
     <div>
+      <label htmlFor={field.key} className="text-sm font-medium text-white/40">{field.label}</label>
       <div className="relative">
         <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-600" />
         <Input
-          type={field.type}
+          type={field.type === "cpf" ? "text" : field.type}
+          inputMode={field.type === "cpf" || field.type === "tel" ? "numeric" : undefined}
           placeholder={field.placeholder || field.label}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={`h-14 pl-12 bg-transparent border-white/5 rounded-lg focus:border-primary/30 focus:bg-white/2 text-white ${error ? "border-red-500/50" : ""}`}
+          onChange={(e) => handleChange(e.target.value)}
+          className={`h-14 pl-12 bg-transparent border-white/5 rounded-lg focus:border-primary/30 focus:bg-white/1 text-white ${error ? "border-red-500/50" : ""}`}
         />
       </div>
+
       {error && (
         <p className="mt-1 text-xs text-red-400 font-medium px-1">{error}</p>
       )}
     </div>
   );
-}
+};

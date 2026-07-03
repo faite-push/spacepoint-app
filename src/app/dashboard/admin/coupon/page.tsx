@@ -19,17 +19,15 @@ import { DateRangeFilter } from "@/components/admin/dashboard/DateRangeFilter";
 import { CouponModal } from "@/components/admin/coupons/coupon-modal";
 import { couponsApi, Coupon } from "@/lib/coupons-api";
 
-import { subDays, format } from "date-fns";
+import { format } from "date-fns";
+import { getRangeForPreset } from "@/lib/date-range-presets";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function CouponsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [dateRange, setDateRange] = useState({
-    from: subDays(new Date(), 7),
-    to: new Date(),
-  });
+  const [dateRange, setDateRange] = useState(getRangeForPreset("7d"));
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
@@ -106,7 +104,7 @@ export default function CouponsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in duration-500">
+    <div className="relative flex flex-col gap-8 animate-in fade-in duration-500">
       <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
       <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
       <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />

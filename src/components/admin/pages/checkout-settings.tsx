@@ -11,35 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { siteSettingsApi, type CheckoutFieldConfig, type CheckoutSettings, } from "@/lib/admin-api";
+import { DEFAULT_CHECKOUT_SETTINGS } from "@/lib/checkout-defaults";
 import { Toggle } from "@/components/ui/toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-const DEFAULT_SETTINGS: CheckoutSettings = {
-  termsCheckedByDefault: false,
-  prefillUserName: true,
-  prefillUserEmail: true,
-  fields: [
-    {
-      key: "name",
-      label: "Nome completo",
-      type: "text",
-      placeholder: "Nome completo",
-      required: true,
-      enabled: true,
-      prefillFromUser: "name",
-    },
-    {
-      key: "email",
-      label: "E-mail",
-      type: "email",
-      placeholder: "Seu melhor e-mail",
-      required: true,
-      enabled: true,
-      prefillFromUser: "email",
-    }
-  ],
-};
+const DEFAULT_SETTINGS: CheckoutSettings = DEFAULT_CHECKOUT_SETTINGS;
 
 function newField(index: number): CheckoutFieldConfig {
   return {
@@ -70,6 +47,14 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
         fields: data.config.checkoutSettings.fields?.length
           ? data.config.checkoutSettings.fields
           : DEFAULT_SETTINGS.fields,
+        deliveryOptions: {
+          enabled: data.config.checkoutSettings.deliveryOptions?.enabled ?? DEFAULT_SETTINGS.deliveryOptions!.enabled,
+          standardLabel: data.config.checkoutSettings.deliveryOptions?.standardLabel ?? DEFAULT_SETTINGS.deliveryOptions!.standardLabel,
+          standardDescription: data.config.checkoutSettings.deliveryOptions?.standardDescription ?? DEFAULT_SETTINGS.deliveryOptions!.standardDescription,
+          expressLabel: data.config.checkoutSettings.deliveryOptions?.expressLabel ?? DEFAULT_SETTINGS.deliveryOptions!.expressLabel,
+          expressDescription: data.config.checkoutSettings.deliveryOptions?.expressDescription ?? DEFAULT_SETTINGS.deliveryOptions!.expressDescription,
+          expressFeeCents: data.config.checkoutSettings.deliveryOptions?.expressFeeCents ?? DEFAULT_SETTINGS.deliveryOptions!.expressFeeCents,
+        },
       });
     }
   }, [data?.config?.checkoutSettings]);
@@ -150,7 +135,7 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
           <h2 className="text-sm font-medium">Comportamento geral</h2>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 px-4 py-4">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 px-4 py-4">
           <div className="flex items-center justify-between rounded-md border border-white/5 px-4 py-3">
             <div>
               <p className="text-sm font-medium text-white">Termos já marcados</p>
@@ -296,6 +281,7 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
                             <SelectItem value="text">Texto</SelectItem>
                             <SelectItem value="email">E-mail</SelectItem>
                             <SelectItem value="tel">Telefone</SelectItem>
+                            <SelectItem value="cpf">CPF</SelectItem>
                             <SelectItem value="number">Número</SelectItem>
                           </SelectContent>
                         </Select>
@@ -344,7 +330,7 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
                             {field.required ? "Obrigatório" : "Não obrigatório"}
                           </Label>
                           <p className="text-xs text-white/50">
-                            Controla se a categoria aparece no menu superior da loja.
+                            Controla se o campo é obrigatório no checkout.
                           </p>
                         </div>
                       </div>
@@ -378,6 +364,101 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
             </div>
           </ScrollArea>
         </div>
+      </div>
+
+      <div className="rounded-md border border-white/5 bg-transparent">
+        <div className="border-b border-white/5 px-4 py-3">
+          <h2 className="text-sm font-medium">Entrega no checkout</h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Permite alternar entre entrega padrão e expressa com taxa adicional.
+          </p>
+        </div>
+
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 px-4 py-4">
+          <div className="flex items-center justify-between rounded-md border border-white/5 px-4 py-3 md:col-span-2">
+            <div>
+              <p className="text-sm font-medium text-white">Ativar opções de entrega</p>
+              <p className="text-xs text-muted-foreground">Exibe padrão vs expressa no checkout</p>
+            </div>
+            <Toggle
+              variant="default"
+              size="sm"
+              pressed={settings.deliveryOptions?.enabled ?? true}
+              onPressedChange={(val) =>
+                setSettings((s) => ({
+                  ...s,
+                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, enabled: val },
+                }))
+              }
+            >
+              {settings.deliveryOptions?.enabled ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            </Toggle>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Label entrega padrão</Label>
+            <Input
+              value={settings.deliveryOptions?.standardLabel ?? ""}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, standardLabel: e.target.value },
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Label entrega expressa</Label>
+            <Input
+              value={settings.deliveryOptions?.expressLabel ?? ""}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, expressLabel: e.target.value },
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-1.5 md:col-span-2">
+            <Label className="text-xs">Descrição entrega expressa</Label>
+            <Input
+              value={settings.deliveryOptions?.expressDescription ?? ""}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, expressDescription: e.target.value },
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Taxa expressa (centavos)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={settings.deliveryOptions?.expressFeeCents ?? 999}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  deliveryOptions: {
+                    ...DEFAULT_SETTINGS.deliveryOptions!,
+                    ...s.deliveryOptions,
+                    expressFeeCents: Math.max(0, Number(e.target.value) || 0),
+                  },
+                }))
+              }
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-md border border-white/5 bg-transparent px-4 py-3">
+        <p className="text-xs text-muted-foreground">
+          Campos exigidos pelo gateway ativo (PagBank, Mercado Pago, Stripe etc.) são ativados e tornados obrigatórios automaticamente no checkout.
+        </p>
       </div>
     </div>
   );

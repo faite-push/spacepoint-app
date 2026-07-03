@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, CheckCircle, XCircle, Truck, Clock, ChevronLeft, ChevronRight, Eye, MoreVertical, Check, Filter, Loader2, ShoppingCart, DollarSign, TrendingUp, Package, ExternalLink, MessageSquare, Save, Dot, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, CheckCircle, XCircle, Truck, Clock, ChevronLeft, ChevronRight, Eye, MoreVertical, Check, Filter, Loader2, ShoppingCart, DollarSign, Package, ExternalLink, Save, Zap, ChevronDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { subDays, format } from "date-fns";
+import { getRangeForPreset } from "@/lib/date-range-presets";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
@@ -22,6 +23,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { DateRangeFilter } from "@/components/admin/dashboard/DateRangeFilter";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  formatCheckoutFieldLabel,
+  getDeliveryOptionLabel,
+  isExpressDelivery,
+  stripExpressAdminNote,
+} from "@/lib/order-delivery";
 
 const STATUS_OPTIONS = [
   { value: "ALL", label: "Todos os Status" },
@@ -35,7 +42,7 @@ export default function OrdersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
-  const [dateRange, setDateRange] = useState({ from: subDays(new Date(), 30), to: new Date(), });
+  const [dateRange, setDateRange] = useState(getRangeForPreset("30d"));
   const [page, setPage] = useState(1);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -168,7 +175,7 @@ export default function OrdersPage() {
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-3">
-              <DateRangeFilter onRangeChange={setDateRange} />
+              <DateRangeFilter defaultPreset="30d" onRangeChange={setDateRange} />
             </div>
 
             <div className="relative">
@@ -190,16 +197,16 @@ export default function OrdersPage() {
 
               {isStatusOpen && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-[100] cursor-default" 
-                    onClick={() => setIsStatusOpen(false)} 
+                  <div
+                    className="fixed inset-0 z-[100] cursor-default"
+                    onClick={() => setIsStatusOpen(false)}
                   />
                   <div className="absolute right-0 top-full mt-2 w-[220px] space-y-1 bg-card border border-white/5 rounded-md p-1.5 z-[101] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
                     {STATUS_OPTIONS.map((opt) => {
                       const info = opt.value !== "ALL" ? getStatusInfo(opt.value) : null;
                       const Icon = info?.icon || Filter;
                       const isActive = status === opt.value;
-                      
+
                       return (
                         <div
                           key={opt.value}
@@ -406,9 +413,16 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
 
   const [notes, setNotes] = useState("");
 
-  useMemo(() => {
-    if (order?.adminNotes) setNotes(order.adminNotes);
-  }, [order?.adminNotes]);
+  useEffect(() => {
+    if (order?.adminNotes !== undefined) {
+      setNotes(stripExpressAdminNote(order.adminNotes));
+    }
+  }, [order?.adminNotes, id]);
+
+  const express = order ? isExpressDelivery(order) : false;
+  const checkoutEntries = order?.checkoutData
+    ? Object.entries(order.checkoutData).filter(([, v]) => v != null && String(v).trim() !== "")
+    : [];
 
   const statusInfo = order ? (() => {
     switch (order.status.toUpperCase()) {
@@ -445,6 +459,16 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
               </SheetDescription>
             </SheetHeader>
 
+            {express && (
+              <div className="mx-6 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-amber-200">
+                <Zap className="h-4 w-4 shrink-0 text-amber-400" />
+                <p className="text-sm">
+                  <span className="font-semibold text-amber-300">Entrega expressa</span>
+                  {' — '}priorize o atendimento e a entrega deste pedido.
+                </p>
+              </div>
+            )}
+
             <ScrollArea className="flex-1 px-6">
               <div className="space-y-4">
                 <section>
@@ -464,14 +488,14 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
                   </div>
                 </section>
 
-                {order.checkoutData && Object.entries(order.checkoutData).length > 0 && (
+                {checkoutEntries.length > 0 && (
                   <section>
                     <h4 className="text-sm font-medium text-white mb-1">Dados do Checkout</h4>
                     <div className="grid grid-cols-2 gap-3">
-                      {Object.entries(order.checkoutData).map(([key, value]) => (
+                      {checkoutEntries.map(([key, value]) => (
                         <div key={key} className="bg-card p-3 rounded-md border border-white/5">
-                          <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">{key}</p>
-                          <p className="text-sm text-white/90 font-medium">{String(value)}</p>
+                          <p className="text-xs font-medium text-muted-foreground">{formatCheckoutFieldLabel(key)}</p>
+                          <p className="text-sm text-white/90 font-medium break-all">{String(value)}</p>
                         </div>
                       ))}
                     </div>
@@ -503,32 +527,43 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
                       </div>
                     ))}
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-zinc-500">Subtotal</span>
-                      <span className="text-white">{formatBRL(order.total)}</span>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-white/80">Subtotal</span>
+                      <span className="text-white font-medium">{formatBRL(order.subtotal ?? order.total)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-zinc-500">Desconto</span>
-                      <span className="text-white">{formatBRL(order.discount)}</span>
+                    <div className="flex justify-between">
+                      <span className="text-white/80">Desconto</span>
+                      <span className="text-white font-medium">{formatBRL(order.discount ?? 0)}</span>
                     </div>
-                     <div className="flex justify-between text-sm font-bold">
-                      <span className="text-white">Total</span>
-                      <span className="text-primary text-lg">{formatBRL(order.total)}</span>
+                    <div className="flex justify-between">
+                      <span className="text-white/80">Método de Entrega</span>
+                      <span className={cn(
+                        "font-medium",
+                        express ? "text-amber-400" : "text-white"
+                      )}>
+                        {getDeliveryOptionLabel(order)}
+                      </span>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-6 pt-2">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground mr-2">Pagamento</span>
-                      <span className="text-xs text-white bg-white/5 px-2 py-1 rounded border border-white/5 font-medium uppercase tracking-wider">{order.paymentMethod || "Não informado"}</span>
-                    </div>
-                    {order.couponCode && (
-                      <div className="flex flex-col">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground mr-2">Cupom</span>
-                        <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 font-bold uppercase tracking-wider">{order.couponCode}</span>
+                    {(order.deliveryFee ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-white/80">Taxa de entrega</span>
+                        <span className="text-amber-400 font-medium">{formatBRL(order.deliveryFee)}</span>
                       </div>
                     )}
+                    <div className="flex justify-between pt-1 border-t border-white/5">
+                      <span className="text-white/80">Valor Total</span>
+                      <span className="text-white font-medium text-lg">{formatBRL(order.total)}</span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-white/80">Método de Pagamento</span>
+                      <span className="text-white font-medium">{order.paymentMethod || "Não informado"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/80">Cupom</span>
+                      <span className="text-white font-medium">{order.couponCode ? <span className="text-emerald-400 font-bold uppercase">{order.couponCode}</span> : "Nenhum cupom aplicado"}</span>
+                    </div>
                   </div>
                 </section>
 
@@ -594,8 +629,16 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
                       className="w-full"
                       size="lg"
                       variant="outline"
-                      onClick={() => updateNotes({ id: order.id, notes })}
-                      disabled={notes === order.adminNotes}
+                      onClick={() => {
+                        const base = notes.trim();
+                        const payload = express
+                          ? (base
+                            ? `[ENTREGA EXPRESSA] Priorizar atendimento e entrega deste pedido.\n\n${base}`
+                            : '[ENTREGA EXPRESSA] Priorizar atendimento e entrega deste pedido.')
+                          : base;
+                        updateNotes({ id: order.id, notes: payload });
+                      }}
+                      disabled={notes === stripExpressAdminNote(order.adminNotes)}
                     >
                       Salvar Observações
                     </Button>
@@ -612,17 +655,6 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
                   onClick={() => updateStatus({ id: order.id, status: "PAID" })}
                 >
                   Aprovar Pagamento
-                </Button>
-              )}
-
-              {order.status === "PAID" && (
-                <Button
-                  className="flex-2 bg-primary hover:bg-primary/90 text-white gap-2"
-                  size="lg"
-                  variant="outline"
-                  onClick={() => updateStatus({ id: order.id, status: "DELIVERED" })}
-                >
-                  Marcar como Entregue
                 </Button>
               )}
 

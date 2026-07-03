@@ -25,18 +25,26 @@ export async function fetchOrder(id: string, paymentMethod?: string): Promise<{ 
   return data;
 }
 
-export async function fetchCheckoutPaymentOptions(): Promise<{
+export async function fetchCheckoutPaymentOptions(paymentMethod?: "PIX" | "CARD"): Promise<{
   gateway: string | null;
   pixGateway: string | null;
   cardGateway: string | null;
   methods: string[];
+  requiredCustomerFields?: string[];
+  requiredFieldsByMethod?: { PIX: string[]; CARD: string[] };
 }> {
-  return apiFetch("/v2/api/orders/payment-options");
+  const query = paymentMethod ? `?paymentMethod=${paymentMethod}` : "";
+  return apiFetch(`/v2/api/orders/payment-options${query}`);
 }
 
 export async function createOrder(
   items: Array<{ productId: string; variantId?: string | null; quantity: number }>,
-  opts?: { couponCode?: string | null; paymentMethod?: string; checkoutData?: any }
+  opts?: {
+    couponCode?: string | null;
+    paymentMethod?: string;
+    checkoutData?: any;
+    deliveryOption?: "standard" | "express";
+  }
 ): Promise<Order> {
   const data = await apiFetch<{ order: Order }>("/v2/api/orders", {
     method: "POST",
@@ -46,6 +54,7 @@ export async function createOrder(
       couponCode: opts?.couponCode ?? null,
       paymentMethod: opts?.paymentMethod ?? "PIX",
       checkoutData: opts?.checkoutData ?? null,
+      deliveryOption: opts?.deliveryOption ?? "standard",
     }),
   });
   return data.order;

@@ -81,30 +81,30 @@ export function AdminHeader({ user, onOpenMenu }: AdminHeaderProps) {
     .join("");
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-white/5 bg-background/95 px-4 backdrop-blur-md lg:h-20 lg:px-6">
+    <header className="sticky top-0 z-40 flex h-14 w-full items-center gap-3 border-b border-white/5 bg-card/50 px-3 backdrop-blur-md sm:px-4 lg:h-20 lg:px-6">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <button
           type="button"
           onClick={onOpenMenu}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-white transition-colors hover:bg-white/5 lg:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center text-white transition-colors lg:hidden"
           aria-label="Abrir menu"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-6 w-6" />
         </button>
 
-        <Link href="/dashboard/admin" className="flex shrink-0 items-center mx-auto lg:hidden">
+        <Link href="/dashboard/admin" className="absolute left-1/2 md:hidden flex shrink-0 -translate-x-1/2 items-center lg:static lg:translate-x-0">
           <Image
             src="/logo-sidebar.png"
             alt="Space Point"
             width={100}
             height={28}
-            className="h-42 w-auto object-contain"
+            className="h-38 w-auto object-contain select-none pointer-events-none invert brightness-0 opacity-70 hover:opacity-60 transition-opacity duration-300"
             priority
           />
         </Link>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+      <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
         <div
           className="hidden items-center gap-3 rounded-lg px-3 py-2 text-sm md:flex"
           aria-label="Data e hora atuais"

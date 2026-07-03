@@ -265,15 +265,18 @@ export function ProductForm({ product, variantCount = 0, isModal = false, onCanc
 
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Button asChild variant="ghost" size="icon" className="h-9 w-9 p-0 hover:bg-transparent">
+              <Button asChild variant="ghost" size="icon" className="md:flex hidden h-9 w-9 p-0 hover:bg-transparent">
                 <Link href="/dashboard/admin/products" aria-label="Voltar">
                   <ArrowLeft className="h-4 w-4" />
                 </Link>
               </Button>
               <div>
-                <h1 className="text-xl font-bold text-white tracking-tight">
-                  {isEditing ? "Editar pacote" : "Adicionar pacote"}
+                <h1 className="text-base md:text-xl font-bold text-white">
+                  {isEditing ? "Edição de produto" : "Criação de produto"}
                 </h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {isEditing ? "Edite as informações do produto" : "Crie um novo produto para o seu catálogo"}
+                </p>
               </div>
             </div>
 

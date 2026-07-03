@@ -1,23 +1,63 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Shield, ShieldCheck, Ban, User, ChevronLeft, ChevronRight, Eye, Plus, Loader2, X, Check, Mail, Pencil, Trash2, PlusCircle } from "lucide-react";
-import { TeamNav } from "@/components/admin/layout/team-nav";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+import {
+  Search,
+  Shield,
+  Loader2,
+  Plus,
+  X,
+  MoreVertical,
+  Trash2,
+  User,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+
+import { TeamNav } from "@/components/admin/layout/team-nav";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn, getCsrfToken } from "@/lib/utils";
 import { Can } from "@/providers/PermissionProvider";
+import { useAuth } from "@/context/auth-context";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-async function fetchTeam() {
+type StoreUser = {
+  id: string;
+  name: string | null;
+  email: string;
+  image?: string | null;
+  isAdmin?: boolean;
+  isSuperOwner?: boolean;
+  createdAt: string;
+  roleId?: string | null;
+  role?: { id: string; name: string; isProtected?: boolean } | null;
+};
+
+async function fetchTeamMembers(): Promise<StoreUser[]> {
   const res = await fetch(`${API_URL}/v2/api/admin/team`, { credentials: "include" });
   if (!res.ok) throw new Error("Falha ao buscar equipe");
   const data = await res.json();
@@ -33,7 +73,10 @@ async function fetchRoles() {
 
 async function searchUsers(query: string) {
   if (!query || query.length < 2) return [];
-  const res = await fetch(`${API_URL}/v2/api/admin/users/search?query=${encodeURIComponent(query)}`, { credentials: "include" });
+  const res = await fetch(
+    `${API_URL}/v2/api/admin/users/search?query=${encodeURIComponent(query)}`,
+    { credentials: "include" }
+  );
   if (!res.ok) throw new Error("Erro ao buscar usuários");
   const data = await res.json();
   return data.users;
@@ -42,9 +85,9 @@ async function searchUsers(query: string) {
 async function assignRole({ userId, roleId }: { userId: string; roleId: string | null }) {
   const res = await fetch(`${API_URL}/api/admin/users/${userId}/role`, {
     method: "POST",
-    headers: { 
+    headers: {
       "Content-Type": "application/json",
-      "X-CSRF-Token": getCsrfToken()
+      "X-CSRF-Token": getCsrfToken(),
     },
     credentials: "include",
     body: JSON.stringify({ roleId }),
@@ -56,23 +99,64 @@ async function assignRole({ userId, roleId }: { userId: string; roleId: string |
   return res.json();
 }
 
-export default function TeamPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
-  const [inviteQuery, setInviteQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [selectedRoleId, setSelectedRoleId] = useState<string>("");
-  const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
-  const queryClient = useQueryClient();
+function UserAvatar({ user }: { user: StoreUser }) {
+  const initial = (user.name || user.email || "?").charAt(0).toUpperCase();
+  return (
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/5 text-sm font-semibold text-white">
+      {user.image ? (
+        <img src={user.image} alt="" className="h-full w-full rounded-full object-cover" />
+      ) : (
+        initial
+      )}
+    </div>
+  );
+}
 
-  const { data: team, isLoading: teamLoading } = useQuery({
-    queryKey: ["team"],
-    queryFn: fetchTeam,
+function RoleBadge({
+  roleName,
+  onRemove,
+  canRemove,
+}: {
+  roleName: string;
+  onRemove?: () => void;
+  canRemove?: boolean;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white">
+      <Shield className="h-3 w-3 shrink-0 text-zinc-400" />
+      <span className="truncate max-w-[120px]">{roleName}</span>
+      {canRemove && onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="rounded p-0.5 text-zinc-500 hover:bg-white/10 hover:text-white"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </span>
+  );
+}
+
+export default function UsersPage() {
+  const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [rolePickerUserId, setRolePickerUserId] = useState<string | null>(null);
+  const [roleSearch, setRoleSearch] = useState("");
+  const [removeTarget, setRemoveTarget] = useState<StoreUser | null>(null);
+  const [addSearchQuery, setAddSearchQuery] = useState("");
+  const [addSearchResults, setAddSearchResults] = useState<StoreUser[]>([]);
+  const [addSearching, setAddSearching] = useState(false);
+  const [selectedAddUser, setSelectedAddUser] = useState<StoreUser | null>(null);
+  const [selectedAddRoleId, setSelectedAddRoleId] = useState("");
+
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["admin-team"],
+    queryFn: fetchTeamMembers,
   });
 
   const { data: roles } = useQuery({
@@ -82,360 +166,398 @@ export default function TeamPage() {
 
   const assignMutation = useMutation({
     mutationFn: assignRole,
-    onSuccess: (data) => {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-team"] });
       queryClient.invalidateQueries({ queryKey: ["team"] });
-      toast.success(selectedRoleId ? "Cargo atribuído com sucesso!" : "Membro removido da equipe!");
-      setIsAddModalOpen(false);
-      setDeleteConfirm(null);
+      toast.success("Cargo atualizado!");
+      setRolePickerUserId(null);
+      setRoleSearch("");
+      setRemoveTarget(null);
+      setAddOpen(false);
       resetAddModal();
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
+  const resetAddModal = () => {
+    setInviteName("");
+    setInviteEmail("");
+    setAddSearchQuery("");
+    setAddSearchResults([]);
+    setSelectedAddUser(null);
+    setSelectedAddRoleId("");
+  };
+
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      if (inviteQuery.length >= 2 && !selectedUser) {
-        setIsSearching(true);
+    const timer = setTimeout(async () => {
+      if (addSearchQuery.length >= 2 && !selectedAddUser) {
+        setAddSearching(true);
         try {
-          const results = await searchUsers(inviteQuery);
-          setSearchResults(results);
-          setShowResults(true);
-        } catch (err) {
-          console.error(err);
+          const results = await searchUsers(addSearchQuery);
+          setAddSearchResults(results);
+        } catch {
+          setAddSearchResults([]);
         } finally {
-          setIsSearching(false);
+          setAddSearching(false);
         }
       } else {
-        setSearchResults([]);
-        setShowResults(false);
+        setAddSearchResults([]);
       }
-    }, 400);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [addSearchQuery, selectedAddUser]);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [inviteQuery, selectedUser]);
-
-  const resetAddModal = () => {
-    setInviteQuery("");
-    setSearchResults([]);
-    setSelectedUser(null);
-    setSelectedRoleId("");
-    setIsSearching(false);
-    setShowResults(false);
-  };
-
-  const handleSelectUser = (user: any) => {
-    setSelectedUser(user);
-    setSelectedRoleId(user.roleId || "");
-    setShowResults(false);
-    setInviteQuery(user.email);
-  };
-
-  const handleAddMember = () => {
-    if (!selectedUser || !selectedRoleId) return;
-    assignMutation.mutate({ userId: selectedUser.id, roleId: selectedRoleId });
-  };
-
-  const handleEditRole = (member: any) => {
-    setSelectedUser(member);
-    setSelectedRoleId(member.roleId || "");
-    setInviteQuery(member.email);
-    setIsAddModalOpen(true);
-  };
-
-  const handleRemoveMember = () => {
-    if (!deleteConfirm) return;
-    assignMutation.mutate({ userId: deleteConfirm.id, roleId: null });
-  };
-
-  const filteredTeam = team?.filter((user: any) => 
-    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = users?.filter(
+    (u) =>
+      u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const filteredRoles =
+    roles?.filter((r: { name: string }) =>
+      r.name.toLowerCase().includes(roleSearch.toLowerCase())
+    ) ?? [];
+
+  const handleAssignRole = (userId: string, roleId: string) => {
+    assignMutation.mutate({ userId, roleId });
+  };
+
+  const handleRemoveRole = (user: StoreUser) => {
+    if (user.isSuperOwner) return;
+    assignMutation.mutate({ userId: user.id, roleId: null });
+  };
+
+  const handleAddUserSubmit = () => {
+    if (selectedAddUser && selectedAddRoleId) {
+      assignMutation.mutate({ userId: selectedAddUser.id, roleId: selectedAddRoleId });
+      return;
+    }
+    if (inviteEmail.trim()) {
+      toast.info("Convite por e-mail em breve. Busque o usuário pelo e-mail para atribuir um cargo.");
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <TeamNav />
-
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Equipe</h1>
-          <p className="text-muted-foreground">Gerencie os membros da sua equipe e seus acessos</p>
-        </div>
-
-        <Can I="roles:manage">
-          <Dialog open={isAddModalOpen} onOpenChange={(open) => {
-            setIsAddModalOpen(open);
-            if (!open) resetAddModal();
-          }}>
-            <DialogTrigger asChild>
-              <Button variant="default" className="bg-primary hover:bg-primary/80 gap-2 py-5 px-4 shrink-0">
-                <PlusCircle className="h-4 w-4" />
-                Adicionar à Equipe
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-[#111111] border-white/10 text-white max-w-md">
-              <DialogHeader>
-                <DialogTitle>{selectedUser ? "Editar Cargo" : "Adicionar Membro"}</DialogTitle>
-                <DialogDescription className="text-zinc-400">
-                  {selectedUser ? "Altere o cargo administrativo deste membro." : "Busque um usuário pelo nome ou email e atribua um cargo."}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4 py-4 relative">
-                {!selectedUser && (
-                  <div className="space-y-2">
-                    <Label>Buscar Usuário</Label>
-                    <div className="relative">
-                      <Input 
-                        placeholder="Nome ou email..." 
-                        value={inviteQuery}
-                        onChange={(e) => setInviteQuery(e.target.value)}
-                        className="bg-black/50 border-white/10 pl-10"
-                        autoComplete="off"
-                      />
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                      
-                      {isSearching && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
-                        </div>
-                      )}
-
-                      {showResults && searchResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border border-white/10 bg-[#161616] p-1 shadow-2xl animate-in fade-in zoom-in-95">
-                          {searchResults.map((user) => (
-                            <button
-                              key={user.id}
-                              onClick={() => handleSelectUser(user)}
-                              className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-white/5 transition-colors"
-                            >
-                              <div className="h-8 w-8 rounded-full bg-[#9333EA]/20 flex items-center justify-center shrink-0">
-                                {user.image ? (
-                                  <img src={user.image} className="h-8 w-8 rounded-full" alt="" />
-                                ) : (
-                                  <User className="h-4 w-4 text-[#9333EA]" />
-                                )}
-                              </div>
-                              <div className="overflow-hidden">
-                                <p className="text-sm font-medium truncate">{user.name || "Sem nome"}</p>
-                                <p className="text-[10px] text-zinc-500 truncate">{user.email}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {showResults && inviteQuery.length >= 2 && searchResults.length === 0 && !isSearching && (
-                        <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-lg border border-white/10 bg-[#161616] p-4 text-center shadow-2xl">
-                          <p className="text-sm text-zinc-500">Nenhum usuário encontrado</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {selectedUser && (
-                  <div className="rounded-xl border border-[#9333EA]/30 bg-[#9333EA]/5 p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-[#9333EA]/20 flex items-center justify-center border border-[#9333EA]/30">
-                          {selectedUser.image ? (
-                            <img src={selectedUser.image} className="h-10 w-10 rounded-full" alt="" />
-                          ) : (
-                            <User className="h-5 w-5 text-[#9333EA]" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-semibold">{selectedUser.name || "Sem nome"}</p>
-                          <p className="text-xs text-zinc-500">{selectedUser.email}</p>
-                        </div>
-                      </div>
-                      {!inviteQuery && (
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedUser(null)} className="h-8 w-8 text-zinc-500 hover:text-white">
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs text-zinc-400">Cargo Atribuído</Label>
-                      <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
-                        <SelectTrigger className="bg-black/50 border-white/10 text-white h-11">
-                          <SelectValue placeholder="Selecione um cargo..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#111111] border-white/10">
-                          {roles?.map((role: any) => (
-                            <SelectItem key={role.id} value={role.id} className="text-white hover:bg-white/10">
-                              {role.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setIsAddModalOpen(false)} className="text-zinc-400">Cancelar</Button>
-                <Button 
-                  onClick={handleAddMember} 
-                  className="bg-[#9333EA] hover:bg-[#7e22ce] min-w-[100px]"
-                  disabled={!selectedUser || !selectedRoleId || assignMutation.isPending}
-                >
-                  {assignMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </Can>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold text-white">Usuários</h1>
+        <p className="text-sm text-zinc-500">Lista de usuários adicionados a loja</p>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-        <input
-          type="text"
-          placeholder="Buscar na equipe..."
+      <TeamNav />
+
+      <Can I="roles:manage">
+        <Button
+          onClick={() => setAddOpen(true)}
+          className="bg-white text-black hover:bg-white/90 h-10 px-5 font-medium"
+        >
+          Adicionar usuário
+        </Button>
+      </Can>
+
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <Input
+          placeholder="Pesquisar"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-10 w-full rounded-lg border border-white/10 bg-[#0A0A0A] pl-10 pr-4 text-sm text-white placeholder:text-zinc-600 focus:border-[#9333EA]/60 focus:outline-none focus:ring-none transition-all duration-300"
+          className="h-10 border-white/10 bg-white/[0.03] pl-9"
         />
       </div>
 
-      <div className="rounded-lg border border-white/3 bg-background overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/3 bg-white/[0.01]">
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/75">Membro:</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/75">Cargo:</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/75">Status:</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/75">Desde:</th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-white/75">Ações:</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {teamLoading ? (
-                <tr>
-                  <td colSpan={5} className="py-20 text-center">
-                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#9333EA]" />
-                  </td>
-                </tr>
-              ) : filteredTeam?.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-20 text-center text-zinc-500">
-                    Nenhum membro da equipe encontrado
-                  </td>
-                </tr>
-              ) : (
-                filteredTeam?.map((member: any) => (
-                  <tr key={member.id} className="group hover:bg-white/[0.02] transition-colors cursor-pointer select-none">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <div className="h-11 w-11 rounded-full bg-white/3 p-[1px]">
-                            <div className="flex h-full w-full items-center justify-center rounded-full bg-[#111111]">
-                              {member.image ? (
-                                <img src={member.image} className="h-full w-full rounded-full object-cover pointer-events-none select-none" alt="" />
-                              ) : (
-                                <User className="h-5 w-5 text-[#9333EA]" />
-                              )}
-                            </div>
-                          </div>
-                          {member.isAdmin && (
-                            <div className="absolute -right-1 -top-1 rounded-full bg-yellow-500 p-1 border-2 border-[#111111]">
-                              <ShieldCheck className="h-2 w-2 text-black" />
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-white transition-colors">{member.name || "Sem nome"}</p>
-                          <p className="text-xs text-white/60">{member.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {member.isAdmin && !member.role ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-yellow-500/10 px-3 py-1 text-[11px] font-bold tracking-wider text-yellow-500 border border-yellow-500/20">
-                          Dono Supremo
-                        </span>
-                      ) : member.role ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/3 px-3 py-1 text-[11px] font-bold tracking-wider text-emerald-500 border border-emerald-500/20">
-                          {member.role.name}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-zinc-500">—</span>
+      <div className="space-y-3">
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-[#fcb64c]" />
+          </div>
+        ) : filteredUsers?.length === 0 ? (
+          <p className="py-12 text-center text-zinc-500">Nenhum usuário encontrado</p>
+        ) : (
+          filteredUsers?.map((member) => {
+            const isYou = member.id === currentUser?.id;
+            const isOwner = member.isSuperOwner;
+            const canManage = !isOwner && !member.isSuperOwner;
+
+            return (
+              <div
+                key={member.id}
+                className="rounded-xl border border-white/5 bg-[#111111] p-4"
+              >
+                <div className="flex items-start gap-3">
+                  <UserAvatar user={member} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-semibold text-white">
+                        {member.name || member.email.split("@")[0]}
+                      </span>
+                      {isOwner && (
+                        <span className="text-sm text-[#fcb64c]">· Dono</span>
                       )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                        <span className="text-sm text-zinc-300">Ativo</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-white/80">
-                      {format(new Date(member.createdAt), "MMMM yyyy", { locale: ptBR })}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {(!member.isAdmin || member.role) && (
-                          <>
-                            <Button 
-                              onClick={() => handleEditRole(member)}
-                              variant="outline"
-                              size="icon-lg"
-                              className="flex cursor-pointer"
-                              title="Editar Cargo"
+                      {isYou && !isOwner && (
+                        <span className="text-sm text-blue-400">· Você</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-500">
+                      {member.email} ·{" "}
+                      {format(new Date(member.createdAt), "d, MMM yyyy", { locale: ptBR })}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Can I="roles:manage">
+                        {canManage && (
+                          <Popover
+                            open={rolePickerUserId === member.id}
+                            onOpenChange={(open) => {
+                              setRolePickerUserId(open ? member.id : null);
+                              if (!open) setRoleSearch("");
+                            }}
+                          >
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-white/5 text-zinc-400 hover:text-white"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              align="start"
+                              className="w-64 border-white/10 bg-[#161616] p-2"
                             >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              onClick={() => setDeleteConfirm(member)}
-                              variant="destructive"
-                              size="icon-lg"
-                              className="flex cursor-pointer"
-                              title="Remover da Equipe"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
+                              <div className="relative mb-2">
+                                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+                                <Input
+                                  placeholder="Pesquisar cargo"
+                                  value={roleSearch}
+                                  onChange={(e) => setRoleSearch(e.target.value)}
+                                  className="h-8 border-white/10 bg-black/40 pl-8 text-sm"
+                                />
+                              </div>
+                              <div className="max-h-48 space-y-0.5 overflow-y-auto">
+                                {filteredRoles.map((role: { id: string; name: string; isProtected?: boolean }) => (
+                                  <button
+                                    key={role.id}
+                                    type="button"
+                                    onClick={() => handleAssignRole(member.id, role.id)}
+                                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-zinc-300 hover:bg-white/5"
+                                  >
+                                    <Shield className="h-3.5 w-3.5 text-zinc-500" />
+                                    {role.name}
+                                  </button>
+                                ))}
+                                {filteredRoles.length === 0 && (
+                                  <p className="px-2 py-3 text-center text-xs text-zinc-500">
+                                    Nenhum cargo encontrado
+                                  </p>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         )}
-                        {member.isAdmin && !member.role && (
-                           <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/5 bg-white/[0.03] text-zinc-400 hover:border-zinc-300 hover:text-white transition-all cursor-not-allowed opacity-30">
-                              <ShieldCheck className="h-4 w-4" />
-                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </Can>
+
+                      {member.role ? (
+                        <RoleBadge
+                          roleName={member.role.name}
+                          canRemove={canManage}
+                          onRemove={
+                            canManage ? () => handleRemoveRole(member) : undefined
+                          }
+                        />
+                      ) : canManage ? (
+                        <Can I="roles:manage">
+                          <button
+                            type="button"
+                            onClick={() => setRolePickerUserId(member.id)}
+                            className="text-xs text-blue-400 hover:underline"
+                          >
+                            Adicionar cargo
+                          </button>
+                        </Can>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {canManage && (
+                    <Can I="roles:manage">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="rounded-md p-2 text-zinc-500 hover:bg-white/5 hover:text-white"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="border-white/10 bg-[#161616]"
+                        >
+                          <DropdownMenuItem
+                            className="text-red-400 focus:text-red-400 focus:bg-red-500/10 cursor-pointer"
+                            onClick={() => setRemoveTarget(member)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Remover usuário
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </Can>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="bg-[#111111] border-white/10 text-white">
+      <Dialog
+        open={addOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open);
+          if (!open) resetAddModal();
+        }}
+      >
+        <DialogContent className="border-white/10 bg-[#111111] text-white sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Remover Membro</DialogTitle>
+            <DialogTitle>Adicionar Usuário</DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Tem certeza que deseja remover <strong>{deleteConfirm?.name}</strong> da equipe? 
-              O acesso administrativo deste usuário será revogado.
+              Preencha as informações para adicionar um novo usuário
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {!selectedAddUser ? (
+              <>
+                <div className="space-y-2">
+                  <Label>Nome do usuário</Label>
+                  <Input
+                    placeholder="usuário"
+                    value={inviteName}
+                    onChange={(e) => {
+                      setInviteName(e.target.value);
+                      setAddSearchQuery(e.target.value);
+                    }}
+                    className="border-white/10 bg-black/40"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>E-mail</Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="exemplo@gmail.com"
+                      value={inviteEmail}
+                      onChange={(e) => {
+                        setInviteEmail(e.target.value);
+                        setAddSearchQuery(e.target.value);
+                      }}
+                      className="border-white/10 bg-black/40"
+                    />
+                    {addSearching && (
+                      <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-zinc-500" />
+                    )}
+                  </div>
+                  {addSearchResults.length > 0 && (
+                    <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-white/10 bg-[#0a0a0a] p-1">
+                      {addSearchResults.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedAddUser(u);
+                            setInviteName(u.name || "");
+                            setInviteEmail(u.email);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-white/5"
+                        >
+                          <User className="h-4 w-4 text-zinc-500" />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm">{u.name || u.email}</p>
+                            <p className="truncate text-xs text-zinc-500">{u.email}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{selectedAddUser.name || selectedAddUser.email}</p>
+                    <p className="text-xs text-zinc-500">{selectedAddUser.email}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedAddUser(null)}
+                    className="h-8 w-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">Cargo</Label>
+                  <select
+                    value={selectedAddRoleId}
+                    onChange={(e) => setSelectedAddRoleId(e.target.value)}
+                    className="h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 text-sm text-white"
+                  >
+                    <option value="">Selecione um cargo...</option>
+                    {roles?.map((r: { id: string; name: string }) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setAddOpen(false)} className="text-zinc-400">
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAddUserSubmit}
+              disabled={
+                assignMutation.isPending ||
+                (selectedAddUser ? !selectedAddRoleId : !inviteEmail.trim())
+              }
+              className="bg-white text-black hover:bg-white/90"
+            >
+              {assignMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Enviar solicitação"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!removeTarget} onOpenChange={() => setRemoveTarget(null)}>
+        <DialogContent className="border-white/10 bg-[#111111] text-white">
+          <DialogHeader>
+            <DialogTitle>Remover usuário</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Remover o cargo de <strong>{removeTarget?.name || removeTarget?.email}</strong>?
+              O acesso administrativo será revogado.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setDeleteConfirm(null)} className="text-zinc-500">Cancelar</Button>
+            <Button variant="ghost" onClick={() => setRemoveTarget(null)} className="text-zinc-500">
+              Cancelar
+            </Button>
             <Button
               variant="destructive"
-              onClick={handleRemoveMember}
+              onClick={() => removeTarget && handleRemoveRole(removeTarget)}
               disabled={assignMutation.isPending}
-              className="bg-red-500 hover:bg-red-600"
             >
               {assignMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Revogar Acesso
+              Remover
             </Button>
           </DialogFooter>
         </DialogContent>

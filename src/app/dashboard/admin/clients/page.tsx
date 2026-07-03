@@ -28,7 +28,7 @@ export default function AdminClientsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-3 animate-in fade-in duration-500">
+    <div className="relative flex flex-col gap-3 animate-in fade-in duration-500">
       <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
       <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
       <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
@@ -39,7 +39,7 @@ export default function AdminClientsPage() {
 
       <div>
         <h1 className="text-2xl font-bold text-white">Clientes</h1>
-        <p className="text-sm text-muted-foreground">Compradores e histórico de pedidos</p>
+        <p className="text-muted-foreground">Compradores e histórico de pedidos</p>
       </div>
 
       <div className="relative max-w-md">

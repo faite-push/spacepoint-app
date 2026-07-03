@@ -66,35 +66,40 @@ export function InstitutionalSettings() {
         <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
       </div>
     );
-  }
+  };
 
   const publicPath = SLUG_PATH[draft.slug] ?? `/${draft.slug}`;
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white lg:text-3xl">Páginas institucionais</h1>
-          <p className="text-sm text-muted-foreground mt-1 lg:text-base">
+          <h1 className="text-xl font-bold text-white lg:text-2xl">Páginas institucionais</h1>
+          <p className="text-muted-foreground">
             Edite o conteúdo de Quem somos, Privacidade e políticas da loja.
           </p>
         </div>
+        
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button variant="outline" asChild className="gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="lg" asChild className="gap-2">
             <Link href={publicPath} target="_blank">
               <ExternalLink className="h-4 w-4" />
               Ver na loja
             </Link>
           </Button>
           <Button
-            className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto"
+            className="shrink-0"
             disabled={saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
             {saveMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Save className="h-4 w-4" />
+              <Save className="h-4 w-4 hidden" />
             )}
             Salvar página
           </Button>
@@ -112,7 +117,7 @@ export function InstitutionalSettings() {
                 setDraft({ ...page });
               }}
               className={cn(
-                "w-full shrink-0 rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-colors lg:py-3",
+                "w-full shrink-0 cursor-pointer rounded-md px-4 py-2.5 text-left text-sm font-medium transition-colors lg:py-3",
                 activeSlug === page.slug
                   ? "bg-[#9333EA]/15 text-[#c084fc]"
                   : "text-zinc-400 hover:bg-white/5 hover:text-white"

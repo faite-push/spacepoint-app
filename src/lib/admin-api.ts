@@ -36,6 +36,7 @@ export interface Category {
   imageUrl: string | null;
   bannerUrl: string | null;
   showInNavbar: boolean;
+  showInFooter: boolean;
   isActive: boolean;
   sortOrder: number;
   parentId: string | null;
@@ -50,6 +51,7 @@ export interface CategoryPayload {
   imageUrl?: string | null;
   bannerUrl?: string | null;
   showInNavbar?: boolean;
+  showInFooter?: boolean;
   isActive?: boolean;
   sortOrder?: number;
   parentId?: string | null;
@@ -385,17 +387,37 @@ export type SiteConfigRecord = {
   chatWelcomeMessage: string | null;
   chatAutomatedMessages: string | null;
   pluginsConfig?: PluginsConfig | null;
+  reviewsSettings?: ReviewsSettings | null;
   checkoutSettings?: CheckoutSettings | null;
+};
+
+export type ReviewsSettings = {
+  enabled: boolean;
+  showOnHomepage: boolean;
+  homeTitle: string;
+  homeSubtitle: string;
+  autoPublish: boolean;
+  allowScreenshots: boolean;
+  opinionTags: string[];
 };
 
 export type CheckoutFieldConfig = {
   key: string;
   label: string;
-  type: "text" | "email" | "tel" | "number";
+  type: "text" | "email" | "tel" | "number" | "cpf";
   placeholder: string;
   required: boolean;
   enabled: boolean;
   prefillFromUser: "name" | "email" | null;
+};
+
+export type CheckoutDeliveryOptions = {
+  enabled: boolean;
+  standardLabel: string;
+  standardDescription: string;
+  expressLabel: string;
+  expressDescription: string;
+  expressFeeCents: number;
 };
 
 export type CheckoutSettings = {
@@ -403,6 +425,7 @@ export type CheckoutSettings = {
   prefillUserName: boolean;
   prefillUserEmail: boolean;
   fields: CheckoutFieldConfig[];
+  deliveryOptions?: CheckoutDeliveryOptions;
 };
 
 export type HomeReviewRecord = {
@@ -509,6 +532,83 @@ export const homeReviewsApi = {
     }),
 };
 
+export type HomeShowcaseSectionRecord = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  enabled: boolean;
+  sortOrder: number;
+  maxItems: number;
+  products?: Array<{
+    id: string;
+    sectionId: string;
+    productId: string;
+    sortOrder: number;
+    product: {
+      id: string;
+      name: string;
+      slug: string;
+      imageUrl: string | null;
+      featured: boolean;
+      isActive: boolean;
+      isVisible: boolean;
+    };
+  }>;
+  _count?: { products: number };
+};
+
+export type FeaturedProductRow = {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl: string | null;
+  featured: boolean;
+  isActive: boolean;
+  isVisible: boolean;
+};
+
+export const homeShowcaseApi = {
+  list: () =>
+    request<{ sections: HomeShowcaseSectionRecord[] }>("/v2/api/admin/home-showcase-sections"),
+  listFeaturedProducts: () =>
+    request<{ products: FeaturedProductRow[] }>("/v2/api/admin/home-showcase/featured-products"),
+  create: (payload: {
+    title: string;
+    subtitle?: string | null;
+    enabled?: boolean;
+    maxItems?: number;
+    productIds?: string[];
+  }) =>
+    request<HomeShowcaseSectionRecord>("/v2/api/admin/home-showcase-sections", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  update: (
+    id: string,
+    payload: Partial<{
+      title: string;
+      subtitle: string | null;
+      enabled: boolean;
+      sortOrder: number;
+      maxItems: number;
+      productIds: string[];
+    }>
+  ) =>
+    request<HomeShowcaseSectionRecord>(`/v2/api/admin/home-showcase-sections/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  remove: (id: string) =>
+    request<{ success: boolean }>(`/v2/api/admin/home-showcase-sections/${id}`, {
+      method: "DELETE",
+    }),
+  reorder: (items: { id: string }[]) =>
+    request<{ success: boolean }>("/v2/api/admin/home-showcase-sections/reorder", {
+      method: "PUT",
+      body: JSON.stringify({ items }),
+    }),
+};
+
 export const pageSeoApi = {
   list: () => request<{ pages: PageSeoRecord[] }>("/v2/api/admin/page-seo"),
   update: (pageKey: string, payload: Partial<PageSeoRecord>) =>
@@ -578,6 +678,8 @@ export interface AdminOrder {
   subtotal: number;
   discount: number;
   total: number;
+  deliveryFee: number;
+  deliveryOption?: string | null;
   customerName: string;
   customerEmail: string;
   customerImage?: string;
@@ -685,6 +787,9 @@ export interface ChatMessage {
   id: string;
   chatId: string;
   senderId: string;
+  senderName?: string | null;
+  senderRole?: string | null;
+  senderStaffTitle?: string | null;
   content: string;
   type: "TEXT" | "IMAGE" | "SYSTEM" | "AUTOMATED" | "ORDER_APPROVED" | "DELIVERY";
   fileUrl: string | null;
@@ -716,6 +821,8 @@ export interface Chat {
   ratingComment: string | null;
   ratingTags?: string[] | null;
   isAnonymousRating?: boolean;
+  reviewStatus?: 'PENDING' | 'PUBLISHED' | 'ARCHIVED' | null;
+  sellerResponse?: string | null;
   assignedToId?: string | null;
   assignedTo?: { id: string; name: string | null; email: string | null; image: string | null } | null;
   firstAdminResponseAt?: string | null;
@@ -731,6 +838,8 @@ export interface Chat {
     subtotal: number;
     discount: number;
     total: number;
+    deliveryOption?: string | null;
+    deliveryFee?: number;
     paymentMethod: string | null;
     createdAt: string;
     paidAt: string | null;
@@ -836,11 +945,12 @@ export const chatApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  list: (params?: { search?: string; status?: string; labelId?: string; page?: number; sortBy?: string }) => {
+  list: (params?: { search?: string; status?: string; labelId?: string; deliveryFilter?: string; page?: number; sortBy?: string }) => {
     const qs = new URLSearchParams();
     if (params?.search) qs.set("search", params.search);
     if (params?.status) qs.set("status", params.status);
     if (params?.labelId) qs.set("labelId", params.labelId);
+    if (params?.deliveryFilter) qs.set("deliveryFilter", params.deliveryFilter);
     if (params?.page) qs.set("page", String(params.page));
     if (params?.sortBy) qs.set("sortBy", params.sortBy);
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
@@ -907,13 +1017,22 @@ export const chatApi = {
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     return request<{ clients: AdminClient[]; total: number; page: number; totalPages: number }>(`/v2/api/admin/clients${suffix}`);
   },
-  listReviews: (params?: { page?: number; minRating?: number }) => {
+  listReviews: (params?: { page?: number; minRating?: number; status?: string; search?: string }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set("page", String(params.page));
     if (params?.minRating) qs.set("minRating", String(params.minRating));
+    if (params?.status) qs.set("status", params.status);
+    if (params?.search) qs.set("search", params.search);
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     return request<{ reviews: ChatReview[]; total: number; page: number; totalPages: number; averageRating: number }>(`/v2/api/admin/chat-reviews${suffix}`);
   },
+  updateReview: (chatId: string, payload: { reviewStatus?: 'PENDING' | 'PUBLISHED' | 'ARCHIVED'; sellerResponse?: string | null }) =>
+    request<ChatReview>(`/v2/api/admin/chat-reviews/${chatId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteReview: (chatId: string) =>
+    request<ChatReview>(`/v2/api/admin/chat-reviews/${chatId}`, { method: "DELETE" }),
   markAsRead: (chatId: string) =>
     request<{ success: boolean; lastAdminReadAt: string }>(`/v2/api/chats/${chatId}/read`, {
       method: "PATCH",

@@ -114,7 +114,9 @@ export function FooterReviews({
             </div>
 
             <p className="flex-1 text-sm leading-relaxed text-white/80 line-clamp-3">
-              &ldquo;{review.comment}&rdquo;
+              {review.comment ? (
+                <>&ldquo;{review.comment}&rdquo;</>
+              ) : null}
             </p>
 
             <div className="flex items-center justify-between border-t border-white/10 pt-3">

@@ -408,11 +408,11 @@ export default function UnifiedInventoryPage() {
           </div>
 
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-medium text-sm text-zinc-100">
+            <span className="font-medium truncate text-sm text-zinc-100">
               {cat.name}
             </span>
 
-            <span className="bg-primary text-black text-[10px] py-0.5 px-2 rounded-sm font-medium shrink-0">
+            <span className="md:flex hidden bg-primary text-black text-[10px] py-0.5 px-2 rounded-sm font-medium shrink-0">
               {displayLabel} ( {displayCount} )
             </span>
           </div>
@@ -535,11 +535,11 @@ export default function UnifiedInventoryPage() {
                         {p.name}
                       </button>
 
-                      <span className={cn("text-xs font-medium px-2 py-1 rounded-sm", p.isVisible ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/10 text-zinc-500")}>
+                      <span className={cn("md:flex hidden text-xs font-medium px-2 py-1 rounded-sm", p.isVisible ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/10 text-zinc-500")}>
                         {p.isVisible ? "on" : "off"}
                       </span>
 
-                      <Badge variant="secondary" className="bg-white/5 rounded-sm text-zinc-400 text-xs px-2 py-1 font-medium">
+                      <Badge variant="secondary" className="md:flex hidden bg-white/5 rounded-sm text-zinc-400 text-xs px-2 py-1 font-medium">
                         {p.deliveryType === "automatic_lines" ? "linhas"
                           : p.deliveryType === "file" ? "arquivo"
                             : p.deliveryType === "manual" ? "manual"
@@ -550,7 +550,7 @@ export default function UnifiedInventoryPage() {
 
                       {(p.minPurchaseQuantity > 1 || p.maxPurchaseQuantity || p.onePurchasePerUser) && (
                         <>
-                          <div className="flex items-center gap-2">
+                          <div className="md:flex hidden items-center gap-2">
                             {p.minPurchaseQuantity > 1 && (
                               <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
                                 min: {p.minPurchaseQuantity}
@@ -571,7 +571,7 @@ export default function UnifiedInventoryPage() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-6 shrink-0 pr-4">
+                    <div className="md:flex hidden items-center gap-6 shrink-0 pr-4">
                       {variantCount > 0 ? (
                         <div className="flex flex-col items-start">
                           <button
@@ -618,6 +618,7 @@ export default function UnifiedInventoryPage() {
                             type="button"
                             size="icon"
                             variant="ghost"
+                            className="md:flex hidden"
                             disabled={toggleFeaturedMutation.isPending}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -795,14 +796,12 @@ export default function UnifiedInventoryPage() {
   if (!isDndReady) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
-      <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
-      <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+    <div className="relative space-y-6">
+      <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
 
-      <div className="absolute bottom-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
-      <div className="absolute bottom-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
-      <div className="absolute bottom-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 right-[10%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[10%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -819,24 +818,24 @@ export default function UnifiedInventoryPage() {
         </Can>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-row sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-          <input
+          <Input
             placeholder="Pesquisar por produto ou categoria"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-10 w-full rounded-lg border border-white/10 bg-[#0A0A0A] pl-10 pr-4 text-sm text-white placeholder:text-zinc-600 focus:border-[#9333EA]/60 focus:outline-none focus:ring-none transition-all duration-300"
+            className="pl-10"
           />
         </div>
 
         <div className="relative" ref={filterRef}>
-          <button
+          <Button
             className={cn(
-              "inline-flex items-center gap-2 h-10 px-4 rounded-lg cursor-pointer border transition-all text-sm font-medium",
+              "inline-flex items-center gap-2 h-10 px-4 rounded-md cursor-pointer border transition-all text-sm font-medium",
               isFilterActive
-                ? "border-[#9333EA]/50 bg-[#9333EA]/10 text-[#A855F7] hover:bg-[#9333EA]/10"
-                : "border-white/10 bg-[#0A0A0A] text-zinc-300 hover:bg-white/5"
+                ? "bg-primary/10 text-primary hover:bg-primary/20"
+                : "text-zinc-300"
             )}
             onClick={() => setShowFilters((v) => !v)}
           >
@@ -847,7 +846,7 @@ export default function UnifiedInventoryPage() {
               )}
             </div>
             Filtros
-          </button>
+          </Button>
 
           {showFilters && (
             <div className="absolute right-0 sm:left-0 sm:right-auto top-full mt-2 w-80 sm:w-96 rounded-md border border-white/5 bg-card z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
@@ -967,8 +966,8 @@ export default function UnifiedInventoryPage() {
                   {filteredTopCategories.length === 0 && uncategorized.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-52 text-center">
                       <Package className="h-12 w-12 text-white mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-2">Inventário Vazio</h3>
-                      <p className="text-sm text-zinc-500">Nenhum item bate com os filtros atuais.</p>
+                      <h3 className="text-lg font-medium text-white mb-2">Nenhum produto encontrado</h3>
+                      <p className="text-sm text-zinc-500">Nenhum produto bate com os filtros atuais.</p>
                     </div>
                   )}
                 </div>

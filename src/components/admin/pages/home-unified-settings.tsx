@@ -23,7 +23,7 @@ const TABS: { id: TabId; label: string; description: string; icon: React.Element
   { id: "banners", label: "Banners Principais", description: "Configure o banner principal e outros elementos exibidos na home da loja.", icon: BiSolidImage },
   { id: "vitrines", label: "Vitrine de Produtos", description: "Configure os produtos e coleções que aparecem na home.", icon: FaBasketShopping },
   { id: "reviews", label: "Avaliações Google", description: "Configure as avaliações do Google exibidas na home da loja.", icon: RiGoogleFill },
-  { id: "top-bar", label: "Anúncios", description: "Configure os anúncios exibidos no topo da página.", icon: TbLayoutNavbarFilled },
+  // { id: "top-bar", label: "Anúncios", description: "Configure os anúncios exibidos no topo da página.", icon: TbLayoutNavbarFilled },
   { id: "popup", label: "Pop-up", description: "Configure o pop-up de conversão de entrada ou saída.", icon: MousePointerClick },
 ];
 
@@ -78,7 +78,7 @@ export function HomeUnifiedSettings() {
         {activeTab === "banners" && <HomePageSettings hideHeader />}
         {activeTab === "vitrines" && <HomeShowcaseSettings hideHeader />}
         {activeTab === "reviews" && <HomeReviewsSettings hideHeader />}
-        {activeTab === "top-bar" && <TopBarSettings hideHeader />}
+        {/* {activeTab === "top-bar" && <TopBarSettings hideHeader />} */}
         {activeTab === "popup" && <HomePopupSettings hideHeader />}
       </div>
     </div>

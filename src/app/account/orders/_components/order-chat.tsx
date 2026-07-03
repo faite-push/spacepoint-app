@@ -12,10 +12,11 @@ import { uploadChatImages } from '@/lib/chat-upload';
 import { cn } from '@/lib/utils';
 import { playNotificationSound } from '@/lib/notification-sound';
 import { useSocket } from '@/context/socket-context';
-import { OrderApprovedCard, DeliveryCard, parseOrderApproved, parseDelivery } from '@/components/admin/chat/chat-message-cards';
+import { ChatMessageItem } from '@/components/admin/chat/chat-message-row';
 import { ChatInput } from '@/components/admin/chat/chat-input';
 import { ChatImageLightbox } from '@/components/admin/chat/chat-image-lightbox';
 import { ChatRatingDialog } from '@/components/admin/chat/chat-rating-dialog';
+import { isSupportSender } from '@/lib/chat-message-display';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -89,69 +90,18 @@ function ChatMessages({
         </div>
       )}
 
-      {(chat.messages ?? []).map((msg) => {
-        const orderApproved = msg.type === 'ORDER_APPROVED' ? parseOrderApproved(msg.content) : null;
-        const delivery = msg.type === 'DELIVERY' ? parseDelivery(msg.content) : null;
-        const isSystem = msg.senderId === 'SYSTEM' || msg.type === 'AUTOMATED';
-        const isAdmin = msg.senderId === 'ADMIN';
-
-        if (orderApproved) {
-          return (
-            <div key={msg.id} className="flex flex-col items-start">
-              <OrderApprovedCard payload={orderApproved} />
-              <span className="text-[10px] text-muted-foreground mt-1">{format(new Date(msg.createdAt), 'HH:mm', { locale: ptBR })}</span>
-            </div>
-          );
-        }
-        if (delivery) {
-          return (
-            <div key={msg.id} className="flex flex-col items-start">
-              <DeliveryCard payload={delivery} />
-              <span className="text-[10px] text-muted-foreground mt-1">{format(new Date(msg.createdAt), 'HH:mm', { locale: ptBR })}</span>
-            </div>
-          );
-        }
-        if (isSystem) {
-          return (
-            <div key={msg.id} className="w-full flex justify-start">
-              <div className="flex flex-col items-start gap-1 max-w-[70%]">
-                <div className="bg-blue-500/40 text-white text-sm rounded-sm p-2">
-                  <p className="whitespace-pre-wrap">{renderMessageContent(msg.content)}</p>
-                </div>
-                <span className="text-[10px] text-muted-foreground">{format(new Date(msg.createdAt), 'HH:mm', { locale: ptBR })}</span>
-              </div>
-            </div>
-          );
-        }
-        if (isAdmin) {
-          return (
-            <div key={msg.id} className="w-full flex justify-start">
-              <div className="flex flex-col items-start gap-1 max-w-[70%]">
-                <div className="bg-blue-500/40 text-white text-sm rounded-sm p-2">
-                  {msg.fileUrl && (
-                    <img src={formatFileUrl(msg.fileUrl)} alt="Anexo" className="rounded-sm mb-1 max-w-full cursor-pointer" onClick={() => onLightboxOpen(formatFileUrl(msg.fileUrl!))} />
-                  )}
-                  {msg.content && <p className="whitespace-pre-wrap">{renderMessageContent(msg.content)}</p>}
-                </div>
-                <span className="text-[10px] text-muted-foreground">{format(new Date(msg.createdAt), 'HH:mm', { locale: ptBR })}</span>
-              </div>
-            </div>
-          );
-        }
-        return (
-          <div key={msg.id} className="w-full flex justify-end">
-            <div className="flex flex-col items-end gap-1 max-w-[70%]">
-              <div className="bg-[#c1c1c1]/70 text-black text-sm rounded-sm p-2">
-                {msg.fileUrl && (
-                  <img src={formatFileUrl(msg.fileUrl)} alt="Anexo" className="rounded-md mb-1 max-w-full cursor-pointer" onClick={() => onLightboxOpen(formatFileUrl(msg.fileUrl!))} />
-                )}
-                <p className="whitespace-pre-wrap">{renderMessageContent(msg.content)}</p>
-              </div>
-              <span className="text-[10px] text-zinc-500">{format(new Date(msg.createdAt), 'HH:mm', { locale: ptBR })}</span>
-            </div>
-          </div>
-        );
-      })}
+      {(chat.messages ?? []).map((msg) => (
+        <ChatMessageItem
+          key={msg.id}
+          msg={msg}
+          viewer="client"
+          clientUserId={chat.order?.user?.id}
+          clientName={chat.order?.user?.name || chat.order?.user?.email || 'Cliente'}
+          formatFileUrl={formatFileUrl}
+          onLightboxOpen={onLightboxOpen}
+          renderContent={renderMessageContent}
+        />
+      ))}
 
       {readAt && (
         <p className="text-[10px] text-emerald-400/80 text-right">✓ Visualizado pelo suporte</p>
@@ -222,7 +172,7 @@ export function OrderChat({ orderId }: OrderChatProps) {
         return { ...old, messages: [...messages, msg] };
       });
 
-      if (msg.senderId === 'ADMIN' || msg.senderId === 'SYSTEM') {
+      if (isSupportSender(msg)) {
         playNotificationSound();
         if (document.hidden && Notification.permission === 'granted') {
           new Notification('Nova mensagem do suporte', { body: msg.content?.slice(0, 80) || 'Você recebeu uma resposta.' });
@@ -279,10 +229,25 @@ export function OrderChat({ orderId }: OrderChatProps) {
   }, [socket, chat?.id, orderId, queryClient]);
 
   useEffect(() => {
-    if (!socket || !chat?.id || !message.trim()) return;
-    socket.emit('typing_start', { chatId: chat.id });
-    const t = setTimeout(() => socket.emit('typing_stop', { chatId: chat.id }), 2500);
-    return () => clearTimeout(t);
+    if (!socket || !chat?.id) return;
+
+    if (!message.trim()) {
+      socket.emit('typing_stop', { chatId: chat.id });
+      return;
+    }
+
+    const startTimer = setTimeout(() => {
+      socket.emit('typing_start', { chatId: chat.id });
+    }, 400);
+
+    const stopTimer = setTimeout(() => {
+      socket.emit('typing_stop', { chatId: chat.id });
+    }, 2800);
+
+    return () => {
+      clearTimeout(startTimer);
+      clearTimeout(stopTimer);
+    };
   }, [message, socket, chat?.id]);
 
   const sendMutation = useMutation({
@@ -304,9 +269,22 @@ export function OrderChat({ orderId }: OrderChatProps) {
 
   const reopenMutation = useMutation({
     mutationFn: () => chatApi.reopenChat(chat?.id || ''),
-    onSuccess: () => {
+    onSuccess: (updatedChat) => {
       toast.success('Chat reaberto');
-      queryClient.invalidateQueries({ queryKey: ['chat', orderId] });
+      queryClient.setQueryData(['chat', orderId], (old: any) => {
+        if (!old) return updatedChat;
+        const messages = old.messages ?? [];
+        const newMessages = updatedChat?.messages?.length
+          ? updatedChat.messages.filter((m: any) => !messages.some((existing: any) => existing.id === m.id))
+          : [];
+        return {
+          ...old,
+          ...updatedChat,
+          status: 'OPEN',
+          isResolved: false,
+          messages: newMessages.length ? [...messages, ...newMessages] : messages,
+        };
+      });
     },
     onError: (err: Error) => toast.error(err.message || 'Falha ao reabrir'),
   });

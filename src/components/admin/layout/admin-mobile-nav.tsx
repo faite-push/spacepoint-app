@@ -22,14 +22,14 @@ export function AdminMobileNav({
       >
         <SheetTitle className="sr-only">Menu administrativo</SheetTitle>
 
-        <div className="flex h-16 items-center mx-auto border-b border-white/5 px-4">
-          <Link href="/dashboard/admin" onClick={close} className="flex items-center">
+        <div className="flex h-16 items-center mx-auto px-4">
+          <Link href="/dashboard/admin" onClick={close} className="flex items-center mt-8">
             <Image
               src="/logo-sidebar.png"
               alt="Space Point"
               width={120}
               height={36}
-              className="h-42 mx-auto w-auto object-contain"
+              className="h-42 mx-auto w-auto object-contain select-none pointer-events-none invert brightness-0 opacity-70 hover:opacity-60 transition-opacity duration-300"
               priority
             />
           </Link>

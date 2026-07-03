@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Send, Trash2 } from 'lucide-react';
 import { RiImageAddLine } from 'react-icons/ri';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -57,7 +57,15 @@ export function ChatInput({
 
   useEffect(() => {
     resizeTextarea();
-  }, [message, resizeTextarea]);
+  }, []);
+
+  const handleMessageChange = (val: string) => {
+    onMessageChange(val);
+    requestAnimationFrame(() => resizeTextarea());
+    if (showMacroHint && onMacroTrigger) {
+      onMacroTrigger(val.startsWith('!'));
+    }
+  };
 
   const addFiles = (incoming: FileList | File[]) => {
     const list = Array.from(incoming).filter(
@@ -173,22 +181,24 @@ export function ChatInput({
               ref={textareaRef}
               placeholder={placeholder}
               value={message}
-              onChange={(e) => {
-                const val = e.target.value;
-                onMessageChange(val);
-                if (showMacroHint && onMacroTrigger) {
-                  onMacroTrigger(val.startsWith('!'));
-                }
-              }}
-              className="min-h-[40px] max-h-[220px] overflow-y-auto resize-y border-0 bg-transparent py-2.5 whitespace-pre-wrap"
+              onChange={(e) => handleMessageChange(e.target.value)}
+              className="min-h-[40px] max-h-[220px] overflow-y-auto resize-none border-0 bg-transparent py-2.5 whitespace-pre-wrap"
               onKeyDown={handleKeyDown}
               maxLength={maxLength}
               rows={1}
             />
-            <span className="absolute bottom-1 right-1 text-[10px] text-zinc-600 pointer-events-none">
-              {message.length} / {maxLength}
-            </span>
           </div>
+
+          <Button
+            type="button"
+            size="icon"
+            className="md:hidden flex h-10 w-10 shrink-0 bg-primary text-black hover:bg-primary/90 disabled:opacity-40"
+            onClick={onSend}
+            disabled={isSending || (!message.trim() && !files.length)}
+            aria-label="Enviar mensagem"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>

@@ -70,10 +70,10 @@ export default function AdminPluginsPage() {
         </div>
       ) : (
         pluginsByCategory.map((section) => (
-          <section key={section.id} className="relative space-y-4">
+          <section key={section.id} className="relative space-y-2">
             <div>
-              <h2 className="text-lg font-semibold text-white">{section.label}</h2>
-              <p className="text-xs text-muted-foreground">{section.description}</p>
+              <h2 className="text-xl font-medium text-white">{section.label}</h2>
+              <p className="text-sm text-muted-foreground">{section.description}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               {section.plugins.map((plugin) => (

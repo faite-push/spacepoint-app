@@ -34,6 +34,36 @@ export const FOOTER_DEFAULTS = {
     { label: "Política de Privacidade", href: "/privacy" },
     { label: "Política de Trocas e Devoluções", href: "/refunds" },
   ] as FooterLink[],
+  trustSeals: [
+    {
+      id: "reclame-aqui",
+      title: "Reclame Aqui",
+      subtitle: "Empresa verificada",
+      href: "https://www.reclameaqui.com.br/",
+    },
+    {
+      id: "ssl",
+      title: "Site Seguro",
+      subtitle: "Conexão SSL criptografada",
+    },
+    {
+      id: "pagamento",
+      title: "Pagamento Seguro",
+      subtitle: "Dados protegidos",
+    },
+    {
+      id: "digital",
+      title: "Entrega Digital",
+      subtitle: "Rápida e automática",
+    },
+  ],
+};
+
+export type FooterTrustSeal = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  href?: string;
 };
 
 export type ResolvedFooterConfig = {
@@ -62,6 +92,7 @@ export type ResolvedFooterConfig = {
   socialLinkedin: string | null;
   socialYoutube: string | null;
   socialLinks: { platform: string; url: string }[];
+  trustSeals: FooterTrustSeal[];
 };
 
 function parseLinks(raw: FooterLink[] | null | undefined, fallback: FooterLink[]): FooterLink[] {
@@ -69,7 +100,8 @@ function parseLinks(raw: FooterLink[] | null | undefined, fallback: FooterLink[]
 }
 
 export function resolveFooterConfig(
-  config?: PublicSiteConfig | null
+  config?: PublicSiteConfig | null,
+  footerCategoryLinks?: FooterLink[]
 ): ResolvedFooterConfig {
   const year = new Date().getFullYear();
   const copyrightRaw = config?.footerCopyright?.trim();
@@ -112,7 +144,10 @@ export function resolveFooterConfig(
       config?.footerCategoryColumnTitle?.trim() || FOOTER_DEFAULTS.categoryColumnTitle,
     supportColumnTitle:
       config?.footerSupportColumnTitle?.trim() || FOOTER_DEFAULTS.supportColumnTitle,
-    categoryLinks: parseLinks(config?.footerCategoryLinks, FOOTER_DEFAULTS.categoryLinks),
+    categoryLinks: parseLinks(
+      footerCategoryLinks?.length ? footerCategoryLinks : config?.footerCategoryLinks,
+      FOOTER_DEFAULTS.categoryLinks
+    ),
     supportLinks: parseLinks(config?.footerSupportLinks, FOOTER_DEFAULTS.supportLinks),
     legalLinks: parseLinks(config?.footerLegalLinks, FOOTER_DEFAULTS.legalLinks),
     copyright,
@@ -130,5 +165,6 @@ export function resolveFooterConfig(
           { platform: "FaLinkedin", url: config?.socialLinkedin },
           { platform: "FaYoutube", url: config?.socialYoutube },
         ].filter((l) => l.url?.trim()) as { platform: string; url: string }[]),
+    trustSeals: FOOTER_DEFAULTS.trustSeals,
   };
 }

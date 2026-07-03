@@ -108,7 +108,7 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
   );
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
       <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
       <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
       <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/2 rounded-full blur-[120px] z-0 pointer-events-none" />
@@ -193,11 +193,11 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
                                   {v.name}
                                 </button>
 
-                                <span className={cn("text-xs font-medium px-2 py-1 rounded-sm", v.isVisible ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/10 text-zinc-500")}>
+                                <span className={cn("md:flex hidden text-xs font-medium px-2 py-1 rounded-sm", v.isVisible ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/10 text-zinc-500")}>
                                   {v.isVisible ? "on" : "off"}
                                 </span>
 
-                                <Badge variant="secondary" className="bg-white/5 rounded-sm text-zinc-400 text-xs px-2 py-1 font-medium">
+                                <Badge variant="secondary" className="md:flex hidden bg-white/5 rounded-sm text-zinc-400 text-xs px-2 py-1 font-medium">
                                   {v.deliveryType === "automatic_lines" ? "linhas"
                                     : v.deliveryType === "file" ? "arquivo"
                                       : v.deliveryType === "manual" ? "manual"
@@ -207,7 +207,7 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
                                 </Badge>
 
                                 {(v.minPurchaseQuantity > 1 || v.maxPurchaseQuantity || v.onePurchasePerUser) && (
-                                  <div className="flex items-center gap-2">
+                                  <div className="md:flex hidden flex items-center gap-2">
                                     {v.minPurchaseQuantity > 1 && (
                                       <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
                                         min: {v.minPurchaseQuantity}
@@ -227,7 +227,7 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
                                 )}
                               </div>
 
-                              <div className="flex items-center gap-6 shrink-0 pr-4">
+                              <div className="md:flex hidden flex items-center gap-6 shrink-0 pr-4">
                                 <div className="flex flex-col items-end">
                                   {(() => {
                                     const { stock, label } = getVariantStockLabel(v);

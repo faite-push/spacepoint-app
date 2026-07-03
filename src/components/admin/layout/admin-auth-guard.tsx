@@ -6,6 +6,8 @@ import { Loader2 } from "lucide-react";
 
 import { AdminShell } from "@/components/admin/layout/admin-shell";
 import { AdminChatNotifications } from "@/components/admin/chat/admin-chat-notifications";
+import { AdminRouteGuard } from "@/components/admin/layout/admin-route-guard";
+import { AdminDocumentSetup } from "@/components/admin/layout/admin-document-setup";
 import { apiFetch } from "@/lib/api";
 import { PermissionProvider } from "@/providers/PermissionProvider";
 
@@ -67,9 +69,10 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
       userPermissions={user.permissions || []}
       isSuperOwner={user.isSuperOwner || false}
     >
+      <AdminDocumentSetup />
       <AdminShell user={user}>
         <AdminChatNotifications />
-        {children}
+        <AdminRouteGuard>{children}</AdminRouteGuard>
       </AdminShell>
     </PermissionProvider>
   );

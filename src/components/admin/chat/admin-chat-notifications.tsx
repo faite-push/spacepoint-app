@@ -10,6 +10,12 @@ import { chatApi } from '@/lib/admin-api';
 import { playNotificationSound } from '@/lib/notification-sound';
 import { usePermission } from '@/providers/PermissionProvider';
 import { useSocket } from '@/context/socket-context';
+import {
+  claimRealtimeEvent,
+  getActiveAdminChatId,
+  handleAdminChatListUpdate,
+  isCustomerAlertMessage,
+} from '@/lib/admin-chat-realtime';
 
 const CHATS_PATH = '/dashboard/admin/chats';
 
@@ -23,20 +29,13 @@ type ChatMessagePreview = {
 type AlertPayload = {
   chatId: string;
   message?: ChatMessagePreview;
-  type?: 'new_chat';
+  type?: 'new_chat' | 'reopened' | string;
   orderId?: string;
   customerName?: string;
 };
 
 function isCustomerMessage(msg?: ChatMessagePreview) {
-  if (!msg) return false;
-  return (
-    msg.senderId !== 'ADMIN' &&
-    msg.senderId !== 'SYSTEM' &&
-    msg.type !== 'ORDER_APPROVED' &&
-    msg.type !== 'AUTOMATED' &&
-    msg.type !== 'DELIVERY'
-  );
+  return isCustomerAlertMessage(msg);
 }
 
 export function AdminChatNotifications() {
@@ -55,7 +54,7 @@ export function AdminChatNotifications() {
   const isOnChatsPageRef = useRef(isOnChatsPage);
   useEffect(() => { isOnChatsPageRef.current = isOnChatsPage; }, [isOnChatsPage]);
 
-  const canView = hasPermission('orders:view');
+  const canView = hasPermission('chats:view');
 
   // Fallback seed when WS is disconnected
   const { data } = useQuery({
@@ -103,11 +102,16 @@ export function AdminChatNotifications() {
     const handleNewMessageAlert = (payload: AlertPayload) => {
       const { chatId, message, type, orderId, customerName } = payload;
 
+      handleAdminChatListUpdate(queryClient, payload, getActiveAdminChatId());
+
       if (type === 'new_chat') {
         queryClient.invalidateQueries({ queryKey: ['admin', 'chats'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'unread-chats-count'] });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['admin', 'unread-chats-count'] });
+      }
+
+      if (isOnChatsPageRef.current) return;
+
+      if (!claimRealtimeEvent({ chatId, lastMessage: message, type, orderId, customerName })) {
+        return;
       }
 
       const customer = customerName || 'Cliente';
@@ -115,14 +119,22 @@ export function AdminChatNotifications() {
       if (type === 'new_chat') {
         if (knownChatIds.current.has(chatId)) return;
         knownChatIds.current.add(chatId);
-        queryClient.setQueryData<number>(['admin', 'unread-chats-count'], (old) => (old ?? 0) + 1);
-        queryClient.invalidateQueries({ queryKey: ['admin', 'chats'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'unread-chats-count'] });
         showToast(
           'Nova compra recebida',
           `${customer}${orderId ? ` — Pedido #${orderId.slice(-8)}` : ''}`,
           <ShoppingBag className="h-4 w-4 text-primary" />,
           'Ver atendimento',
+          chatId
+        );
+        return;
+      }
+
+      if (type === 'reopened') {
+        showToast(
+          'Chat reaberto pelo cliente',
+          `${customer}${orderId ? ` — Pedido #${orderId.slice(-8)}` : ''}`,
+          <MessageSquare className="h-4 w-4 text-amber-400" />,
+          'Abrir chat',
           chatId
         );
         return;
@@ -143,10 +155,16 @@ export function AdminChatNotifications() {
       );
     };
 
+    const handleChatListUpdate = (payload: AlertPayload) => {
+      handleAdminChatListUpdate(queryClient, payload, getActiveAdminChatId());
+    };
+
     socket.on('new_message_alert', handleNewMessageAlert);
+    socket.on('chat_list_update', handleChatListUpdate);
 
     return () => {
       socket.off('new_message_alert', handleNewMessageAlert);
+      socket.off('chat_list_update', handleChatListUpdate);
     };
   }, [socket, canView, router, queryClient]);
 

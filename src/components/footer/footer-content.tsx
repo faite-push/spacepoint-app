@@ -36,17 +36,7 @@ function LinkColumn({ title, items }: { title: string; items: ResolvedFooterConf
   );
 }
 
-export function FooterContent({
-  footer,
-  isHome = false,
-  compact = false,
-  onNewsletterSubmit,
-}: {
-  footer: ResolvedFooterConfig;
-  isHome?: boolean;
-  compact?: boolean;
-  onNewsletterSubmit?: (email: string) => void;
-}) {
+export function FooterContent({ footer, isHome = false, compact = false }: { footer: ResolvedFooterConfig; isHome?: boolean; compact?: boolean; }) {
   const paddingTop = isHome ? footer.paddingTopHome : footer.paddingTopDefault;
   const socials = (footer.socialLinks || []).map((link) => {
     // @ts-ignore
@@ -80,34 +70,6 @@ export function FooterContent({
             <h3 className="text-base font-semibold">{footer.aboutTitle}</h3>
             <p className="text-sm leading-relaxed text-white/90">{footer.aboutText}</p>
           </div>
-
-          {footer.newsletterEnabled && (
-            <div className="lg:justify-self-end w-full lg:max-w-md">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const fd = new FormData(e.currentTarget);
-                  onNewsletterSubmit?.(String(fd.get("email") ?? ""));
-                }}
-                className="flex items-center gap-2 rounded-full bg-white/10 p-1.5 ring-1 ring-white/20"
-              >
-                <input
-                  name="email"
-                  type="email"
-                  placeholder={footer.newsletterPlaceholder}
-                  className="flex-1 bg-transparent px-4 py-2 text-sm text-white placeholder:text-white/60 focus:outline-none min-w-0"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 rounded-full bg-white/95 px-4 py-2 text-sm font-semibold transition-colors hover:bg-white sm:px-5"
-                  style={{ color: footer.buttonTextColor }}
-                >
-                  {footer.newsletterButtonLabel}
-                </button>
-              </form>
-            </div>
-          )}
         </div>
 
         <div className="relative z-10 mt-8 grid gap-8 sm:grid-cols-2 lg:mt-12 lg:grid-cols-[1fr_1fr_1fr_1fr] lg:gap-10">

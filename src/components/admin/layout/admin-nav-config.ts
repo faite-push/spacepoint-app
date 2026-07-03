@@ -20,40 +20,40 @@ export type AdminNavGroup = {
 };
 
 export const adminMainNavItems: AdminNavItem[] = [
-  { href: "/dashboard/admin", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/dashboard/admin", icon: LayoutDashboard, label: "Dashboard", permission: "analytics:view" },
   { href: "/dashboard/admin/products", icon: FolderClosed, label: "Produtos", permission: "products:view" },
   { href: "/dashboard/admin/orders", icon: BadgeDollarSign, label: "Vendas", permission: "orders:view" },
-  { href: "/dashboard/admin/coupon", icon: Tag, label: "Cupom", permission: "codes:view" },
-  { href: "/dashboard/admin/gallery", icon: PiGooglePhotosLogo, label: "Galeria", permission: "settings:manage" },
-  { href: "/dashboard/admin/clients", icon: UserRoundCog, label: "Clientes", permission: "users:view" },
-  { href: "/dashboard/admin/reviews", icon: Star, label: "Avaliações", permission: "analytics:view" },
+  { href: "/dashboard/admin/coupon", icon: Tag, label: "Cupom", permission: "coupons:view" },
+  { href: "/dashboard/admin/gallery", icon: PiGooglePhotosLogo, label: "Galeria", permission: "media:view" },
+  { href: "/dashboard/admin/clients", icon: UserRoundCog, label: "Clientes", permission: "clients:view" },
+  { href: "/dashboard/admin/reviews", icon: Star, label: "Avaliações", permission: "reviews:view" },
 ];
 
 export const adminServiceNavItem: AdminNavItem = {
   href: "/dashboard/admin/chats",
   icon: RiCustomerService2Fill,
   label: "Space Chat",
-  permission: "orders:view",
+  permission: "chats:view",
 };
 
 export const adminSitePagesGroup: AdminNavGroup = {
   id: "site-pages",
-  icon: Globe,
-  label: "Páginas do site",
-  permission: "settings:manage",
+  icon: Settings,
+  label: "Configurações",
+  permission: "pages:manage",
   children: [
-    { href: "/dashboard/admin/pages/home", icon: Home, label: "Página Inicial" },
-    { href: "/dashboard/admin/pages/checkout", icon: ShoppingCart, label: "Checkout" },
-    { href: "/dashboard/admin/pages/global", icon: Paintbrush, label: "Aparência" },
-    { href: "/dashboard/admin/pages/institutional", icon: ReceiptText, label: "Páginas Institucionais" },
+    { href: "/dashboard/admin/pages/home", icon: Home, label: "Página Inicial", permission: "pages:manage" },
+    { href: "/dashboard/admin/pages/checkout", icon: ShoppingCart, label: "Checkout", permission: "pages:manage" },
+    { href: "/dashboard/admin/pages/global", icon: Paintbrush, label: "Aparência", permission: "pages:manage" },
+    { href: "/dashboard/admin/pages/institutional", icon: ReceiptText, label: "Páginas Institucionais", permission: "pages:manage" },
   ],
 };
 
 export const adminConfigNavItems: AdminNavItem[] = [
   { href: "/dashboard/admin/users", icon: UsersRound, label: "Equipe", permission: "users:view" },
-  { href: "/dashboard/admin/gateways", icon: CreditCard, label: "Gateways", permission: "settings:manage" },
-  { href: "/dashboard/admin/plugins", icon: PiPuzzlePiece, label: "Plugins", permission: "settings:manage" },
-  { href: "/dashboard/admin/settings", icon: Settings, label: "Configurações", permission: "settings:manage" },
+  { href: "/dashboard/admin/gateways", icon: CreditCard, label: "Gateways", permission: "gateways:manage" },
+  { href: "/dashboard/admin/plugins", icon: PiPuzzlePiece, label: "Plugins", permission: "plugins:manage" },
+  // { href: "/dashboard/admin/settings", icon: Settings, label: "Configurações", permission: "settings:manage" },
 ];
 
 export function isAdminNavActive(pathname: string, href: string) {

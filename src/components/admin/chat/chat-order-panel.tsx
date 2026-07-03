@@ -1,26 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Hand, Info, Package, ShoppingCart, Tag, X, Plus, Loader2, Copy, Pencil, Eye, ExternalLink, Clock, CheckCircle2, Truck } from 'lucide-react';
+import { Hand, Info, Package, ShoppingCart, Tag, X, Plus, Loader2, Copy, Pencil, Eye, ExternalLink, Clock, CheckCircle2, Truck, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 import { chatApi, ordersApi, type Chat, type DeliveryType } from '@/lib/admin-api';
 import { formatPrice } from '@/lib/shop-api';
 import { cn } from '@/lib/utils';
 import { getDeliveredContents } from '@/lib/chat-utils';
+import { getDeliveryOptionLabel, isExpressDelivery, stripExpressAdminNote } from '@/lib/order-delivery';
 import { DeliverProductDialog } from '@/components/admin/chat/deliver-product-dialog';
 
 type Tab = 'info' | 'cart' | 'tags';
@@ -29,6 +27,8 @@ interface ChatOrderPanelProps {
   chat: Chat;
   allLabels: Array<{ id: string; name: string; color: string }>;
   onToggleLabel: (labelId: string) => void;
+  className?: string;
+  embedded?: boolean;
 }
 
 function getItemDeliveryType(item: Chat['order']['items'][0]): DeliveryType {
@@ -52,16 +52,30 @@ function getDeliveryLabel(type: DeliveryType) {
   return 'Manual';
 }
 
-export function ChatOrderPanel({ chat, allLabels, onToggleLabel }: ChatOrderPanelProps) {
+export function ChatOrderPanel({ chat, allLabels, onToggleLabel, className, embedded = false }: ChatOrderPanelProps) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('info');
   const [deliverItem, setDeliverItem] = useState<Chat['order']['items'][0] | null>(null);
   const [editDeliverItem, setEditDeliverItem] = useState<Chat['order']['items'][0] | null>(null);
   const [viewDelivered, setViewDelivered] = useState<string[] | null>(null);
-  const [adminNotes, setAdminNotes] = useState(chat.order?.adminNotes || '');
+  const [adminNotes, setAdminNotes] = useState(stripExpressAdminNote(chat.order?.adminNotes));
+
+  useEffect(() => {
+    setAdminNotes(stripExpressAdminNote(chat.order?.adminNotes));
+  }, [chat.order?.adminNotes, chat.order?.id]);
+
+  const express = isExpressDelivery(chat.order);
 
   const notesMutation = useMutation({
-    mutationFn: (notes: string) => ordersApi.updateNotes(chat.order.id, notes),
+    mutationFn: (notes: string) => {
+      const base = notes.trim();
+      const payload = express
+        ? (base
+          ? `[ENTREGA EXPRESSA] Priorizar atendimento e entrega deste pedido.\n\n${base}`
+          : '[ENTREGA EXPRESSA] Priorizar atendimento e entrega deste pedido.')
+        : base;
+      return ordersApi.updateNotes(chat.order.id, payload);
+    },
     onSuccess: () => {
       toast.success('Notas salvas');
       queryClient.invalidateQueries({ queryKey: ['chat', chat.orderId] });
@@ -99,8 +113,12 @@ export function ChatOrderPanel({ chat, allLabels, onToggleLabel }: ChatOrderPane
   const assignedLabelIds = new Set(chat.labels?.map((l) => l.id) || []);
 
   return (
-    <div className="w-110 flex flex-col rounded-md border border-white/5">
-      <div className="border-b border-white/5">
+    <div className={cn(
+      "flex min-h-0 flex-col rounded-md border border-white/5",
+      embedded ? "h-full w-full border-0 rounded-none" : "w-110 h-full",
+      className
+    )}>
+      <div className="shrink-0 border-b border-white/5">
         <div className="px-4 py-3 border-b border-white/5">
           <h3 className="text-lg font-medium text-white">Detalhes do pedido</h3>
         </div>
@@ -125,9 +143,19 @@ export function ChatOrderPanel({ chat, allLabels, onToggleLabel }: ChatOrderPane
         </div>
       </div>
 
-      <ScrollArea className="flex-1 max-h-[700px]">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {activeTab === 'info' && (
-          <div className="p-4 space-y-3">
+          <div className="space-y-3 p-4">
+            {express && (
+              <div className="flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-2.5 text-amber-200">
+                <Zap className="h-4 w-4 shrink-0 text-[#fcb74e] fill-current" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#fcb74e]">Entrega expressa</p>
+                  <p className="text-xs text-[#fcb74e]/80">Priorize o atendimento e a entrega deste pedido.</p>
+                </div>
+              </div>
+            )}
+
             <div className="bg-card/30 border border-white/5 rounded-md p-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center justify-center gap-2">
@@ -164,6 +192,18 @@ export function ChatOrderPanel({ chat, allLabels, onToggleLabel }: ChatOrderPane
               <div className="text-sm px-4 py-2">
                 <div className="flex justify-between"><span className='text-sm text-muted-foreground'>Subtotal</span><span className="text-sm text-white/90 font-medium">{formatPrice(chat.order?.subtotal || 0)}</span></div>
                 <div className="flex justify-between"><span className='text-sm text-muted-foreground'>Desconto</span><span className="text-sm text-white/90 font-medium">{formatPrice(chat.order?.discount || 0)}</span></div>
+                <div className="flex justify-between">
+                  <span className='text-sm text-muted-foreground'>Entrega</span>
+                  <span className={cn("text-sm font-medium", express ? "text-white/90" : "text-white/90")}>
+                    {getDeliveryOptionLabel(chat.order)}
+                  </span>
+                </div>
+                {(chat.order?.deliveryFee ?? 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className='text-sm text-muted-foreground'>Taxa de entrega</span>
+                    <span className="text-sm text-white/90 font-medium">{formatPrice(chat.order?.deliveryFee ?? 0)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between"><span className='text-sm text-muted-foreground'>Valor Total</span><span className="text-sm text-white/90 font-medium">{formatPrice(chat.order?.total || 0)}</span></div>
               </div>
 
@@ -320,9 +360,9 @@ export function ChatOrderPanel({ chat, allLabels, onToggleLabel }: ChatOrderPane
             <h4 className="text-sm text-muted-foreground font-medium">Etiquetas do chat</h4>
             <div className="flex flex-wrap gap-2">
               {chat.labels?.map((label) => (
-                <button key={label.id} onClick={() => onToggleLabel(label.id)} className="px-2 py-1 rounded-full text-[10px] font-medium text-white" style={{ backgroundColor: label.color }}>
+                <Button key={label.id} size="xs" onClick={() => onToggleLabel(label.id)} className="rounded-sm font-medium text-white" style={{ backgroundColor: label.color }}>
                   {label.name} <X className="h-3 w-3 inline ml-1" />
-                </button>
+                </Button>
               ))}
             </div>
 
@@ -331,9 +371,9 @@ export function ChatOrderPanel({ chat, allLabels, onToggleLabel }: ChatOrderPane
             <h4 className="text-sm text-muted-foreground font-medium">Adicionar etiqueta</h4>
             <div className="flex flex-wrap gap-2">
               {allLabels.filter((l) => !assignedLabelIds.has(l.id)).map((label) => (
-                <button key={label.id} onClick={() => onToggleLabel(label.id)} className="px-2 py-1 rounded-full text-[10px] font-medium text-white transition-opacity" style={{ backgroundColor: label.color }}>
-                  <Plus className="h-3 w-3 inline mr-0.5" />{label.name}
-                </button>
+                <Button key={label.id} size="xs" onClick={() => onToggleLabel(label.id)} className="rounded-sm font-medium text-white transition-opacity" style={{ backgroundColor: label.color }}>
+                  <Plus className="h-3 w-3" />{label.name}
+                </Button>
               ))}
               {allLabels.filter((l) => !assignedLabelIds.has(l.id)).length === 0 && (
                 <p className="text-xs text-zinc-600">Todas as etiquetas já foram adicionadas</p>
@@ -341,7 +381,7 @@ export function ChatOrderPanel({ chat, allLabels, onToggleLabel }: ChatOrderPane
             </div>
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       {deliverItem && (
         <DeliverProductDialog

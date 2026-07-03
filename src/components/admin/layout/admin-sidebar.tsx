@@ -14,10 +14,10 @@ export function AdminSidebar() {
     >
       <div className="absolute top-[-20%] right-[-30%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-white/10 rounded-full blur-[120px] -z-10 pointer-events-none" />
     
-      <div className="flex h-20 items-center justify-between px-4">
+      <div className="relative z-0 flex h-22 shrink-0 items-center justify-center px-4">
         <Link
           href="/"
-          className="flex items-center justify-center gap-2 overflow-hidden"
+          className="inline-flex shrink-0 items-center justify-center overflow-hidden opacity-70 hover:opacity-60 transition-opacity duration-300"
           aria-label="Space Point Admin"
         >
           <Image
@@ -25,13 +25,13 @@ export function AdminSidebar() {
             alt="Space Point"
             width={140}
             height={44}
-            className="mr-2 h-auto w-auto object-contain select-none pointer-events-none"
+            className="mr-1 h-[210px] w-[210px] object-contain select-none pointer-events-none invert brightness-0"
             priority
           />
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 pb-4">
+      <div className="relative z-10 flex-1 overflow-y-auto p-2 pb-4">
         <AdminNavLinks />
       </div>
     </aside>

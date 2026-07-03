@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { subDays } from "date-fns";
-import { Package, Loader2 } from "lucide-react";
+import { Package } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { usePermission } from "@/providers/PermissionProvider";
 import { Button } from "@/components/ui/button";
 import { API_URL } from "@/lib/api";
+import { getRangeForPreset } from "@/lib/date-range-presets";
 
 import { PerformanceChart } from "@/components/admin/dashboard/PerformanceChart";
 import { DateRangeFilter } from "@/components/admin/dashboard/DateRangeFilter";
@@ -37,10 +37,7 @@ export default function AdminDashboard() {
   const { hasPermission } = usePermission();
   const canopyAnalytics = hasPermission('analytics:view');
 
-  const [dateRange, setDateRange] = useState({
-    from: subDays(new Date(), 7),
-    to: new Date(),
-  });
+  const [dateRange, setDateRange] = useState(getRangeForPreset("7d"));
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["admin", "stats", dateRange.from.toISOString(), dateRange.to.toISOString()],
