@@ -24,7 +24,7 @@ export function TeamNav() {
     {
       id: "users" as const,
       label: "Usuários",
-      href: "/dashboard/admin/users",
+      href: "/dashboard/admin/team",
       icon: Users,
       permission: "users:view",
     },
@@ -40,7 +40,7 @@ export function TeamNav() {
   if (tabs.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-6 border-b border-white/5">
+    <div className="flex items-center gap-3">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = active === tab.id;
@@ -50,18 +50,12 @@ export function TeamNav() {
             key={tab.id}
             href={tab.href}
             className={cn(
-              "relative flex items-center gap-2 pb-3 text-sm font-medium transition-colors",
-              isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+              "relative flex justify-center rounded-md h-10 items-center gap-2 text-sm font-medium transition-colors",
+              isActive ? "bg-white/5 rounded-md px-6 text-white hover:bg-white/5" : "bg-transparent rounded-md px-6 text-white hover:bg-white/5"
             )}
           >
-            <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#fcb64c]" : "")} />
+            <Icon className={cn("h-4 w-4 shrink-0")} />
             {tab.label}
-            {isActive && (
-              <span
-                className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-[#fcb64c]"
-                aria-hidden
-              />
-            )}
           </Link>
         );
       })}

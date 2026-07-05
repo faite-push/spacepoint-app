@@ -65,7 +65,21 @@ export function ReferenceSelectorDialog({ open, onOpenChange, initialReferences,
     if (isSelected(type, id)) {
       setSelectedRefs((prev) => prev.filter((r) => !(r.type === type && r.referenceId === id)));
     } else {
-      setSelectedRefs((prev) => [...prev, { type, referenceId: id, label }]);
+      setSelectedRefs((prev) => {
+        let next = [...prev, { type, referenceId: id, label }];
+        if (type === "PRODUCT") {
+          const product = products.find((p) => p.id === id);
+          if (product?.categoryId) {
+            next = next.filter((r) => !(r.type === "CATEGORY" && r.referenceId === product.categoryId));
+          }
+        }
+        if (type === "CATEGORY") {
+          next = next.filter(
+            (r) => !(r.type === "PRODUCT" && products.find((p) => p.id === r.referenceId)?.categoryId === id)
+          );
+        }
+        return next;
+      });
     }
   };
 

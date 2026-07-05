@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { Send, Trash2 } from 'lucide-react';
 import { RiImageAddLine } from 'react-icons/ri';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+
+const MIN_TEXTAREA_HEIGHT = 40;
+const MAX_TEXTAREA_HEIGHT = 220;
 
 interface ChatInputProps {
   message: string;
@@ -51,20 +53,38 @@ export function ChatInput({
   const resizeTextarea = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = '40px';
-    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
-  }, []);
 
-  useEffect(() => {
+    el.style.height = 'auto';
+
+    if (!message.trim()) {
+      el.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+      return;
+    }
+
+    el.style.height = `${Math.min(
+      Math.max(el.scrollHeight, MIN_TEXTAREA_HEIGHT),
+      MAX_TEXTAREA_HEIGHT
+    )}px`;
+  }, [message]);
+
+  useLayoutEffect(() => {
     resizeTextarea();
-  }, []);
+  }, [message, resizeTextarea]);
 
   const handleMessageChange = (val: string) => {
     onMessageChange(val);
-    requestAnimationFrame(() => resizeTextarea());
     if (showMacroHint && onMacroTrigger) {
       onMacroTrigger(val.startsWith('!'));
     }
+  };
+
+  const handleSendClick = () => {
+    if (isSending || (!message.trim() && !files.length)) return;
+    onSend();
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) el.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+    });
   };
 
   const addFiles = (incoming: FileList | File[]) => {
@@ -111,7 +131,7 @@ export function ChatInput({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (!isSending && (message.trim() || files.length)) onSend();
+      handleSendClick();
     }
   };
 
@@ -177,15 +197,16 @@ export function ChatInput({
           </Button>
 
           <div className="flex-1 relative min-w-0">
-            <Textarea
+            <textarea
               ref={textareaRef}
               placeholder={placeholder}
               value={message}
               onChange={(e) => handleMessageChange(e.target.value)}
-              className="min-h-[40px] max-h-[220px] overflow-y-auto resize-none border-0 bg-transparent py-2.5 whitespace-pre-wrap"
+              rows={1}
+              className="flex w-full min-h-10 max-h-[220px] resize-none overflow-y-auto rounded-md border-0 bg-transparent px-3 py-2.5 text-sm whitespace-pre-wrap text-white placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ height: MIN_TEXTAREA_HEIGHT }}
               onKeyDown={handleKeyDown}
               maxLength={maxLength}
-              rows={1}
             />
           </div>
 
@@ -193,7 +214,7 @@ export function ChatInput({
             type="button"
             size="icon"
             className="md:hidden flex h-10 w-10 shrink-0 bg-primary text-black hover:bg-primary/90 disabled:opacity-40"
-            onClick={onSend}
+            onClick={handleSendClick}
             disabled={isSending || (!message.trim() && !files.length)}
             aria-label="Enviar mensagem"
           >

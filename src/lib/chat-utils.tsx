@@ -1,5 +1,7 @@
 import type { Chat } from '@/lib/admin-api';
 import React from 'react';
+import { differenceInMinutes, differenceInHours, format, isToday, isYesterday } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { BiImage } from 'react-icons/bi';
 import { PiCheckSquareFill } from "react-icons/pi";
 import { BiSolidPackage } from "react-icons/bi";
@@ -158,4 +160,40 @@ export function getPreviewText(content: string, type?: string): React.ReactNode 
   }
   if (type === 'AUTOMATED') return content.slice(0, 60);
   return content.slice(0, 80);
+}
+
+function formatAbsoluteChatTime(date: Date): string {
+  const day = format(date, 'd', { locale: ptBR });
+  const month = format(date, 'MMM', { locale: ptBR }).replace('.', '');
+  const monthLabel = month.charAt(0).toUpperCase() + month.slice(1);
+  const time = format(date, 'HH:mm', { locale: ptBR });
+  return `${day} ${monthLabel} ${time}`;
+}
+
+/** Horário na lista de conversas do admin. */
+export function formatChatListTimestamp(
+  isoDate: string | undefined | null,
+  isResolved?: boolean
+): string {
+  if (!isoDate) return 'agora';
+
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return 'agora';
+
+  if (isResolved) {
+    return formatAbsoluteChatTime(date);
+  }
+
+  const minutes = differenceInMinutes(new Date(), date);
+  if (minutes < 1) return 'agora';
+  if (minutes < 60) return `há ${minutes} min`;
+
+  if (isToday(date)) {
+    const hours = Math.max(1, differenceInHours(new Date(), date));
+    return `há ${hours}h`;
+  }
+
+  if (isYesterday(date)) return 'ontem';
+
+  return formatAbsoluteChatTime(date);
 }

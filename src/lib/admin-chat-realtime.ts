@@ -16,9 +16,11 @@ export type ChatListUpdatePayload = {
   type?: 'new_chat' | 'reopened' | string;
   orderId?: string;
   customerName?: string;
+  unreadCount?: number;
 };
 
 const processedEventKeys = new Map<string, string>();
+const processedListUpdateKeys = new Map<string, string>();
 let activeAdminChatId: string | null = null;
 
 export function setActiveAdminChatId(chatId: string | null) {
@@ -70,8 +72,18 @@ function shouldIncrementUnread(chat: Chat, lastMessage?: ChatRealtimeMessage) {
   return true;
 }
 
+/** Evita processar new_message_alert + chat_list_update duas vezes para o mesmo evento. */
+export function claimListUpdate(payload: ChatListUpdatePayload): boolean {
+  const key = eventDedupKey(payload);
+  if (!key) return true;
+  if (processedListUpdateKeys.get(payload.chatId) === key) return false;
+  processedListUpdateKeys.set(payload.chatId, key);
+  return true;
+}
+
 export function resetUnreadBumpKey(chatId: string) {
   processedEventKeys.delete(chatId);
+  processedListUpdateKeys.delete(chatId);
 }
 
 export function applyChatListUpdate(
@@ -105,6 +117,8 @@ export function applyChatListUpdate(
 
     if (isActive) {
       updated.unreadCount = 0;
+    } else if (typeof payload.unreadCount === 'number') {
+      updated.unreadCount = payload.unreadCount;
     } else if (type === 'reopened') {
       updated.unreadCount = Math.max(c.unreadCount || 0, 1);
     } else if (lastMessage && shouldIncrementUnread(c, lastMessage)) {
@@ -172,12 +186,14 @@ export function normalizeChatRealtimePayload(payload: {
   type?: string;
   orderId?: string;
   customerName?: string;
+  unreadCount?: number;
 }): ChatListUpdatePayload {
   return {
     chatId: payload.chatId,
     type: payload.type,
     orderId: payload.orderId,
     customerName: payload.customerName,
+    unreadCount: payload.unreadCount,
     lastMessage: payload.lastMessage || payload.message,
   };
 }
@@ -211,10 +227,21 @@ export function handleAdminChatListUpdate(
     type?: string;
     orderId?: string;
     customerName?: string;
+    unreadCount?: number;
   },
   activeChatId?: string | null
 ) {
   const payload = normalizeChatRealtimePayload(rawPayload);
   const resolvedActiveChatId = activeChatId ?? getActiveAdminChatId();
+
+  if (!claimListUpdate(payload)) return;
+
   patchAllChatLists(queryClient, payload, resolvedActiveChatId);
+
+  if (payload.type === 'new_chat') {
+    queryClient.invalidateQueries({ queryKey: ['admin', 'chats'] });
+  }
+
+  // Badge do Space Chat usa query separada — atualiza após evento realtime
+  queryClient.invalidateQueries({ queryKey: ['admin', 'unread-chats-count'] });
 }

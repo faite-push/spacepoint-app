@@ -1,15 +1,13 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { Search, Archive, Send, MessageSquareQuote, CornerDownRight, Plus, X, Loader2, Settings, Volume2, Trash2, Edit2, Zap, RotateCcw, CheckCircle2, Circle, Tag, Check, Pin, Clock, UserCheck, ChevronLeft, MessageSquare } from 'lucide-react';
+import { Search, Archive, Send, MessageSquareQuote, CornerDownRight, Plus, X, Loader2, Settings, Volume2, Trash2, Edit2, Zap, RotateCcw, CheckCircle2, Circle, Tag, Check, Clock, UserCheck, ChevronLeft, MessageSquare } from 'lucide-react';
 import { LuClock4, LuCheck } from "react-icons/lu";
 import { TbTagFilled } from "react-icons/tb";
 
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -23,45 +21,36 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from "@/components/ui/slider";
 
-import { chatApi, siteSettingsApi, type Chat, type ChatMacro, type ChatLabel } from '@/lib/admin-api';
+import { chatApi, siteSettingsApi, type Chat, type ChatMessage, type ChatMacro, type ChatLabel } from '@/lib/admin-api';
 import { API_URL } from '@/lib/api';
 import { uploadChatImages } from '@/lib/chat-upload';
 import { useAuth } from '@/context/auth-context';
 import { useSocket } from '@/context/socket-context';
 import { cn } from '@/lib/utils';
 import { playNotificationSound } from '@/lib/notification-sound';
-import { ChatMessageItem } from '@/components/admin/chat/chat-message-row';
+import { ChatMessagesList, dedupeChatMessages } from '@/components/admin/chat/chat-messages-list';
 import { isSupportSender } from '@/lib/chat-message-display';
 import { ChatOrderPanel } from '@/components/admin/chat/chat-order-panel';
 import { ChatInput } from '@/components/admin/chat/chat-input';
 import { ChatImageLightbox } from '@/components/admin/chat/chat-image-lightbox';
 import { ChatLabelModal, type ChatLabelFormValues } from '@/components/admin/chat/chat-label-modal';
-import { AdminChatMessagesSkeleton } from '@/components/admin/chat/chat-messages-skeleton';
-import {
-  getUnreadCount,
-  isOrderFullyDelivered,
-  getPreviewText,
-  mergeChatData,
-  mergeOrderData,
-} from '@/lib/chat-utils';
-import {
-  claimRealtimeEvent,
-  clearChatUnreadInCache,
-  isCustomerAlertMessage,
-  normalizeChatRealtimePayload,
-  resetUnreadBumpKey,
-  setActiveAdminChatId,
-} from '@/lib/admin-chat-realtime';
+import { getUnreadCount, isOrderFullyDelivered, getPreviewText, formatChatListTimestamp, mergeChatData, mergeOrderData, } from '@/lib/chat-utils';
+import { claimRealtimeEvent, clearChatUnreadInCache, isCustomerAlertMessage, normalizeChatRealtimePayload, resetUnreadBumpKey, setActiveAdminChatId, } from '@/lib/admin-chat-realtime';
 import { getChatListRowClass, isExpressDelivery } from '@/lib/order-delivery';
+import { buildChatFiltersSearchParams, buildChatListQueryParams, readChatFiltersFromSearchParams, type ChatStatusFilter, } from '@/lib/chat-list-filters';
+import { CHAT_LIST_SCROLL_CLASS, restoreChatListScroll, saveChatListScrollTop, } from '@/lib/chat-list-scroll';
 import { useIsMobile } from '@/lib/use-is-mobile';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { AdminAmbientGlow } from '@/components/admin/layout/admin-ambient-glow';
+import Image from 'next/image';
 
 export default function AdminChatsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const initialFilters = readChatFiltersFromSearchParams(searchParams);
   const chatIdFromUrl = pathname.match(/\/chats\/chat\/([^/]+)/)?.[1];
   const isMobile = useIsMobile();
   const [listSheetOpen, setListSheetOpen] = useState(false);
@@ -76,7 +65,8 @@ export default function AdminChatsPage() {
     if (!customerId) return false;
     return onlineUsers.includes(customerId);
   };
-  const [search, setSearch] = useState('');
+
+  const [search, setSearch] = useState(initialFilters.search);
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [chatWelcomeMessage, setChatWelcomeMessage] = useState('');
@@ -86,17 +76,14 @@ export default function AdminChatsPage() {
   const [editingLabel, setEditingLabel] = useState<ChatLabel | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chatListScrollRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
 
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'ARCHIVED' | 'EXPRESS' | 'RESOLVED' | 'UNRESOLVED'>('ALL');
-  const [labelFilter, setLabelFilter] = useState<string>('ALL');
-  const [deliveryFilter, setDeliveryFilter] = useState<'ALL' | 'EXPRESS'>('ALL');
-  const [sortBy, setSortBy] = useState<'activity' | 'created'>('activity');
+  const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>(initialFilters.statusFilter);
+  const [labelFilter, setLabelFilter] = useState<string>(initialFilters.labelFilter);
+  const [sortBy, setSortBy] = useState<'activity' | 'created'>(initialFilters.sortBy);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [notificationVolume, setNotificationVolume] = useState(80);
-  const knownChatIdsRef = useRef<Set<string>>(new Set());
-  const chatsInitializedRef = useRef(false);
-
   const selectedChatRef = useRef(selectedChat);
   useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
   useEffect(() => {
@@ -116,6 +103,19 @@ export default function AdminChatsPage() {
   const sortByRef = useRef(sortBy);
   useEffect(() => { sortByRef.current = sortBy; }, [sortBy]);
 
+  useEffect(() => {
+    const params = buildChatFiltersSearchParams(statusFilter, labelFilter, search, sortBy);
+    const qs = params.toString();
+    const path = chatIdFromUrl
+      ? `/dashboard/admin/chats/chat/${chatIdFromUrl}`
+      : '/dashboard/admin/chats';
+    const next = qs ? `${path}?${qs}` : path;
+    const current = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    if (next !== current) {
+      router.replace(next, { scroll: false });
+    }
+  }, [statusFilter, labelFilter, search, sortBy, chatIdFromUrl, pathname, router, searchParams]);
+
   const [editingMacro, setEditingMacro] = useState<ChatMacro | null>(null);
   const [newMacroShortcut, setNewMacroShortcut] = useState('');
   const [newMacroContent, setNewMacroContent] = useState('');
@@ -129,14 +129,8 @@ export default function AdminChatsPage() {
   const dragCounterRef = useRef(0);
 
   const { data: chatsData, isLoading } = useQuery({
-    queryKey: ['admin', 'chats', search, statusFilter, labelFilter, deliveryFilter, sortBy],
-    queryFn: () => chatApi.list({
-      search,
-      status: statusFilter,
-      labelId: labelFilter !== 'ALL' ? labelFilter : undefined,
-      deliveryFilter: deliveryFilter === 'EXPRESS' ? 'express' : undefined,
-      sortBy,
-    }),
+    queryKey: ['admin', 'chats', search, statusFilter, labelFilter, sortBy],
+    queryFn: () => chatApi.list(buildChatListQueryParams(statusFilter, labelFilter, search, sortBy)),
     refetchInterval: isConnected ? false : 8000,
     refetchIntervalInBackground: false,
     staleTime: isConnected ? Infinity : 0,
@@ -161,13 +155,9 @@ export default function AdminChatsPage() {
     staleTime: isConnected ? Infinity : 0,
   });
 
-  const chatDetailReady =
-    !!selectedChat &&
-    !!selectedChatData &&
-    (selectedChatData.orderId === selectedChat.orderId || selectedChatData.id === selectedChat.id);
+  const chatDetailReady = !!selectedChat && !!selectedChatData && (selectedChatData.orderId === selectedChat.orderId || selectedChatData.id === selectedChat.id);
 
-  const isChatMessagesLoading =
-    !!selectedChat && (!chatDetailReady || isLoadingSelectedChat || (isFetchingSelectedChat && !chatDetailReady));
+  const isChatMessagesLoading = !!selectedChat && (!chatDetailReady || isLoadingSelectedChat || (isFetchingSelectedChat && !chatDetailReady));
 
   const selectedChatFull = selectedChat && chatDetailReady
     ? {
@@ -179,12 +169,6 @@ export default function AdminChatsPage() {
       userStats: selectedChatData.userStats ?? selectedChat.userStats,
     }
     : selectedChat;
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [selectedChatFull?.messages?.length]);
 
   useEffect(() => {
     if (!socket || !selectedChat?.id) return;
@@ -209,28 +193,6 @@ export default function AdminChatsPage() {
   }, [message, socket, selectedChat?.id]);
 
   useEffect(() => {
-    if (!chatsData?.chats?.length) return;
-
-    if (!chatsInitializedRef.current) {
-      chatsData.chats.forEach((c) => knownChatIdsRef.current.add(c.id));
-      chatsInitializedRef.current = true;
-      return;
-    }
-
-    for (const chat of chatsData.chats) {
-      if (!knownChatIdsRef.current.has(chat.id)) {
-        knownChatIdsRef.current.add(chat.id);
-        if (notificationsEnabled) {
-          playNotificationSound(notificationVolume / 100);
-          toast('Nova compra recebida', {
-            description: `${chat.order?.user?.name || chat.order?.user?.email || 'Cliente'} — Pedido #${chat.orderId.slice(-8)}`,
-          });
-        }
-      }
-    }
-  }, [chatsData?.chats, notificationsEnabled, notificationVolume]);
-
-  useEffect(() => {
     if (!socket) return;
 
     const handleNewMessageAlert = (raw: {
@@ -243,9 +205,7 @@ export default function AdminChatsPage() {
       const payload = normalizeChatRealtimePayload(raw);
       const activeChatId = selectedChatRef.current?.id ?? null;
 
-      if (payload.type === 'new_chat') {
-        queryClient.invalidateQueries({ queryKey: ['admin', 'chats'] });
-      }
+      // Lista e badge são atualizados por AdminChatNotifications (evita processar 2x)
 
       if (!claimRealtimeEvent(payload)) return;
 
@@ -274,21 +234,12 @@ export default function AdminChatsPage() {
       }
     };
 
-    const handleChatListUpdate = (raw: {
+    const handleChatListUpdate = (_raw: {
       chatId: string;
       lastMessage?: { id: string; content: string; senderId: string; type?: string };
       type?: string;
     }) => {
-      if (raw.type === 'new_chat') {
-        const s = searchRef.current;
-        const sf = statusFilterRef.current;
-        const lf = labelFilterRef.current;
-        const sb = sortByRef.current;
-        const old = queryClient.getQueryData<{ chats?: Chat[] }>(['admin', 'chats', s, sf, lf, sb]);
-        if (!old?.chats?.some((c) => c.id === raw.chatId)) {
-          queryClient.invalidateQueries({ queryKey: ['admin', 'chats'] });
-        }
-      }
+      // Processado globalmente em AdminChatNotifications
     };
 
     socket.on('new_message_alert', handleNewMessageAlert);
@@ -343,7 +294,7 @@ export default function AdminChatsPage() {
         }
         const messages = old.messages ?? [];
         if (messages.some((m) => m.id === msg.id)) return old;
-        return { ...old, messages: [...messages, msg] };
+        return { ...old, messages: dedupeChatMessages([...messages, msg]) };
       });
     };
 
@@ -394,24 +345,11 @@ export default function AdminChatsPage() {
       }
     };
 
-    const handleMessagePinned = ({ chatId: cid, message }: { chatId: string; message: any }) => {
-      if (cid !== chatId) return;
-      queryClient.setQueryData(['chat', orderId], (old: Chat | undefined) => {
-        if (!old?.messages) return old;
-        return {
-          ...old,
-          messages: old.messages.map((m) => (m.id === message.id ? { ...m, isPinned: message.isPinned } : m)),
-        };
-      });
-    };
-
     socket.on('typing', handleTyping);
-    socket.on('message_pinned', handleMessagePinned);
 
     return () => {
       socket.emit('leave_chat', chatId);
       socket.off('typing', handleTyping);
-      socket.off('message_pinned', handleMessagePinned);
     };
   }, [socket, selectedChat?.id, selectedChat?.orderId, queryClient]);
 
@@ -460,11 +398,55 @@ export default function AdminChatsPage() {
   const sendMutation = useMutation({
     mutationFn: (payload: { content: string; type?: string; fileUrl?: string }) =>
       chatApi.sendMessage(selectedChatFull?.id || '', payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'chats'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'unread-chats-count'] });
+    onMutate: async (payload) => {
+      const orderId = selectedChatRef.current?.orderId;
+      const chatId = selectedChatRef.current?.id;
+      if (!orderId || !chatId || !user?.id) return;
+
+      await queryClient.cancelQueries({ queryKey: ['chat', orderId] });
+
+      const tempId = `optimistic-${Date.now()}`;
+      const optimisticMsg: ChatMessage = {
+        id: tempId,
+        chatId,
+        senderId: 'ADMIN',
+        senderName: user.name ?? null,
+        content: payload.content,
+        type: (payload.type as ChatMessage['type']) || 'TEXT',
+        fileUrl: payload.fileUrl ?? null,
+        createdAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<Chat>(['chat', orderId], (old) => {
+        if (!old) return old;
+        return { ...old, messages: [...(old.messages ?? []), optimisticMsg] };
+      });
+
+      return { orderId, tempId };
     },
-    onError: () => toast.error('Erro ao enviar mensagem'),
+    onSuccess: (saved, _payload, context) => {
+      if (!context) return;
+      queryClient.setQueryData<Chat>(['chat', context.orderId], (old) => {
+        if (!old) return old;
+        const withoutTemp = (old.messages ?? []).filter((m) => m.id !== context.tempId);
+        const next = withoutTemp.some((m) => m.id === saved.id)
+          ? withoutTemp
+          : [...withoutTemp, saved];
+        return { ...old, messages: dedupeChatMessages(next) };
+      });
+    },
+    onError: (_err, _payload, context) => {
+      if (context?.orderId) {
+        queryClient.setQueryData<Chat>(['chat', context.orderId], (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            messages: (old.messages ?? []).filter((m) => m.id !== context.tempId),
+          };
+        });
+      }
+      toast.error('Erro ao enviar mensagem');
+    },
   });
 
   const { data: siteSettingsData } = useQuery({
@@ -514,12 +496,6 @@ export default function AdminChatsPage() {
       toast.success('Atendente atualizado');
       queryClient.invalidateQueries({ queryKey: ['chat', selectedChat?.orderId] });
     },
-  });
-
-  const pinMutation = useMutation({
-    mutationFn: (messageId: string) =>
-      chatApi.togglePinMessage(selectedChatFull?.id || '', messageId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['chat', selectedChat?.orderId] }),
   });
 
   const getSlaMinutes = (chat: Chat) => {
@@ -648,7 +624,12 @@ export default function AdminChatsPage() {
   });
 
   const handleSelectChat = (chat: Chat) => {
-    router.push(`/dashboard/admin/chats/chat/${chat.id}`);
+    if (chatListScrollRef.current) {
+      saveChatListScrollTop(chatListScrollRef.current.scrollTop);
+    }
+    const params = buildChatFiltersSearchParams(statusFilter, labelFilter, search, sortBy);
+    const qs = params.toString();
+    router.push(qs ? `/dashboard/admin/chats/chat/${chat.id}?${qs}` : `/dashboard/admin/chats/chat/${chat.id}`);
     setSelectedChat(chat);
     if (chat.orderId) {
       void queryClient.invalidateQueries({ queryKey: ['chat', chat.orderId] });
@@ -758,11 +739,28 @@ export default function AdminChatsPage() {
   const macros = macrosData?.macros || [];
   const allLabels = labelsData?.labels || [];
 
+  const handleChatListScroll = () => {
+    if (chatListScrollRef.current) {
+      saveChatListScrollTop(chatListScrollRef.current.scrollTop);
+    }
+  };
+
+  useLayoutEffect(() => {
+    const el = chatListScrollRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => restoreChatListScroll(el));
+  }, [chatsData?.chats, chatIdFromUrl]);
+
   const renderChatListItems = () => (
-    <ScrollArea className="flex-1">
+    <div
+      ref={chatListScrollRef}
+      className={CHAT_LIST_SCROLL_CLASS}
+      onScroll={handleChatListScroll}
+    >
       <div className="px-2 space-y-1">
         {chats.map((c) => {
           const unread = getUnreadCount(c);
+          const delivered = isOrderFullyDelivered(c);
           const isSelected = selectedChat?.id === c.id;
           const isOnline = checkIsOnline(c);
           const express = isExpressDelivery(c.order);
@@ -781,33 +779,100 @@ export default function AdminChatsPage() {
                     {c.order?.user?.name?.slice(0, 1).toUpperCase() || '??'}
                   </span>
                 </div>
-                <div className={cn(
-                  "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-black",
-                  isOnline ? "bg-emerald-500" : "bg-zinc-500"
-                )} />
+
+                {delivered ? (
+                  <Tooltip>
+                    <TooltipTrigger render={
+                      <div className="absolute -top-0.5 -left-0.5 bg-blue-500 text-white font-bold p-1 rounded-full border-2 border-black">
+                        <LuCheck className="h-3 w-3 text-[#1a1a1a]" />
+                      </div>
+                    }>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Produto Entregue</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger render={
+                      <div className="absolute -top-0.5 -left-0.5 bg-[#fcb64c] text-white font-bold p-1 rounded-full border-2 border-black">
+                        <LuClock4 className="h-3 w-3 text-[#1a1a1a]" />
+                      </div>
+                    }>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Entrega pendente</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
+                <Tooltip>
+                  <TooltipTrigger render={
+                    <div className={cn(
+                      "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-black flex items-center justify-center shadow-md",
+                      isOnline ? "bg-emerald-500" : "bg-zinc-500"
+                    )}>
+                      {isOnline && <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />}
+                    </div>
+                  }>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isOnline ? 'Cliente Online' : 'Cliente Offline'}</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
+
               <div className="flex-1 min-w-0 text-left">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-white text-sm truncate">
-                    {c.order?.user?.name || c.order?.user?.email || 'Cliente'}
-                  </span>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {express && (
-                      <span className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] font-bold uppercase bg-amber-500/25 text-amber-300 border border-amber-500/40">
-                        <Zap className="h-2.5 w-2.5" />
-                      </span>
-                    )}
-                    <span className="text-[10px] text-muted-foreground">
-                      {c.updatedAt ? format(new Date(c.updatedAt), 'HH:mm', { locale: ptBR }) : 'agora'}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium text-white text-sm truncate">
+                      {c.order?.user?.name || c.order?.user?.email || 'Cliente'}
                     </span>
+
+                    {express && (
+                      <Tooltip>
+                        <TooltipTrigger render={
+                          <span className="inline-flex items-center justify-center text-xs font-medium text-[#fcb74e]">
+                            <Zap className="h-3.5 w-3.5 fill-current rotate-12" />
+                          </span>
+                        }>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Entrega expressa</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+
+                    {c.labels && c.labels.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger render={
+                          <div className="flex items-center justify-center gap-1">
+                            {c.labels.slice(0, 2).map((l) => (
+                              <span key={l.id} className="flex items-center justify-center text-xs text-white">
+                                <TbTagFilled className="h-3.5 w-3.5" fill={l.color} />
+                              </span>
+                            ))}
+                          </div>
+                        }>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{c.labels.map((l) => l.name).join(', ')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
+
+                  <span className="text-[10px] text-muted-foreground shrink-0">
+                    {formatChatListTimestamp(c.updatedAt, c.isResolved)}
+                  </span>
                 </div>
+
                 <div className="flex items-center justify-between gap-2">
                   <span className={cn("text-sm text-muted-foreground line-clamp-1", unread > 0 && "text-white font-medium")}>
                     {c.messages?.[0] ? getPreviewText(c.messages[0].content, c.messages[0].type) : ''}
                   </span>
                   {unread > 0 && (
-                    <span className="text-xs font-medium text-white h-5 min-w-5 px-1 rounded-full bg-emerald-500 flex items-center justify-center">
+                    <span className="text-xs font-medium text-white h-5 min-w-5 px-1 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
                       {unread > 99 ? '99+' : unread}
                     </span>
                   )}
@@ -817,7 +882,7 @@ export default function AdminChatsPage() {
           );
         })}
       </div>
-    </ScrollArea>
+    </div>
   );
 
   if (isMobile && !chatIdFromUrl) {
@@ -1153,7 +1218,7 @@ export default function AdminChatsPage() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <Select value={statusFilter} onValueChange={(v: 'ALL' | 'OPEN' | 'ARCHIVED' | 'EXPRESS' | 'RESOLVED' | 'UNRESOLVED') => setStatusFilter(v)}>
+                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ChatStatusFilter)}>
                     <SelectTrigger className="bg-white/[0.02] border border-white/10 text-xs h-8 rounded-sm">
                       <SelectValue placeholder="Status do chat" />
                     </SelectTrigger>
@@ -1181,147 +1246,7 @@ export default function AdminChatsPage() {
               </div>
             </div>
 
-            <ScrollArea className="flex-1">
-              <div className="px-2 space-y-1">
-                {chats.map((c) => {
-                  const unread = getUnreadCount(c);
-                  const delivered = isOrderFullyDelivered(c);
-                  const isSelected = selectedChat?.id === c.id;
-                  const isOnline = checkIsOnline(c);
-                  const express = isExpressDelivery(c.order);
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => handleSelectChat(c)}
-                      className={cn('w-full select-none cursor-pointer flex items-start gap-3 rounded-md p-3 transition-all relative border', getChatListRowClass({ isExpress: express, isResolved: c.isResolved, isSelected }))}
-                    >
-                      <div className="relative flex-shrink-0">
-                        <div className="flex items-center justify-center bg-white/10 rounded-full h-10 w-10 text-white ml-1">
-                          <span className="font-medium">
-                            {c.order?.user?.name?.slice(0, 1).toUpperCase() || '??'}
-                          </span>
-                        </div>
-
-                        {delivered ? (
-                          <Tooltip>
-                            <TooltipTrigger render={
-                              <div className="absolute -top-0.5 -left-0.5 bg-blue-500 text-white font-bold p-1 rounded-full border-2 border-black">
-                                <LuCheck className="h-3 w-3 text-[#1a1a1a]" />
-                              </div>
-                            }>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Produto Entregue</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <Tooltip>
-                            <TooltipTrigger render={
-                              <div className="absolute -top-0.5 -left-0.5 bg-[#fcb64c] text-white font-bold p-1 rounded-full border-2 border-black">
-                                <LuClock4 className="h-3 w-3 text-[#1a1a1a]" />
-                              </div>
-                            }>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Entrega pendente</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-
-                        <Tooltip>
-                          <TooltipTrigger render={
-                            <div className={cn(
-                              "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-black flex items-center justify-center shadow-md",
-                              isOnline ? "bg-emerald-500" : "bg-zinc-500"
-                            )}>
-                              {isOnline && <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />}
-                            </div>
-                          }>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{isOnline ? 'Cliente Online' : 'Cliente Offline'}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="font-medium text-white text-sm truncate">
-                              {c.order?.user?.name || c.order?.user?.email || 'Cliente'}
-                            </span>
-
-                            {express && (
-                              <div className="flex items-center justify-center gap-1">
-                                <Tooltip>
-                                  <TooltipTrigger render={
-                                    <span className="inline-flex items-center justify-center text-xs font-medium text-[#fcb74e]">
-                                      <Zap className="h-3.5 w-3.5 fill-current rotate-12" />
-                                    </span>
-                                  }>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Entrega expressa</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            )}
-
-                            {c.labels && c.labels.length > 0 && (
-                              <div className="flex items-center justify-center gap-1">
-                                <Tooltip>
-                                  <TooltipTrigger render={
-                                    <div className="flex items-center justify-center gap-1">
-                                      {c.labels.slice(0, 2).map((l) => (
-                                        <span key={l.id} className="flex items-center justify-center text-xs text-white">
-                                          <TbTagFilled className="h-3.5 w-3.5" fill={l.color} />
-                                        </span>
-                                      ))}
-                                    </div>
-                                  }>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{c.labels.map((l) => l.name).join(', ')}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className='flex flex-row items-end gap-1.5 shrink-0'>
-                            <span className="text-[10px] text-muted-foreground">
-                              {c.updatedAt
-                                ? format(new Date(c.updatedAt), 'HH:mm', { locale: ptBR })
-                                : 'agora'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className='text-start text-sm text-muted-foreground line-clamp-1 text-clip gap-1'>
-                            {c.messages?.[0] && (
-                              <>
-                                <span className={cn(unread > 0 && "text-white font-medium")}>
-                                  {getPreviewText(c.messages[0].content, c.messages[0].type)}
-                                </span>
-                              </>
-                            )}
-                          </div>
-
-                          <div className='flex items-end'>
-                            {unread > 0 && (
-                              <div className='flex items-center justify-center text-xs font-medium text-white h-5 min-w-5 px-1 rounded-full bg-emerald-500'>
-                                {unread > 99 ? '99+' : unread}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+            {renderChatListItems()}
           </div>
 
           <div
@@ -1483,27 +1408,23 @@ export default function AdminChatsPage() {
                   </div>
                 )}
 
-                <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-white/10 min-h-0">
-                  {isChatMessagesLoading ? (
-                    <AdminChatMessagesSkeleton />
-                  ) : (
-                    <>
-                      {(selectedChatFull?.messages ?? []).map((msg) => (
-                        <div key={msg.id} className="space-y-1">
-                          <ChatMessageItem
-                            msg={msg}
-                            viewer="admin"
-                            clientUserId={selectedChatFull.order?.user?.id}
-                            clientName={selectedChatFull.order?.user?.name || selectedChatFull.order?.user?.email || 'Cliente'}
-                            formatFileUrl={formatFileUrl}
-                            onLightboxOpen={(url) => setLightboxImage(url)}
-                            renderContent={renderMessageContent}
-                          />
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
+                {selectedChatFull && (
+                  <ChatMessagesList
+                    chat={selectedChatFull}
+                    viewer="admin"
+                    clientUserId={selectedChatFull.order?.user?.id}
+                    clientName={
+                      selectedChatFull.order?.user?.name ||
+                      selectedChatFull.order?.user?.email ||
+                      'Cliente'
+                    }
+                    isLoading={isChatMessagesLoading}
+                    formatFileUrl={formatFileUrl}
+                    onLightboxOpen={(url) => setLightboxImage(url)}
+                    renderContent={renderMessageContent}
+                    scrollRef={scrollRef}
+                  />
+                )}
 
                 <div className={cn("relative", isChatMessagesLoading && "pointer-events-none opacity-50")}>
                   {showMacros && (
@@ -1575,11 +1496,17 @@ export default function AdminChatsPage() {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-zinc-600 gap-4">
-                <div className="h-20 w-20 rounded-full border border-white/5 bg-white/[0.02] flex items-center justify-center">
-                  <MessageSquareQuote className="h-10 w-10 opacity-20" />
+              <div className="flex-1 flex flex-col items-center justify-center text-zinc-600">
+                <div className="h-[300px] w-[300px] flex items-center justify-center">
+                  <Image
+                    src="/logo-sidebar.png"
+                    alt="Space Point"
+                    width={140}
+                    height={44}
+                    className="mr-1 h-full w-full opacity-80 object-contain select-none pointer-events-none invert brightness-0"
+                    priority
+                  />
                 </div>
-                <p className="text-sm">Selecione uma conversa para começar</p>
               </div>
             )}
           </div>
@@ -1635,7 +1562,7 @@ export default function AdminChatsPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <Select value={statusFilter} onValueChange={(v: 'ALL' | 'OPEN' | 'ARCHIVED' | 'EXPRESS' | 'RESOLVED' | 'UNRESOLVED') => setStatusFilter(v)}>
+                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ChatStatusFilter)}>
                     <SelectTrigger className="bg-white/[0.02] border border-white/10 text-xs h-8 rounded-sm">
                       <SelectValue placeholder="Status do chat" />
                     </SelectTrigger>
@@ -1660,7 +1587,6 @@ export default function AdminChatsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 {renderChatListItems()}
               </div>
             </SheetContent>

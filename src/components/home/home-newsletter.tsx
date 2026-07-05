@@ -3,7 +3,6 @@
 import { toast } from "sonner";
 import type { PublicSiteConfig } from "@/lib/site-api";
 import { resolveFooterConfig } from "@/lib/footer-config";
-import { AnimateSvg } from "../arrow-component/ribbon";
 
 type HomeNewsletterProps = {
   config?: PublicSiteConfig | null;

@@ -50,7 +50,7 @@ export const adminSitePagesGroup: AdminNavGroup = {
 };
 
 export const adminConfigNavItems: AdminNavItem[] = [
-  { href: "/dashboard/admin/users", icon: UsersRound, label: "Equipe", permission: "users:view" },
+  { href: "/dashboard/admin/team", icon: UsersRound, label: "Equipe", permission: "users:view" },
   { href: "/dashboard/admin/gateways", icon: CreditCard, label: "Gateways", permission: "gateways:manage" },
   { href: "/dashboard/admin/plugins", icon: PiPuzzlePiece, label: "Plugins", permission: "plugins:manage" },
   // { href: "/dashboard/admin/settings", icon: Settings, label: "Configurações", permission: "settings:manage" },

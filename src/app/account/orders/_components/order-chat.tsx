@@ -3,16 +3,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Star, Maximize2, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { chatApi, type Chat, type ChatMessage } from '@/lib/admin-api';
 import { API_URL } from '@/lib/api';
 import { uploadChatImages } from '@/lib/chat-upload';
-import { cn } from '@/lib/utils';
 import { playNotificationSound } from '@/lib/notification-sound';
+import { useAuth } from '@/context/auth-context';
 import { useSocket } from '@/context/socket-context';
-import { ChatMessageItem } from '@/components/admin/chat/chat-message-row';
+import { ChatMessagesList, dedupeChatMessages } from '@/components/admin/chat/chat-messages-list';
 import { ChatInput } from '@/components/admin/chat/chat-input';
 import { ChatImageLightbox } from '@/components/admin/chat/chat-image-lightbox';
 import { ChatRatingDialog } from '@/components/admin/chat/chat-rating-dialog';
@@ -63,57 +61,9 @@ function getDeliveryProgress(chat: Chat) {
   return total ? Math.round((delivered / total) * 100) : 0;
 }
 
-function ChatMessages({
-  chat,
-  scrollRef,
-  messagesEndRef,
-  onLightboxOpen,
-  readAt,
-}: {
-  chat: Chat;
-  scrollRef: React.RefObject<HTMLDivElement | null>;
-  messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  onLightboxOpen: (url: string) => void;
-  readAt?: string | null;
-}) {
-  const pinned = (chat.messages ?? []).filter((m) => m.isPinned);
-
-  return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-white/10 min-h-0">
-      {pinned.length > 0 && (
-        <div className="space-y-2 mb-2">
-          {pinned.map((msg) => (
-            <div key={msg.id} className="bg-amber-500/10 border border-amber-500/20 rounded-md p-2 text-xs text-amber-200">
-              📌 {msg.content.slice(0, 120)}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {(chat.messages ?? []).map((msg) => (
-        <ChatMessageItem
-          key={msg.id}
-          msg={msg}
-          viewer="client"
-          clientUserId={chat.order?.user?.id}
-          clientName={chat.order?.user?.name || chat.order?.user?.email || 'Cliente'}
-          formatFileUrl={formatFileUrl}
-          onLightboxOpen={onLightboxOpen}
-          renderContent={renderMessageContent}
-        />
-      ))}
-
-      {readAt && (
-        <p className="text-[10px] text-emerald-400/80 text-right">✓ Visualizado pelo suporte</p>
-      )}
-
-      <div ref={messagesEndRef} />
-    </div>
-  );
-}
-
 export function OrderChat({ orderId }: OrderChatProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -123,8 +73,6 @@ export function OrderChat({ orderId }: OrderChatProps) {
   const [adminTyping, setAdminTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const expandedScrollRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const expandedEndRef = useRef<HTMLDivElement>(null);
   const lastSentAtRef = useRef(0);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, isConnected } = useSocket();
@@ -138,8 +86,10 @@ export function OrderChat({ orderId }: OrderChatProps) {
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      expandedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const el = scrollRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+      const expanded = expandedScrollRef.current;
+      if (expanded) expanded.scrollTop = expanded.scrollHeight;
     });
   }, []);
 
@@ -169,7 +119,7 @@ export function OrderChat({ orderId }: OrderChatProps) {
         }
         const messages = old.messages ?? [];
         if (messages.some((m: any) => m.id === msg.id)) return old;
-        return { ...old, messages: [...messages, msg] };
+        return { ...old, messages: dedupeChatMessages([...messages, msg]) };
       });
 
       if (isSupportSender(msg)) {
@@ -253,7 +203,52 @@ export function OrderChat({ orderId }: OrderChatProps) {
   const sendMutation = useMutation({
     mutationFn: (payload: { content: string; type?: string; fileUrl?: string }) =>
       chatApi.sendMessage(chat?.id || '', payload),
-    onError: (err: Error) => toast.error(err.message || 'Falha ao enviar mensagem'),
+    onMutate: async (payload) => {
+      if (!chat?.id || !user?.id) return;
+      await queryClient.cancelQueries({ queryKey: ['chat', orderId] });
+
+      const tempId = `optimistic-${Date.now()}`;
+      const optimisticMsg: ChatMessage = {
+        id: tempId,
+        chatId: chat.id,
+        senderId: user.id,
+        senderName: user.name ?? null,
+        content: payload.content,
+        type: (payload.type as ChatMessage['type']) || 'TEXT',
+        fileUrl: payload.fileUrl ?? null,
+        createdAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<Chat>(['chat', orderId], (old) => {
+        if (!old) return old;
+        return { ...old, messages: [...(old.messages ?? []), optimisticMsg] };
+      });
+
+      return { tempId };
+    },
+    onSuccess: (saved, _payload, context) => {
+      if (!context) return;
+      queryClient.setQueryData<Chat>(['chat', orderId], (old) => {
+        if (!old) return old;
+        const withoutTemp = (old.messages ?? []).filter((m) => m.id !== context.tempId);
+        const next = withoutTemp.some((m) => m.id === saved.id)
+          ? withoutTemp
+          : [...withoutTemp, saved];
+        return { ...old, messages: dedupeChatMessages(next) };
+      });
+    },
+    onError: (_err, _payload, context) => {
+      if (context?.tempId) {
+        queryClient.setQueryData<Chat>(['chat', orderId], (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            messages: (old.messages ?? []).filter((m) => m.id !== context.tempId),
+          };
+        });
+      }
+      toast.error('Falha ao enviar mensagem');
+    },
   });
 
   const ratingMutation = useMutation({
@@ -341,7 +336,32 @@ export function OrderChat({ orderId }: OrderChatProps) {
   const isClosed = chat.status === 'CLOSED';
   const progress = getDeliveryProgress(chat);
   const canRate = isClosed && !chat.rating;
-  const readAt = chat.lastAdminReadAt;
+
+  const messagesList = (
+    <ChatMessagesList
+      chat={chat}
+      viewer="client"
+      clientUserId={chat.order?.user?.id}
+      clientName={chat.order?.user?.name || chat.order?.user?.email || 'Cliente'}
+      formatFileUrl={formatFileUrl}
+      onLightboxOpen={setLightboxImage}
+      renderContent={renderMessageContent}
+      scrollRef={scrollRef}
+    />
+  );
+
+  const expandedMessagesList = (
+    <ChatMessagesList
+      chat={chat}
+      viewer="client"
+      clientUserId={chat.order?.user?.id}
+      clientName={chat.order?.user?.name || chat.order?.user?.email || 'Cliente'}
+      formatFileUrl={formatFileUrl}
+      onLightboxOpen={setLightboxImage}
+      renderContent={renderMessageContent}
+      scrollRef={expandedScrollRef}
+    />
+  );
 
   const panelHeader = (
     <div className="p-4 border-b border-white/5 bg-white/[0.02] flex items-center justify-between shrink-0">
@@ -423,13 +443,7 @@ export function OrderChat({ orderId }: OrderChatProps) {
         {panelHeader}
         {progressBar}
         {faqSection}
-        <ChatMessages
-          chat={chat}
-          scrollRef={scrollRef}
-          messagesEndRef={messagesEndRef}
-          onLightboxOpen={setLightboxImage}
-          readAt={readAt}
-        />
+        {messagesList}
         {inputSection}
       </div>
 
@@ -439,13 +453,7 @@ export function OrderChat({ orderId }: OrderChatProps) {
           <div className="flex flex-col h-full min-h-0">
             {panelHeader}
             {progressBar}
-            <ChatMessages
-              chat={chat}
-              scrollRef={expandedScrollRef}
-              messagesEndRef={expandedEndRef}
-              onLightboxOpen={setLightboxImage}
-              readAt={readAt}
-            />
+            {expandedMessagesList}
             {inputSection}
           </div>
         </DialogContent>

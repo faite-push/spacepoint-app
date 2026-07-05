@@ -831,6 +831,10 @@ export interface Chat {
   updatedAt: string;
   lastAdminReadAt?: string | null;
   messages: ChatMessage[];
+  messagesMeta?: {
+    hasMore: boolean;
+    oldestId: string | null;
+  };
   labels: ChatLabel[];
   order: {
     id: string;
@@ -904,6 +908,9 @@ export interface AdminClient {
   email: string | null;
   image: string | null;
   createdAt: string;
+  isAdmin?: boolean;
+  roleId?: string | null;
+  role?: { id: string; name: string } | null;
   ordersCount: number;
   totalSpent: number;
   totalItemsCount: number;
@@ -939,7 +946,23 @@ export interface ChatReview extends Chat {
 
 export const chatApi = {
   getById: (chatId: string) => request<Chat>(`/v2/api/chats/${chatId}`),
-  getByOrder: (orderId: string) => request<Chat>(`/v2/api/chats/order/${orderId}`),
+  getByOrder: (orderId: string, params?: { messageLimit?: number; before?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.messageLimit) qs.set('messageLimit', String(params.messageLimit));
+    if (params?.before) qs.set('before', params.before);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return request<Chat>(`/v2/api/chats/order/${orderId}${suffix}`);
+  },
+  listMessages: (orderId: string, params?: { before?: string; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.before) qs.set('before', params.before);
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return request<{
+      messages: ChatMessage[];
+      messagesMeta: { hasMore: boolean; oldestId: string | null };
+    }>(`/v2/api/chats/order/${orderId}/messages${suffix}`);
+  },
   sendMessage: (chatId: string, payload: { content: string; type?: string; fileUrl?: string }) =>
     request<ChatMessage>(`/v2/api/chats/${chatId}/messages`, {
       method: "POST",
@@ -1001,8 +1024,6 @@ export const chatApi = {
       method: "PATCH",
       body: JSON.stringify({ assignedToId }),
     }),
-  togglePinMessage: (chatId: string, messageId: string) =>
-    request<ChatMessage>(`/v2/api/chats/${chatId}/messages/${messageId}/pin`, { method: "PATCH" }),
   submitRating: (chatId: string, payload: { rating: number; ratingComment?: string; ratingTags?: string[]; isAnonymous?: boolean }) =>
     request<Chat>(`/v2/api/chats/${chatId}/rating`, {
       method: "POST",

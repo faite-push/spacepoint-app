@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
-import { Slot } from "@radix-ui/react-slot"
 import { cn } from "@/lib/utils"
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
@@ -12,10 +11,23 @@ function Popover({ ...props }: PopoverPrimitive.Root.Props) {
 
 const PopoverTrigger = React.forwardRef<
   HTMLButtonElement,
-  PopoverPrimitive.Trigger.Props & { asChild?: boolean }
->(({ asChild, ...props }, ref) => {
-  const Comp = asChild ? Slot : PopoverPrimitive.Trigger
-  return <Comp ref={ref} data-slot="popover-trigger" {...(props as any)} />
+  PopoverPrimitive.Trigger.Props & { asChild?: boolean; children?: React.ReactNode }
+>(({ asChild, children, ...props }, ref) => {
+  if (asChild && React.isValidElement(children)) {
+    return (
+      <PopoverPrimitive.Trigger
+        ref={ref}
+        data-slot="popover-trigger"
+        render={children}
+        {...props}
+      />
+    );
+  }
+  return (
+    <PopoverPrimitive.Trigger ref={ref} data-slot="popover-trigger" {...props}>
+      {children}
+    </PopoverPrimitive.Trigger>
+  );
 })
 PopoverTrigger.displayName = "PopoverTrigger"
 

@@ -3,20 +3,7 @@
 import { useState, useEffect, useMemo, Suspense, type CSSProperties } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Search,
-  Shield,
-  Loader2,
-  Plus,
-  X,
-  ChevronLeft,
-  GripVertical,
-  Lock,
-  Users,
-  KeyRound,
-  FolderOpen,
-  Check,
-} from "lucide-react";
+import { Search, Shield, Loader2, Plus, X, ChevronLeft, ChevronDown, GripVertical, Lock, Users, KeyRound, FolderOpen, Check, } from "lucide-react";
 import { TbGridDots } from "react-icons/tb";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
@@ -26,21 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
 import { cn, getCsrfToken } from "@/lib/utils";
 import { Can } from "@/providers/PermissionProvider";
+import { UserPickerDialog } from "@/components/admin/team/user-picker-dialog";
+import { Separator } from "@/components/ui/separator";
+import { Toggle } from "@/components/ui/toggle";
 
 interface Permission {
   key: string;
@@ -94,6 +72,102 @@ const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   plugins: "Integrações e plugins",
   settings: "Configurações gerais",
   analytics: "Dashboard e relatórios",
+};
+
+/** Toggle principal por categoria — ativa/desativa todas as permissões do grupo. */
+const CATEGORY_MASTER: Record<string, { title: string; description: string }> = {
+  products: {
+    title: "Manage Products",
+    description: "Gerenciar produtos com acesso total às funcionalidades",
+  },
+  codes: {
+    title: "Manage Codes",
+    description: "Gerenciar códigos digitais com acesso total às funcionalidades",
+  },
+  orders: {
+    title: "Manage Orders",
+    description: "Gerenciar pedidos com acesso total às funcionalidades",
+  },
+  coupons: {
+    title: "Manage Coupons",
+    description: "Gerenciar cupons com acesso total às funcionalidades",
+  },
+  chats: {
+    title: "Manage Space Chat",
+    description: "Gerenciar atendimento com acesso total às funcionalidades",
+  },
+  clients: {
+    title: "View Clients",
+    description: "Visualizar lista de clientes da loja",
+  },
+  reviews: {
+    title: "Manage Reviews",
+    description: "Moderar avaliações com acesso total às funcionalidades",
+  },
+  media: {
+    title: "Manage Gallery",
+    description: "Gerenciar galeria com acesso total às funcionalidades",
+  },
+  users: {
+    title: "Manage Team",
+    description: "Gerenciar equipe com acesso total às funcionalidades",
+  },
+  roles: {
+    title: "Manage Roles",
+    description: "Gerenciar cargos e permissões com acesso total",
+  },
+  pages: {
+    title: "Manage Pages",
+    description: "Gerenciar páginas e aparência do site",
+  },
+  gateways: {
+    title: "Manage Gateways",
+    description: "Gerenciar gateways de pagamento",
+  },
+  plugins: {
+    title: "Manage Plugins",
+    description: "Gerenciar plugins e integrações",
+  },
+  settings: {
+    title: "Manage Settings",
+    description: "Gerenciar configurações gerais da loja",
+  },
+  analytics: {
+    title: "View Analytics",
+    description: "Visualizar dashboard e relatórios",
+  },
+};
+
+const PERMISSION_DESCRIPTIONS: Record<string, string> = {
+  "products:view": "Visualizar lista de produtos e detalhes",
+  "products:create": "Criar produtos, categorias e variantes",
+  "products:edit": "Editar produtos, categorias e variantes",
+  "products:delete": "Excluir produtos, categorias e variantes",
+  "codes:view": "Visualizar códigos e inventário",
+  "codes:upload": "Fazer upload de códigos digitais",
+  "codes:delete": "Excluir códigos do inventário",
+  "orders:view": "Visualizar pedidos e detalhes",
+  "orders:manage": "Alterar status e gerenciar pedidos",
+  "orders:refund": "Processar reembolsos",
+  "coupons:view": "Visualizar cupons",
+  "coupons:manage": "Criar, editar e excluir cupons",
+  "chats:view": "Visualizar conversas do Space Chat",
+  "chats:manage": "Responder e gerenciar chats",
+  "clients:view": "Visualizar lista de clientes",
+  "reviews:view": "Visualizar avaliações",
+  "reviews:manage": "Moderar e publicar avaliações",
+  "media:view": "Visualizar galeria de mídia",
+  "media:manage": "Enviar e gerenciar arquivos",
+  "users:view": "Visualizar membros da equipe",
+  "users:edit": "Editar usuários da equipe",
+  "users:ban": "Banir ou desbanir usuários",
+  "roles:view": "Visualizar cargos",
+  "roles:manage": "Criar, editar e atribuir cargos",
+  "pages:manage": "Editar páginas e aparência do site",
+  "gateways:manage": "Configurar gateways de pagamento",
+  "plugins:manage": "Instalar e configurar plugins",
+  "settings:manage": "Alterar configurações gerais",
+  "analytics:view": "Acessar métricas e relatórios",
 };
 
 async function fetchRoles(): Promise<Role[]> {
@@ -182,69 +256,146 @@ async function assignRole({ userId, roleId }: { userId: string; roleId: string |
   return res.json();
 }
 
-function PermissionToggle({
-  perm,
-  checked,
-  disabled,
-  onToggle,
-}: {
-  perm: Permission;
-  checked: boolean;
-  disabled?: boolean;
-  onToggle: () => void;
-}) {
+function PermissionToggle({ title, description, checked, disabled, onToggle, }: { title: string; description?: string; checked: boolean; disabled?: boolean; onToggle: (next: boolean) => void; }) {
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onToggle}
-      className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3 text-left transition-colors hover:bg-white/[0.04] disabled:opacity-50"
-    >
+    <div className="flex w-full items-center justify-between gap-3 rounded-sm border border-white/5 bg-white/[0.02] px-4 py-3">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-white">{perm.name}</p>
-        <p className="text-xs text-zinc-500">{perm.key}</p>
+        <p className="text-sm font-medium text-white">{title}</p>
+        {description && <p className="text-xs text-zinc-500">{description}</p>}
       </div>
-      <span
-        className={cn(
-          "flex h-6 w-6 shrink-0 items-center justify-center rounded border",
-          checked
-            ? "border-[#fcb64c] bg-[#fcb64c] text-black"
-            : "border-white/15 bg-transparent text-zinc-500"
-        )}
+      <Toggle
+        pressed={checked}
+        onPressedChange={onToggle}
+        disabled={disabled}
+        size="sm"
+        className="h-8 w-8 shrink-0 p-0 data-[state=on]:bg-primary data-[state=on]:text-black"
+        aria-label={title}
       >
         {checked ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-      </span>
-    </button>
+      </Toggle>
+    </div>
   );
 }
 
-function RolesSidebar({
-  roles,
-  selectedId,
-  search,
-  onSearchChange,
-  onSelect,
-  onCreate,
-  onDelete,
-  onDragEnd,
-}: {
-  roles: Role[];
-  selectedId: string | null;
-  search: string;
-  onSearchChange: (v: string) => void;
-  onSelect: (id: string) => void;
-  onCreate: () => void;
-  onDelete: (role: Role) => void;
-  onDragEnd: (result: DropResult) => void;
-}) {
+function isCategoryFullyEnabled(keys: string[], selectedKeys: string[]) {
+  return keys.length > 0 && keys.every((k) => selectedKeys.includes(k));
+}
+
+function toggleCategoryKeys(
+  keys: string[],
+  selectedKeys: string[],
+  enable: boolean
+): string[] {
+  if (enable) {
+    return [...new Set([...selectedKeys, ...keys])];
+  }
+  return selectedKeys.filter((k) => !keys.includes(k));
+}
+
+function RolesDraggableList({ droppableId, roles, dragEnabled, selectedId, onDragEnd, onSelect, onDelete, variant = "list", }: { droppableId: string; roles: Role[]; dragEnabled: boolean; selectedId?: string | null; onDragEnd: (result: DropResult) => void; onSelect: (id: string) => void; onDelete?: (role: Role) => void; variant?: "list" | "sidebar"; }) {
+  const isSidebar = variant === "sidebar";
+
+  return (
+    <DragDropContext onDragEnd={onDragEnd}>
+      <Droppable droppableId={droppableId} isDropDisabled={!dragEnabled}>
+        {(provided) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={cn(
+              isSidebar ? "flex-1 space-y-0.5 overflow-y-auto px-2 pb-2" : "space-y-1"
+            )}
+          >
+            {roles.map((role, index) => (
+              <Draggable
+                key={role.id}
+                draggableId={role.id}
+                index={index}
+                isDragDisabled={!dragEnabled || role.isProtected}
+              >
+                {(dragProvided, snapshot) => {
+                  const { style, ...draggableProps } = dragProvided.draggableProps;
+                  return (
+                    <div
+                      ref={dragProvided.innerRef}
+                      {...draggableProps}
+                      style={style as CSSProperties}
+                      className={cn("group flex items-center gap-3 transition-colors cursor-pointer select-none",
+                        isSidebar ? "rounded-md px-2 py-2.5" : "rounded-md border border-white/5 bg-card px-3 py-3",
+                        selectedId === role.id ? "bg-white/10" : "hover:bg-white/2 cursor-pointer",
+                        snapshot.isDragging && "opacity-70 shadow-lg ring-1 ring-white/50",
+                        !dragEnabled && !role.isProtected && "opacity-80 cursor-not-allowed"
+                      )}
+                    >
+                      {role.isProtected ? (
+                        <Lock className={cn("shrink-0 text-zinc-500", isSidebar ? "h-4 w-4" : "h-4 w-4")} />
+                      ) : (
+                        <div
+                          {...(dragEnabled ? dragProvided.dragHandleProps : {})}
+                          className={cn(
+                            "shrink-0 text-zinc-600",
+                            dragEnabled ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed opacity-40"
+                          )}
+                        >
+                          {isSidebar ? (
+                            <TbGridDots className="h-4 w-4" />
+                          ) : (
+                            <GripVertical className="h-4 w-4" />
+                          )}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onSelect(role.id)}
+                        className="flex min-w-0 cursor-pointer flex-1 items-center gap-2 text-left"
+                      >
+                        <Shield className={cn("shrink-0 text-zinc-500", isSidebar ? "h-3.5 w-3.5" : "h-4 w-4")} />
+                        <span className={cn("truncate text-white", isSidebar ? "text-sm" : "text-sm")}>
+                          {role.name}
+                        </span>
+                      </button>
+                      {!role.isProtected && role.userCount === 0 && onDelete && (
+                        <Can I="roles:manage">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(role);
+                            }}
+                            className={cn(
+                              "shrink-0 text-zinc-500 hover:text-red-400",
+                              isSidebar ? "rounded p-1 text-zinc-600 opacity-0 group-hover:opacity-100" : "p-1"
+                            )}
+                          >
+                            <X className={isSidebar ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                          </Button>
+                        </Can>
+                      )}
+                    </div>
+                  );
+                }}
+              </Draggable>
+            ))}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
+    </DragDropContext>
+  );
+}
+
+function RolesSidebar({ roles, selectedId, search, onSearchChange, onSelect, onCreate, onDelete, onDragEnd, }: { roles: Role[]; selectedId: string | null; search: string; onSearchChange: (v: string) => void; onSelect: (id: string) => void; onCreate: () => void; onDelete: (role: Role) => void; onDragEnd: (result: DropResult, displayRoles: Role[]) => void; }) {
   const filtered = roles.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase())
   );
+  const dragEnabled = !search.trim();
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-white/5 bg-[#111111]">
+    <div className="hidden md:flex h-[500px] max-h-[500px] flex-col rounded-md border border-white/5 bg-card">
       <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
-        <span className="text-xs font-semibold tracking-wider text-zinc-500">CARGOS</span>
+        <span className="text-sm font-semibold text-muted-foreground">Cargos</span>
         <Can I="roles:manage">
           <button
             type="button"
@@ -262,82 +413,23 @@ function RolesSidebar({
             placeholder="Pesquisar"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="h-8 border-white/10 bg-black/30 pl-8 text-sm"
+            className="pl-8"
           />
         </div>
+        {!dragEnabled && (
+          <p className="mt-2 text-[10px] text-zinc-500">Limpe a pesquisa para reordenar.</p>
+        )}
       </div>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="roles-sidebar">
-          {(provided) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-2"
-            >
-              {filtered.map((role, index) => (
-                <Draggable
-                  key={role.id}
-                  draggableId={role.id}
-                  index={index}
-                  isDragDisabled={role.isProtected}
-                >
-                  {(dragProvided, snapshot) => {
-                    const { style, ...draggableProps } = dragProvided.draggableProps;
-                    return (
-                    <div
-                      ref={dragProvided.innerRef}
-                      {...draggableProps}
-                      style={style as CSSProperties}
-                      className={cn(
-                        "group flex items-center gap-2 rounded-lg px-2 py-2.5 transition-colors",
-                        selectedId === role.id
-                          ? "bg-white/10"
-                          : "hover:bg-white/[0.04]",
-                        snapshot.isDragging && "opacity-70"
-                      )}
-                    >
-                      {role.isProtected ? (
-                        <Lock className="h-4 w-4 shrink-0 text-zinc-500" />
-                      ) : (
-                        <div
-                          {...dragProvided.dragHandleProps}
-                          className="cursor-grab text-zinc-600 active:cursor-grabbing"
-                        >
-                          <TbGridDots className="h-4 w-4" />
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => onSelect(role.id)}
-                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      >
-                        <Shield className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
-                        <span className="truncate text-sm text-white">{role.name}</span>
-                      </button>
-                      {!role.isProtected && role.userCount === 0 && (
-                        <Can I="roles:manage">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDelete(role);
-                            }}
-                            className="rounded p-1 text-zinc-600 opacity-0 hover:text-red-400 group-hover:opacity-100"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </Can>
-                      )}
-                    </div>
-                    );
-                  }}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
+      <RolesDraggableList
+        droppableId="roles-sidebar"
+        roles={filtered}
+        dragEnabled={dragEnabled}
+        selectedId={selectedId}
+        onDragEnd={(result) => onDragEnd(result, filtered)}
+        onSelect={onSelect}
+        onDelete={onDelete}
+        variant="sidebar"
+      />
     </div>
   );
 }
@@ -355,6 +447,7 @@ function RolesPageContent() {
   const [userSearch, setUserSearch] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<Role | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [addUserOpen, setAddUserOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -444,17 +537,22 @@ function RolesPageContent() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleDragEnd = (result: DropResult) => {
+  const handleDragEnd = (result: DropResult, displayRoles: Role[]) => {
     if (!result.destination || !roles) return;
-    const items = Array.from(roles);
+    if (result.source.index === result.destination.index) return;
+
+    const items = Array.from(displayRoles);
     const [moved] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, moved);
+
     queryClient.setQueryData(
       ["roles"],
       items.map((r, i) => ({ ...r, sortOrder: i }))
     );
     reorderMutation.mutate(items.map((r, i) => ({ id: r.id, sortOrder: i })));
   };
+
+  const listDragEnabled = !listSearch.trim();
 
   const grouped = (permissionsData?.grouped ?? {}) as Record<string, Permission[]>;
   const filteredGrouped = useMemo((): Record<string, Permission[]> => {
@@ -470,32 +568,29 @@ function RolesPageContent() {
     return result;
   }, [grouped, permSearch]);
 
-  const roleUsers =
-    allUsers?.filter((u: { roleId?: string | null }) => u.roleId === selectedRoleId) ?? [];
-
-  const availableUsers =
-    allUsers?.filter(
-      (u: { roleId?: string | null; name?: string | null; email: string }) =>
-        u.roleId !== selectedRoleId &&
-        (u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
-          u.email.toLowerCase().includes(userSearch.toLowerCase()))
-    ) ?? [];
-
-  const listFilteredRoles =
-    roles?.filter((r) => r.name.toLowerCase().includes(listSearch.toLowerCase())) ?? [];
+  const roleUsers = allUsers?.filter((u: { roleId?: string | null }) => u.roleId === selectedRoleId) ?? []
+  const availableUsers = allUsers?.filter((u: { roleId?: string | null; name?: string | null; email: string }) => u.roleId !== selectedRoleId && (u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase()))) ?? [];
+  const listFilteredRoles = roles?.filter((r) => r.name.toLowerCase().includes(listSearch.toLowerCase())) ?? [];
 
   const isEditing = !!selectedRoleId;
   const isProtected = selectedRole?.isProtected;
 
-  const togglePermission = (key: string) => {
+  const togglePermission = (key: string, enabled: boolean) => {
     if (isProtected) return;
     setSelectedKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+      enabled ? [...new Set([...prev, key])] : prev.filter((k) => k !== key)
     );
   };
 
-  const toggleCategory = (cat: string) => {
-    setExpandedCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
+  const toggleMasterCategory = (perms: Permission[]) => {
+    if (isProtected) return;
+    const keys = perms.map((p) => p.key);
+    const allEnabled = isCategoryFullyEnabled(keys, selectedKeys);
+    setSelectedKeys((prev) => toggleCategoryKeys(keys, prev, !allEnabled));
+  };
+
+  const toggleCategoryExpanded = (cat: string) => {
+    setExpandedCategories((prev) => ({ ...prev, [cat]: !(prev[cat] ?? false) }));
   };
 
   if (isLoading) {
@@ -508,68 +603,80 @@ function RolesPageContent() {
 
   if (!isEditing) {
     return (
-      <div className="space-y-6">
+      <div className="relative space-y-6">
+        <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+        <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+        <div className="absolute top-[85%] left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-white">Cargos</h1>
-          <p className="text-sm text-zinc-500">Gerencie os cargos dos usuários</p>
+          <p className="text-muted-foreground">Defina as permissões e hierarquia da equipe.</p>
         </div>
+
         <TeamNav />
-        <Can I="roles:manage">
-          <Button
-            onClick={() => {
-              setIsCreating(true);
-              router.push("/dashboard/admin/roles?role=new");
-            }}
-            className="bg-white text-black hover:bg-white/90 h-10 px-5"
-          >
-            Criar cargo
-          </Button>
-        </Can>
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-          <Input
-            placeholder="Pesquisar"
-            value={listSearch}
-            onChange={(e) => setListSearch(e.target.value)}
-            className="h-10 border-white/10 bg-white/[0.03] pl-9"
-          />
-        </div>
-        <div className="space-y-1">
-          {listFilteredRoles.map((role, index) => (
-            <div
-              key={role.id}
-              className="flex items-center gap-3 rounded-lg border border-white/5 bg-[#111111] px-3 py-3"
+
+        <div className="flex flex-row gap-4">
+          <Can I="roles:manage">
+            <Button
+              variant="default"
+              onClick={() => {
+                setIsCreating(true);
+                router.push("/dashboard/admin/roles?role=new");
+              }}
+              className="h-10 px-6"
             >
-              {role.isProtected ? (
-                <Lock className="h-4 w-4 text-zinc-500" />
-              ) : (
-                <GripVertical className="h-4 w-4 text-zinc-600" />
-              )}
-              <button
-                type="button"
-                onClick={() => router.push(`/dashboard/admin/roles?role=${role.id}`)}
-                className="flex flex-1 items-center gap-2 text-left"
-              >
-                <Shield className="h-4 w-4 text-zinc-500" />
-                <span className="text-sm text-white">{role.name}</span>
-              </button>
-              {!role.isProtected && role.userCount === 0 && (
-                <Can I="roles:manage">
-                  <button
-                    type="button"
-                    onClick={() => setDeleteConfirm(role)}
-                    className="p-1 text-zinc-500 hover:text-red-400"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </Can>
-              )}
-            </div>
-          ))}
+              Criar cargo
+            </Button>
+          </Can>
+
+          <div className="relative w-full max-w-xl">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <Input
+              placeholder="Pesquisar"
+              value={listSearch}
+              onChange={(e) => setListSearch(e.target.value)}
+              className="pl-9 w-full"
+            />
+          </div>
         </div>
+
+        {!listDragEnabled && (
+          <p className="text-xs text-zinc-500">Limpe a pesquisa para reordenar os cargos.</p>
+        )}
+
+        <RolesDraggableList
+          droppableId="roles-list"
+          roles={listFilteredRoles}
+          dragEnabled={listDragEnabled}
+          onDragEnd={(result) => handleDragEnd(result, listFilteredRoles)}
+          onSelect={(id) => router.push(`/dashboard/admin/roles?role=${id}`)}
+          onDelete={setDeleteConfirm}
+          variant="list"
+        />
+
+        <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+          <DialogContent className="border-white/10 bg-[#111111] text-white">
+            <DialogHeader>
+              <DialogTitle>Excluir cargo</DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                Excluir o cargo <strong>{deleteConfirm?.name}</strong>? Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>Cancelar</Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteConfirm && deleteMutation.mutate(deleteConfirm.id)}
+                disabled={deleteMutation.isPending}
+              >
+                Excluir
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -577,38 +684,64 @@ function RolesPageContent() {
         <h1 className="text-2xl font-bold text-white">Cargos</h1>
         <p className="text-sm text-zinc-500">Gerencie os cargos dos usuários</p>
       </div>
+
       <TeamNav />
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-lg"
           onClick={() => {
             setIsCreating(false);
             router.push("/dashboard/admin/roles");
           }}
-          className="h-9 w-9"
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
+
+        <div className="flex items-center bg-card rounded-md px-3 py-1 flex gap-6">
+          {[
+            { id: "cargo" as const, label: "Cargo", icon: FolderOpen },
+            { id: "permissoes" as const, label: "Permissões", icon: KeyRound },
+            { id: "usuarios" as const, label: "Usuários", icon: Users },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "relative cursor-pointer flex items-center px-4 py-1 rounded-sm gap-2 text-sm font-medium transition-colors",
+                  active ? "bg-primary text-black" : "text-muted-foreground hover:text-white"
+                )}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
         <Can I="roles:manage">
           <Button
+            size="lg"
+            className={cn("px-5", saveMutation.isPending && "opacity-50 cursor-not-allowed")}
             onClick={() => saveMutation.mutate()}
             disabled={!name.trim() || isProtected || saveMutation.isPending}
-            className="gap-2 border border-white/10 bg-transparent text-white hover:bg-white/5"
           >
             {saveMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Shield className="h-4 w-4" />
+              <Check className="h-4 w-4" />
             )}
             Salvar
           </Button>
         </Can>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-        <div className="w-full lg:w-64 lg:shrink-0 lg:order-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="w-full lg:w-96 lg:shrink-0 lg:order-2">
           <RolesSidebar
             roles={roles ?? []}
             selectedId={selectedRoleId === "new" ? null : selectedRoleId}
@@ -624,45 +757,16 @@ function RolesPageContent() {
           />
         </div>
 
-        <div className="min-w-0 flex-1 lg:order-1">
-          <div className="mb-4 flex gap-4 border-b border-white/5">
-            {[
-              { id: "cargo" as const, label: "Cargo", icon: FolderOpen },
-              { id: "permissoes" as const, label: "Permissões", icon: KeyRound },
-              { id: "usuarios" as const, label: "Usuários", icon: Users },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "relative flex items-center gap-2 pb-3 text-sm font-medium transition-colors",
-                    active ? "text-white" : "text-zinc-500 hover:text-zinc-300"
-                  )}
-                >
-                  <Icon className={cn("h-4 w-4", active && "text-[#fcb64c]")} />
-                  {tab.label}
-                  {active && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#fcb64c]" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
+        <div className="flex flex-col bg-card border border-white/5 p-4 rounded-md">
           {activeTab === "cargo" && (
-            <div className="space-y-4 max-w-xl">
+            <div className="flex flex-col space-y-4 max-w-full">
               <div className="space-y-2">
                 <Label>Nome do cargo</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={isProtected}
-                  placeholder="Ex: Moderador"
-                  className="border-white/10 bg-black/30"
+                  placeholder="Nome do cargo"
                 />
               </div>
               <div className="space-y-2">
@@ -673,7 +777,7 @@ function RolesPageContent() {
                   disabled={isProtected}
                   placeholder="Descreva as responsabilidades deste cargo..."
                   rows={3}
-                  className="resize-none border-white/10 bg-black/30"
+                  className="resize-none"
                 />
               </div>
             </div>
@@ -681,63 +785,81 @@ function RolesPageContent() {
 
           {activeTab === "permissoes" && (
             <div className="space-y-4">
-              <div className="relative max-w-md">
+              <div className="relative max-w-full">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                 <Input
                   placeholder="Pesquisar permissão"
                   value={permSearch}
                   onChange={(e) => setPermSearch(e.target.value)}
-                  className="h-10 border-white/10 bg-white/[0.03] pl-9"
+                  className="pl-9"
                 />
               </div>
+
               <div className="space-y-6">
                 {Object.entries(filteredGrouped).map(([category, perms]) => {
-                  const expanded = expandedCategories[category] ?? true;
-                  const primary = perms[0];
-                  const advanced = perms.slice(1);
+                  const expanded = expandedCategories[category] ?? false;
+                  const categoryKeys = perms.map((p) => p.key);
+                  const master = CATEGORY_MASTER[category] ?? {
+                    title: perms[0]?.name ?? category,
+                    description: CATEGORY_DESCRIPTIONS[category] ?? "",
+                  };
+                  const masterChecked = isCategoryFullyEnabled(categoryKeys, selectedKeys);
+                  const hasAdvanced = perms.length > 1;
+
                   return (
                     <div key={category} className="space-y-3">
-                      <div>
-                        <h3 className="text-sm font-semibold text-white">
-                          {CATEGORY_LABELS[category] || category}
-                        </h3>
-                        <p className="text-xs text-zinc-500">
-                          {CATEGORY_DESCRIPTIONS[category] || ""}
-                        </p>
-                      </div>
-                      {primary && (
+                      <div className="space-y-2 rounded-md border border-white/5 bg-black/20 p-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-white">
+                            {CATEGORY_LABELS[category] || category}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            {CATEGORY_DESCRIPTIONS[category] || ""}
+                          </p>
+                        </div>
+
+                        <Separator className="bg-white/5" />
+
                         <PermissionToggle
-                          perm={primary}
-                          checked={selectedKeys.includes(primary.key)}
+                          title={master.title}
+                          description={master.description}
+                          checked={masterChecked}
                           disabled={isProtected}
-                          onToggle={() => togglePermission(primary.key)}
+                          onToggle={() => toggleMasterCategory(perms)}
                         />
-                      )}
-                      {advanced.length > 0 && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => toggleCategory(category)}
-                            className="flex w-full items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-4 py-2.5 text-sm text-zinc-400"
-                          >
-                            Permissões avançadas
-                            <span className="text-xs">{expanded ? "▲" : "▼"}</span>
-                          </button>
-                          {expanded && (
-                            <div className="space-y-2 pl-2">
-                              {advanced.map((perm) => (
-                                <PermissionToggle
-                                  key={perm.key}
-                                  perm={perm}
-                                  checked={selectedKeys.includes(perm.key)}
-                                  disabled={isProtected}
-                                  onToggle={() => togglePermission(perm.key)}
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      )}
+
+                        {hasAdvanced && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => toggleCategoryExpanded(category)}
+                              className="flex w-full items-center justify-between rounded-sm border border-white/5 bg-transparent px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:bg-white/[0.02] hover:text-zinc-300"
+                            >
+                              Permissões avançadas
+                              <ChevronDown
+                                className={cn(
+                                  "h-4 w-4 shrink-0 transition-transform duration-200",
+                                  expanded && "rotate-180"
+                                )}
+                              />
+                            </button>
+                            {expanded && (
+                              <div className="space-y-2">
+                                {perms.map((perm) => (
+                                  <PermissionToggle
+                                    key={perm.key}
+                                    title={perm.name}
+                                    description={PERMISSION_DESCRIPTIONS[perm.key]}
+                                    checked={selectedKeys.includes(perm.key)}
+                                    disabled={isProtected}
+                                    onToggle={(enabled) => togglePermission(perm.key, enabled)}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -758,51 +880,13 @@ function RolesPageContent() {
                   />
                 </div>
                 <Can I="roles:manage">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button className="bg-white text-black hover:bg-white/90 shrink-0">
-                        Adicionar
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72 border-white/10 bg-[#161616] p-2" align="start">
-                      <p className="mb-2 px-1 text-xs font-medium text-zinc-400">Usuários</p>
-                      <p className="mb-2 px-1 text-xs text-zinc-500">
-                        Selecione o usuário que deseja associar.
-                      </p>
-                      <div className="max-h-48 space-y-0.5 overflow-y-auto">
-                        {availableUsers.map(
-                          (u: { id: string; name?: string | null; email: string }) => (
-                            <button
-                              key={u.id}
-                              type="button"
-                              onClick={() =>
-                                selectedRoleId &&
-                                assignMutation.mutate({
-                                  userId: u.id,
-                                  roleId: selectedRoleId === "new" ? null : selectedRoleId,
-                                })
-                              }
-                              disabled={selectedRoleId === "new"}
-                              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-white/5 disabled:opacity-50"
-                            >
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold">
-                                {(u.name || u.email).charAt(0).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate text-white">{u.name || u.email}</p>
-                                <p className="truncate text-xs text-zinc-500">{u.email}</p>
-                              </div>
-                            </button>
-                          )
-                        )}
-                        {availableUsers.length === 0 && (
-                          <p className="py-4 text-center text-xs text-zinc-500">
-                            Nenhum usuário disponível
-                          </p>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                  <Button
+                    className="bg-white text-black hover:bg-white/90 shrink-0"
+                    onClick={() => setAddUserOpen(true)}
+                    disabled={selectedRoleId === "new"}
+                  >
+                    Adicionar
+                  </Button>
                 </Can>
               </div>
               {roleUsers.length === 0 ? (
@@ -842,6 +926,18 @@ function RolesPageContent() {
           )}
         </div>
       </div>
+
+      <UserPickerDialog
+        open={addUserOpen}
+        onOpenChange={setAddUserOpen}
+        users={availableUsers}
+        title="Adicionar usuário ao cargo"
+        onSelect={(userId) => {
+          if (selectedRoleId && selectedRoleId !== "new") {
+            assignMutation.mutate({ userId, roleId: selectedRoleId });
+          }
+        }}
+      />
 
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent className="border-white/10 bg-[#111111] text-white">

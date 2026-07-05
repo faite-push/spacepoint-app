@@ -84,7 +84,7 @@ function ReviewCard({ review }: { review: PublicStoreReview }) {
   const dateLabel = formatReviewDate(review.dateLabel);
 
   return (
-    <div className="flex h-full min-h-[200px] cursor-pointer w-full flex-col gap-2 rounded-lg border border-white/5 bg-white/1 px-6 py-4 backdrop-blur-sm">
+    <div className="flex h-full min-h-auto cursor-pointer w-full flex-col gap-2 rounded-lg border border-white/5 bg-white/1 px-6 py-4 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/15">
@@ -118,55 +118,6 @@ function ReviewCard({ review }: { review: PublicStoreReview }) {
       </div>
 
       <p className="flex-1 text-sm leading-relaxed text-muted-foreground">{message}</p>
-
-      {review.product ? (
-        <div className="border-t border-white/5 pt-4">
-          {review.product.slug ? (
-            <Link
-              href={`/product/${review.product.slug}`}
-              className="flex items-center gap-3 rounded-md border border-white/5 p-2 transition-colors hover:bg-muted"
-            >
-              <div className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background">
-                {review.product.imageUrl ? (
-                  <img
-                    src={review.product.imageUrl}
-                    alt={review.product.name}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <Package className="size-4 text-muted-foreground" />
-                )}
-              </div>
-              <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground/90">
-                {review.product.name}
-              </span>
-              <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold text-primary">
-                Ver
-                <ChevronRight className="size-3.5" />
-              </span>
-            </Link>
-          ) : (
-            <div className="flex items-center gap-3 px-1 py-1">
-              <div className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background">
-                {review.product.imageUrl ? (
-                  <img
-                    src={review.product.imageUrl}
-                    alt={review.product.name}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <Package className="size-4 text-muted-foreground" />
-                )}
-              </div>
-              <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground/90">
-                {review.product.name}
-              </span>
-            </div>
-          )}
-        </div>
-      ) : null}
     </div>
   );
 }

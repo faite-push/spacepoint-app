@@ -32,6 +32,7 @@ type AlertPayload = {
   type?: 'new_chat' | 'reopened' | string;
   orderId?: string;
   customerName?: string;
+  unreadCount?: number;
 };
 
 function isCustomerMessage(msg?: ChatMessagePreview) {
@@ -107,6 +108,8 @@ export function AdminChatNotifications() {
       if (type === 'new_chat') {
         queryClient.invalidateQueries({ queryKey: ['admin', 'chats'] });
       }
+
+      // handleAdminChatListUpdate já invalida unread-chats-count
 
       if (isOnChatsPageRef.current) return;
 

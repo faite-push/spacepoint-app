@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, CheckCircle, XCircle, Truck, Clock, ChevronLeft, ChevronRight, Eye, MoreVertical, Check, Filter, Loader2, ShoppingCart, DollarSign, Package, ExternalLink, Save, Zap, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { Search, CheckCircle, XCircle, Truck, Clock, ChevronLeft, ChevronRight, Eye, MoreVertical, Check, Filter, Loader2, ShoppingCart, DollarSign, Package, ExternalLink, Save, Zap, ChevronDown, MessageSquare } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRangeForPreset } from "@/lib/date-range-presets";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
-import { ordersApi, AdminOrder } from "@/lib/admin-api";
+import { ordersApi, chatApi, AdminOrder } from "@/lib/admin-api";
+import { OrderDeliveryCart } from "@/components/admin/orders/order-delivery-cart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -405,10 +407,19 @@ export default function OrdersPage() {
 }
 
 function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any) {
+  const queryClient = useQueryClient();
   const { data: order, isLoading } = useQuery({
     queryKey: ["admin", "orders", "detail", id],
     queryFn: () => ordersApi.getOne(id!),
     enabled: !!id,
+  });
+
+  const canUseChat = !!order && (order.status === "PAID" || order.status === "DELIVERED");
+
+  const { data: chat, isLoading: chatLoading } = useQuery({
+    queryKey: ["chat", "by-order", id],
+    queryFn: () => chatApi.getByOrder(id!),
+    enabled: !!id && canUseChat,
   });
 
   const [notes, setNotes] = useState("");
@@ -444,14 +455,25 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
         ) : order && (
           <>
             <SheetHeader>
-              <div className="flex items-center justify-start gap-2 mt-2">
-                <SheetTitle className="text-2xl font-bold text-white flex items-center gap-2">
-                  Pedido #{order.id.slice(-6).toUpperCase()}
-                </SheetTitle>
-                <Badge className={cn("px-2 py-1 gap-1 rounded text-xs lowercase font-bold", statusInfo?.bg, statusInfo?.color)}>
-                  {statusInfo?.icon}
-                  {statusInfo?.label}
-                </Badge>
+              <div className="flex items-center justify-between gap-3 mt-2">
+                <div className="flex items-center justify-start gap-2 min-w-0">
+                  <SheetTitle className="text-2xl font-bold text-white flex items-center gap-2">
+                    Pedido #{order.id.slice(-6).toUpperCase()}
+                  </SheetTitle>
+                  <Badge className={cn("px-2 py-1 gap-1 rounded text-xs lowercase font-bold shrink-0", statusInfo?.bg, statusInfo?.color)}>
+                    {statusInfo?.icon}
+                    {statusInfo?.label}
+                  </Badge>
+                </div>
+
+                {chat && (
+                  <Button asChild variant="outline" size="sm" className="shrink-0 gap-2 border-white/10">
+                    <Link href={`/dashboard/admin/chats/chat/${chat.id}`}>
+                      <MessageSquare className="h-4 w-4" />
+                      Abrir chat
+                    </Link>
+                  </Button>
+                )}
               </div>
 
               <SheetDescription className="">
@@ -571,22 +593,26 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
 
                 {(order.status === "PAID" || order.status === "DELIVERED") && (
                   <section>
-                    <h4 className="text-sm font-medium text-white mb-1">Conteúdo Entregue</h4>
-                    <div className="space-y-2">
-                      {order.items?.flatMap((it: any) => it.codes).map((c: any, i: number) => (
-                        <div key={i} className="bg-card border border-white/5 p-3 rounded-md flex items-center justify-between group">
-                          <code className="text-xs text-primary font-mono select-all">{c.code}</code>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                      {order.items?.every((it: any) => it.codes.length === 0) && (
-                        <div className="text-center py-4 bg-card border border-white/5 rounded-md text-white/40 text-sm">
-                          Nenhum código gerado para este pedido.
-                        </div>
-                      )}
-                    </div>
+                    <h4 className="text-sm font-medium text-white mb-2">Conteúdo Entregue</h4>
+                    {chatLoading ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    ) : chat ? (
+                      <OrderDeliveryCart
+                        chatId={chat.id}
+                        orderId={chat.orderId}
+                        items={chat.order?.items ?? []}
+                        onDelivered={() => {
+                          queryClient.invalidateQueries({ queryKey: ["admin", "orders", "detail", id] });
+                          queryClient.invalidateQueries({ queryKey: ["chat", "by-order", id] });
+                        }}
+                      />
+                    ) : (
+                      <div className="text-center py-4 bg-card border border-white/5 rounded-md text-white/40 text-sm">
+                        Chat ainda não disponível para este pedido.
+                      </div>
+                    )}
                   </section>
                 )}
 
