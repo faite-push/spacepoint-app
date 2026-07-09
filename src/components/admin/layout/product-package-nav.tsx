@@ -52,12 +52,6 @@ export function ProductPackageNav({ productId }: { productId: string }) {
           >
             <Icon className="h-4 w-4 shrink-0" />
             {tab.label}
-            {isActive && (
-              <span
-                className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary"
-                aria-hidden
-              />
-            )}
           </Link>
         );
       })}

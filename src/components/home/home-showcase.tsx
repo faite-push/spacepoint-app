@@ -1,4 +1,4 @@
-import { ProductCard } from "@/components/shop/product-card";
+import { ShowcaseSectionCarousel } from "@/components/home/showcase-section-carousel";
 import type { Product } from "@/types/shop";
 
 export type HomeShowcaseSectionData = {
@@ -26,11 +26,7 @@ function ShowcaseSectionBlock({ section }: { section: HomeShowcaseSectionData })
         ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
-        {section.products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      <ShowcaseSectionCarousel products={section.products} />
     </section>
   );
 }

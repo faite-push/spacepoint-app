@@ -1,7 +1,7 @@
 import type { FooterLink, PublicSiteConfig } from "@/lib/site-api";
 
 export const FOOTER_DEFAULTS = {
-  aboutTitle: "Sobre a loja:",
+  aboutTitle: "Sobre a loja",
   aboutText:
     "A Space Point BR LTDA é uma empresa brasileira especializada na venda de jogos digitais para consoles PlayStation, oferecendo uma experiência prática, segura e acessível para gamers de todo o país.",
   copyrightBase: "SPACE POINT BR LTDA – CNPJ: 52.527.026/0001-95",
@@ -16,14 +16,9 @@ export const FOOTER_DEFAULTS = {
   showNoise: true,
   paddingTopHome: 192,
   paddingTopDefault: 48,
-  categoryColumnTitle: "Categorias:",
-  supportColumnTitle: "Suporte:",
-  categoryLinks: [
-    { label: "Mais Vendidos", href: "/products" },
-    { label: "Lançamentos", href: "/products" },
-    { label: "PlayStation", href: "/products" },
-    { label: "Nintendo", href: "/products", badge: "New" },
-  ] as FooterLink[],
+  categoryColumnTitle: "Categorias",
+  supportColumnTitle: "Suporte",
+  categoryLinks: [ ] as FooterLink[],
   supportLinks: [
     { label: "Fale Conosco", href: "/support" },
     { label: "Como comprar", href: "/support", external: true },

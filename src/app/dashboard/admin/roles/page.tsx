@@ -74,7 +74,6 @@ const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   analytics: "Dashboard e relatórios",
 };
 
-/** Toggle principal por categoria — ativa/desativa todas as permissões do grupo. */
 const CATEGORY_MASTER: Record<string, { title: string; description: string }> = {
   products: {
     title: "Manage Products",
@@ -163,10 +162,9 @@ const PERMISSION_DESCRIPTIONS: Record<string, string> = {
   "users:ban": "Banir ou desbanir usuários",
   "roles:view": "Visualizar cargos",
   "roles:manage": "Criar, editar e atribuir cargos",
-  "pages:manage": "Editar páginas e aparência do site",
+  "pages:manage": "Editar páginas, aparência e configurações do site",
   "gateways:manage": "Configurar gateways de pagamento",
   "plugins:manage": "Instalar e configurar plugins",
-  "settings:manage": "Alterar configurações gerais",
   "analytics:view": "Acessar métricas e relatórios",
 };
 
@@ -596,7 +594,7 @@ function RolesPageContent() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-[#fcb64c]" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -968,7 +966,7 @@ export default function RolesPage() {
     <Suspense
       fallback={
         <div className="flex justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[#fcb64c]" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       }
     >

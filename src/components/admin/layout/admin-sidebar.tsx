@@ -17,7 +17,7 @@ export function AdminSidebar() {
       <div className="relative z-0 flex h-22 shrink-0 items-center justify-center px-4">
         <Link
           href="/"
-          className="inline-flex shrink-0 items-center justify-center overflow-hidden opacity-70 hover:opacity-60 transition-opacity duration-300"
+          className="inline-flex shrink-0 items-center justify-center overflow-hidden opacity-85 hover:opacity-60 transition-opacity duration-300"
           aria-label="Space Point Admin"
         >
           <Image

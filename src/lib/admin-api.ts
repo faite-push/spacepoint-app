@@ -206,6 +206,26 @@ export const productsApi = {
       method: "PUT",
       body: JSON.stringify({ items }),
     }),
+  bulkActions: (payload: {
+    action: "price" | "visibility";
+    productIds?: string[];
+    applyTo?: "products" | "variants" | "both";
+    includeVariants?: boolean;
+    targetField?: "price" | "comparePrice";
+    mode?: "fixed" | "increase_percent" | "decrease_percent";
+    value?: number;
+    alsoApplyToComparePrice?: boolean;
+    isVisible?: boolean;
+  }) =>
+    request<{
+      success: boolean;
+      updatedProducts: number;
+      updatedVariants?: number;
+      applyTo?: "products" | "variants" | "both";
+    }>("/v2/api/admin/products/bulk-actions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   update: (id: string, payload: Partial<ProductPayload>) =>
     request<AdminProduct>(`/v2/api/admin/products/${id}`, {
       method: "PUT",
@@ -253,6 +273,25 @@ export const variantsApi = {
     request<ProductVariant>(
       `/v2/api/admin/products/${productId}/variants/${variantId}/duplicate`,
       { method: "POST" }
+    ),
+  bulkGenerate: (
+    productId: string,
+    payload: {
+      variants: Array<{
+        name: string;
+        price: number;
+        comparePrice?: number | null;
+        stockQuantity?: number;
+      }>;
+      defaults?: Partial<ProductVariantPayload>;
+    }
+  ) =>
+    request<{ variants: ProductVariant[]; created: number; skipped: string[] }>(
+      `/v2/api/admin/products/${productId}/variants/bulk-generate`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
     ),
 };
 
@@ -420,10 +459,13 @@ export type CheckoutDeliveryOptions = {
   expressFeeCents: number;
 };
 
+export type CheckoutAuthMode = "inline_at_payment" | "login_before_checkout";
+
 export type CheckoutSettings = {
   termsCheckedByDefault: boolean;
   prefillUserName: boolean;
   prefillUserEmail: boolean;
+  authMode?: CheckoutAuthMode;
   fields: CheckoutFieldConfig[];
   deliveryOptions?: CheckoutDeliveryOptions;
 };

@@ -4,6 +4,7 @@ export const DEFAULT_CHECKOUT_SETTINGS: CheckoutSettings = {
   termsCheckedByDefault: false,
   prefillUserName: true,
   prefillUserEmail: true,
+  authMode: "inline_at_payment",
   fields: [
     {
       key: "name",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
@@ -24,10 +25,12 @@ import type { CheckoutFieldConfig } from "@/lib/admin-api";
 import { useAuth } from "@/context/auth-context";
 import { useCartStore, useCartHydrated } from "@/store/cart-store";
 import type { Product } from "@/types/shop";
+import { CheckoutAuthModal } from "@/components/checkout/checkout-auth-modal";
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const { items, total, subtotal, discount, setQuantity, removeItem, clear, applyCoupon, appliedCoupon, removeCoupon } = useCartStore();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
 
   const [status, setStatus] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +43,7 @@ export default function CheckoutPage() {
   const [deliveryOption, setDeliveryOption] = useState<"standard" | "express">("standard");
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const hydrated = useCartHydrated();
   const paymentOptionsQuery = useQuery({
@@ -53,6 +57,7 @@ export default function CheckoutPage() {
   });
 
   const checkoutSettings = checkoutConfigQuery.data?.checkoutSettings ?? DEFAULT_CHECKOUT_SETTINGS;
+  const authMode = checkoutSettings.authMode ?? "inline_at_payment";
   const requiredFieldKeys = paymentOptionsQuery.data?.requiredFieldsByMethod?.[paymentMethod] || paymentOptionsQuery.data?.requiredCustomerFields || [];
   const enabledFields = resolveEffectiveCheckoutFields(checkoutSettings, requiredFieldKeys);
   const deliverySettings = checkoutSettings.deliveryOptions ?? DEFAULT_CHECKOUT_SETTINGS.deliveryOptions!;
@@ -62,6 +67,13 @@ export default function CheckoutPage() {
   const availableMethods = paymentOptionsQuery.data?.methods || ["PIX"];
   const pixAvailable = availableMethods.includes("PIX");
   const cardAvailable = availableMethods.includes("CARD");
+
+  useEffect(() => {
+    if (authLoading || user) return;
+    if (authMode === "login_before_checkout") {
+      router.replace(`/login?from=${encodeURIComponent("/checkout")}`);
+    }
+  }, [authLoading, user, authMode, router]);
 
   useEffect(() => {
     if (!checkoutSettings) return;
@@ -138,10 +150,7 @@ export default function CheckoutPage() {
     return Object.keys(errors).length === 0;
   }
 
-  async function submitOrder() {
-    if (!acceptedTerms || isSubmitting || authLoading) return;
-    if (!validateCheckoutFields()) return;
-
+  async function createOrderAndRedirect(checkoutDataOverride?: Record<string, string>) {
     setIsSubmitting(true);
     setStatus("Processando seu pedido seguro...");
 
@@ -155,7 +164,7 @@ export default function CheckoutPage() {
         {
           couponCode: appliedCoupon?.code ?? null,
           paymentMethod,
-          checkoutData: fieldValues,
+          checkoutData: checkoutDataOverride ?? fieldValues,
           deliveryOption,
         }
       );
@@ -165,7 +174,46 @@ export default function CheckoutPage() {
       setStatus(error instanceof Error ? error.message : "Erro ao criar pedido");
       setIsSubmitting(false);
     }
+  }
+
+  async function handleAuthSuccess(authedEmail?: string) {
+    setAuthModalOpen(false);
+
+    let checkoutData = fieldValues;
+    if (authedEmail) {
+      const emailField = enabledFields.find((f) => f.key === "email" || f.type === "email");
+      if (emailField) {
+        checkoutData = { ...fieldValues, [emailField.key]: authedEmail };
+        setFieldValues(checkoutData);
+      }
+    }
+
+    await refreshUser();
+    await createOrderAndRedirect(checkoutData);
+  }
+
+  async function submitOrder() {
+    if (!acceptedTerms || isSubmitting || authLoading) return;
+    if (!validateCheckoutFields()) return;
+
+    if (!user) {
+      if (authMode === "inline_at_payment") {
+        setAuthModalOpen(true);
+        return;
+      }
+      return;
+    }
+
+    await createOrderAndRedirect();
   };
+
+  if (!authLoading && !user && authMode === "login_before_checkout") {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="pb-24 lg:pb-12 -mt-32 py-6 md:py-12 relative">
@@ -648,6 +696,13 @@ export default function CheckoutPage() {
           </aside>
         </div>
       </div>
+
+      <CheckoutAuthModal
+        open={authModalOpen}
+        onOpenChange={setAuthModalOpen}
+        onSuccess={handleAuthSuccess}
+        initialEmail={fieldValues.email || fieldValues["email"] || ""}
+      />
     </div>
   );
 }

@@ -7,7 +7,7 @@ export function resolveMediaUrl(url?: string | null): string | null {
   if (!trimmed) return null;
 
   const apiBase = API_URL?.replace(/\/$/, "");
-  const cdnMatch = trimmed.match(/\/cdn\/([^/?#]+)/i);
+  const cdnMatch = trimmed.match(/\/cdn\/([^#]+)/i);
 
   if (cdnMatch && apiBase) {
     return `${apiBase}/cdn/${cdnMatch[1]}`;

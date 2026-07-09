@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
-import { siteSettingsApi, type CheckoutFieldConfig, type CheckoutSettings, } from "@/lib/admin-api";
+import { siteSettingsApi, type CheckoutAuthMode, type CheckoutFieldConfig, type CheckoutSettings, } from "@/lib/admin-api";
 import { DEFAULT_CHECKOUT_SETTINGS } from "@/lib/checkout-defaults";
 import { Toggle } from "@/components/ui/toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -193,6 +193,113 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
               )}
             </Toggle>
           </div>
+
+          <div className="flex items-center justify-between rounded-md border border-white/5 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-white">Autenticação no checkout</p>
+              <p className="text-xs text-muted-foreground">Define quando o cliente precisa entrar na conta para finalizar a compra.</p>
+            </div>
+            <Select
+              value={settings.authMode ?? "inline_at_payment"}
+              onValueChange={(value: CheckoutAuthMode) =>
+                setSettings((s) => ({ ...s, authMode: value }))
+              }
+            >
+              <SelectTrigger className="w-auto min-w-[300px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inline_at_payment">Login ao pagar (modal no checkout)</SelectItem>
+                <SelectItem value="login_before_checkout">Exigir login antes do checkout</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-md border border-white/5 bg-transparent">
+        <div className="border-b border-white/5 px-4 py-3">
+          <h2 className="text-sm font-medium">Entrega no checkout</h2>
+        </div>
+
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 px-4 py-4">
+          <div className="flex items-center justify-between rounded-md border border-white/5 px-4 py-3 md:col-span-2">
+            <div>
+              <p className="text-sm font-medium text-white">Ativar opções de entrega</p>
+              <p className="text-xs text-muted-foreground">Exibe padrão vs expressa no checkout</p>
+            </div>
+            <Toggle
+              variant="default"
+              size="sm"
+              pressed={settings.deliveryOptions?.enabled ?? true}
+              onPressedChange={(val) =>
+                setSettings((s) => ({
+                  ...s,
+                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, enabled: val },
+                }))
+              }
+            >
+              {settings.deliveryOptions?.enabled ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            </Toggle>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Label entrega padrão</Label>
+            <Input
+              value={settings.deliveryOptions?.standardLabel ?? ""}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, standardLabel: e.target.value },
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Label entrega expressa</Label>
+            <Input
+              value={settings.deliveryOptions?.expressLabel ?? ""}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, expressLabel: e.target.value },
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Descrição entrega expressa</Label>
+            <Input
+              value={settings.deliveryOptions?.expressDescription ?? ""}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, expressDescription: e.target.value },
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Taxa expressa (centavos)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={settings.deliveryOptions?.expressFeeCents ?? 999}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  deliveryOptions: {
+                    ...DEFAULT_SETTINGS.deliveryOptions!,
+                    ...s.deliveryOptions,
+                    expressFeeCents: Math.max(0, Number(e.target.value) || 0),
+                  },
+                }))
+              }
+            />
+          </div>
         </div>
       </div>
 
@@ -364,101 +471,6 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
             </div>
           </ScrollArea>
         </div>
-      </div>
-
-      <div className="rounded-md border border-white/5 bg-transparent">
-        <div className="border-b border-white/5 px-4 py-3">
-          <h2 className="text-sm font-medium">Entrega no checkout</h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            Permite alternar entre entrega padrão e expressa com taxa adicional.
-          </p>
-        </div>
-
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 px-4 py-4">
-          <div className="flex items-center justify-between rounded-md border border-white/5 px-4 py-3 md:col-span-2">
-            <div>
-              <p className="text-sm font-medium text-white">Ativar opções de entrega</p>
-              <p className="text-xs text-muted-foreground">Exibe padrão vs expressa no checkout</p>
-            </div>
-            <Toggle
-              variant="default"
-              size="sm"
-              pressed={settings.deliveryOptions?.enabled ?? true}
-              onPressedChange={(val) =>
-                setSettings((s) => ({
-                  ...s,
-                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, enabled: val },
-                }))
-              }
-            >
-              {settings.deliveryOptions?.enabled ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
-            </Toggle>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Label entrega padrão</Label>
-            <Input
-              value={settings.deliveryOptions?.standardLabel ?? ""}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, standardLabel: e.target.value },
-                }))
-              }
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Label entrega expressa</Label>
-            <Input
-              value={settings.deliveryOptions?.expressLabel ?? ""}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, expressLabel: e.target.value },
-                }))
-              }
-            />
-          </div>
-
-          <div className="space-y-1.5 md:col-span-2">
-            <Label className="text-xs">Descrição entrega expressa</Label>
-            <Input
-              value={settings.deliveryOptions?.expressDescription ?? ""}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  deliveryOptions: { ...DEFAULT_SETTINGS.deliveryOptions!, ...s.deliveryOptions, expressDescription: e.target.value },
-                }))
-              }
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Taxa expressa (centavos)</Label>
-            <Input
-              type="number"
-              min={0}
-              value={settings.deliveryOptions?.expressFeeCents ?? 999}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  deliveryOptions: {
-                    ...DEFAULT_SETTINGS.deliveryOptions!,
-                    ...s.deliveryOptions,
-                    expressFeeCents: Math.max(0, Number(e.target.value) || 0),
-                  },
-                }))
-              }
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-md border border-white/5 bg-transparent px-4 py-3">
-        <p className="text-xs text-muted-foreground">
-          Campos exigidos pelo gateway ativo (PagBank, Mercado Pago, Stripe etc.) são ativados e tornados obrigatórios automaticamente no checkout.
-        </p>
       </div>
     </div>
   );

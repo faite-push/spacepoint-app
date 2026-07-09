@@ -15,13 +15,13 @@ export const ADMIN_ROUTE_PERMISSIONS: AdminRoutePermissionRule[] = [
   { prefix: '/dashboard/admin/clients', permission: 'clients:view', label: 'Clientes' },
   { prefix: '/dashboard/admin/reviews', permission: 'reviews:view', label: 'Avaliações' },
   { prefix: '/dashboard/admin/chats', permission: 'chats:view', label: 'Space Chat' },
-  { prefix: '/dashboard/admin/users', permission: 'users:view', label: 'Equipe' },
+  { prefix: '/dashboard/admin/team', permission: 'users:view', label: 'Equipe' },
   { prefix: '/dashboard/admin/roles', permission: 'roles:view', label: 'Cargos' },
   { prefix: '/dashboard/admin/gateways', permission: 'gateways:manage', label: 'Gateways' },
   { prefix: '/dashboard/admin/plugins', permission: 'plugins:manage', label: 'Plugins' },
   { prefix: '/dashboard/admin/pages', permission: 'pages:manage', label: 'Páginas do site' },
   { prefix: '/dashboard/admin/banners', permission: 'pages:manage', label: 'Banners' },
-  { prefix: '/dashboard/admin/settings', permission: 'settings:manage', label: 'Configurações' },
+  { prefix: '/dashboard/admin/settings', permission: 'pages:manage', label: 'Configurações' },
 ];
 
 export function getAdminRoutePermission(pathname: string): AdminRoutePermissionRule | null {

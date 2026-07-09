@@ -10,22 +10,24 @@ import { useAuth } from "@/context/auth-context";
 import { setCsrfToken, getApiHeaders } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { InputOTP, InputOTPGroup, InputOTPSlot, } from "@/components/ui/input-otp";
+
+function safeRedirectPath(from: string | null): string {
+  if (!from || !from.startsWith("/") || from.startsWith("//")) return "/";
+  return from;
+}
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
+  const redirectTo = safeRedirectPath(searchParams.get("from"));
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace("/");
+      router.replace(redirectTo);
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, redirectTo]);
 
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -97,7 +99,8 @@ function LoginContent() {
 
       if (data.csrfToken) setCsrfToken(data.csrfToken);
 
-      router.push("/");
+      await refreshUser();
+      router.push(redirectTo);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao verificar código");
@@ -107,7 +110,11 @@ function LoginContent() {
   };
 
   const handleOAuth = (provider: "google" | "discord") => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/login/${provider}`;
+    const qs =
+      redirectTo !== "/"
+        ? `?returnTo=${encodeURIComponent(redirectTo)}`
+        : "";
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/login/${provider}${qs}`;
   };
 
   return (
@@ -172,7 +179,7 @@ function LoginContent() {
                 </div>
 
                 {error && (
-                  <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
+                  <div className="flex items-center gap-2 rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
                     <AlertCircle className="h-4 w-4 shrink-0" />
                     <span>{error}</span>
                   </div>
@@ -240,7 +247,7 @@ function LoginContent() {
                 )}
 
                 {error && (
-                  <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
+                  <div className="flex items-center gap-2 rounded-md bg-red-500/10 p-3 text-sm text-red-400">
                     <AlertCircle className="h-4 w-4 shrink-0" />
                     <span>{error}</span>
                   </div>
@@ -249,7 +256,7 @@ function LoginContent() {
                 <button
                   type="submit"
                   disabled={loading || code.length !== 6}
-                  className="flex h-12 w-full items-center cursor-pointer justify-center rounded-xl bg-primary font-medium text-black transition-all duration-300 hover:bg-primary/80 disabled:opacity-30"
+                  className="flex h-12 w-full items-center cursor-pointer justify-center rounded-md bg-primary font-medium text-black transition-all duration-300 hover:bg-primary/80 disabled:opacity-30"
                 >
                   {loading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -275,7 +282,7 @@ function LoginContent() {
 
         <p className="mt-6 text-center text-sm font-light text-white/60">
           Ao fazer login, você concorda com nossos{" "}
-          <Link href="#" className="text-primary hover:text-primary/80 transition-all duration-300">
+          <Link href="" className="text-primary hover:text-primary/80 transition-all duration-300">
             Termos de Serviço
           </Link>
         </p>

@@ -110,21 +110,7 @@ function buildDefaults(v: ProductVariant | null | undefined): VariantFormValues 
   };
 }
 
-export function VariantForm({
-  productId,
-  productName,
-  variant,
-  isModal,
-  onSuccess,
-  onCancel,
-}: {
-  productId: string;
-  productName: string;
-  variant?: ProductVariant | null;
-  isModal?: boolean;
-  onSuccess?: () => void;
-  onCancel?: () => void;
-}) {
+export function VariantForm({ productId, productName, variant, isModal, onSuccess, onCancel, }: { productId: string; productName: string; variant?: ProductVariant | null; isModal?: boolean; onSuccess?: () => void; onCancel?: () => void; }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEditing = !!variant;

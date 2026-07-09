@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Package, Copy, GripVertical, PlusCircle } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Package, Copy, PlusCircle, Grid3X3 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { TbCactusFilled } from "react-icons/tb";
 
@@ -14,11 +14,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TbGridDots } from "react-icons/tb";
+import { MdOutlineRocketLaunch } from "react-icons/md";
 
 import { cn } from "@/lib/utils";
 import { variantsApi, productsApi, type ProductVariant } from "@/lib/admin-api";
 import { ProductPackageNav } from "@/components/admin/layout/product-package-nav";
 import { VariantForm } from "@/components/admin/forms/variant-form";
+import { VariantMatrixGeneratorDialog } from "@/components/admin/products/variant-matrix-generator-dialog";
 
 function getVariantStockLabel(v: ProductVariant) {
   if (v.deliveryType === "automatic_lines") {
@@ -37,6 +39,7 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
   const [deleteVariant, setDeleteVariant] = useState<ProductVariant | null>(null);
   const [localVariants, setLocalVariants] = useState<ProductVariant[] | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isMatrixOpen, setIsMatrixOpen] = useState(false);
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
 
   const { data: productData, isLoading: prodLoading } = useQuery({
@@ -119,30 +122,76 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
 
       <ProductPackageNav productId={productId} />
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" className="h-9 w-9 p-0 hover:bg-transparent">
-            <Link href="/dashboard/admin/products" aria-label="Voltar">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              Editar pacote
-            </h1>
-            {!prodLoading && productData?.name && (
-              <p className="text-xs text-zinc-500 mt-0.5">{productData.name}</p>
-            )}
+      <div className="flex items-center gap-4">
+        <div className="hidden md:flex items-center justify-between gap-3">
+          <div className="flex items-center justify-start gap-3">
+            <Button asChild variant="ghost" size="icon" className="h-9 w-9 p-0 hover:bg-transparent">
+              <Link href="/dashboard/admin/products" aria-label="Voltar">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-white tracking-tight">
+                Editar pacote
+              </h1>
+              {!prodLoading && productData?.name && (
+                <p className="text-xs text-zinc-500 mt-0.5">{productData.name}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              onClick={() => setIsMatrixOpen(true)}
+              variant="outline"
+              size="lg"
+            >
+              <MdOutlineRocketLaunch className="h-4 w-4" /> Gerador matriz
+            </Button>
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              size="lg"
+            >
+              <PlusCircle className="h-4 w-4" /> Nova Variante
+            </Button>
           </div>
         </div>
 
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="gap-2"
-          size="lg"
-        >
-          <PlusCircle className="h-4 w-4" /> Nova Variante
-        </Button>
+        <div className="md:hidden flex flex-col space-y-2">
+          <div className="flex items-center gap-3">
+            <Button asChild variant="ghost" size="icon" className="h-9 w-9 p-0 hover:bg-transparent">
+              <Link href="/dashboard/admin/products" aria-label="Voltar">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-white tracking-tight">
+                Editar pacote
+              </h1>
+              {!prodLoading && productData?.name && (
+                <p className="text-xs text-zinc-500 mt-0.5">{productData.name}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              onClick={() => setIsMatrixOpen(true)}
+              variant="outline"
+              size="lg"
+              className="flex-1"
+            >
+              <MdOutlineRocketLaunch className="h-4 w-4" /> Gerador matriz
+            </Button>
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              size="lg"
+              className="flex-1"
+            >
+              <PlusCircle className="h-4 w-4" /> Nova Variante
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-md border border-white/5 bg-transparent overflow-hidden">
@@ -154,8 +203,15 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
           <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
             <TbCactusFilled className="h-12 w-12" />
             <div>
-              <p className="text-sm font-medium text-white/70">Nenhuma variante criada no momento</p>
+              <p className="text-sm font-medium text-white">Nenhuma variante criada no momento</p>
+              <p className="text-xs text-muted-foreground">
+                Use o gerador matriz para criar variantes de forma rápida e fácil.
+              </p>
             </div>
+            <Button variant="outline" size="lg" onClick={() => setIsMatrixOpen(true)}>
+              <MdOutlineRocketLaunch className="h-4 w-4" />
+              Gerador matriz
+            </Button>
           </div>
         ) : (
           <div className="divide-y divide-white/5">
@@ -166,7 +222,7 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
                     {variants.map((v, index) => (
                       <Draggable key={v.id} draggableId={v.id} index={index}>
                         {(drag, snapshot) => (
-                          <div ref={drag.innerRef} {...(drag.draggableProps as any)} className={cn("flex items-center gap-3 px-6 py-4 bg-transparent hover:bg-black/20 transition-colors group", snapshot.isDragging && "rounded-md border border-white/10")}>
+                          <div ref={drag.innerRef} {...(drag.draggableProps as any)} className={cn("flex items-center gap-3 px-4 sm:px-6 py-4 bg-transparent hover:bg-black/20 transition-colors group", snapshot.isDragging && "rounded-md border border-white/10")}>
                             <div
                               {...drag.dragHandleProps}
                               className="text-white/60 shrink-0 cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 p-1"
@@ -180,84 +236,85 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
                                 : <Package className="h-4 w-4 text-zinc-600" />}
                             </div>
 
-                            <div className="min-w-0 flex-1 flex items-center justify-between">
-                              <div className="min-w-0 gap-36 flex">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingVariant(v);
-                                  }}
-                                  className="font-semibold text-sm text-white/80 truncate text-left transition-colors cursor-pointer block"
-                                >
-                                  {v.name}
-                                </button>
+                            <div className="hidden md:grid flex-1 min-w-0 grid-cols-[minmax(0,1fr)_52px_80px_128px_72px_112px] items-center gap-x-3">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingVariant(v);
+                                }}
+                                className="font-semibold text-sm text-white/80 truncate text-left transition-colors cursor-pointer"
+                              >
+                                {v.name}
+                              </button>
 
-                                <span className={cn("md:flex hidden text-xs font-medium px-2 py-1 rounded-sm", v.isVisible ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/10 text-zinc-500")}>
-                                  {v.isVisible ? "on" : "off"}
-                                </span>
+                              <span className={cn("text-xs font-medium px-2 py-1 rounded-sm text-center", v.isVisible ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/10 text-zinc-500")}>
+                                {v.isVisible ? "on" : "off"}
+                              </span>
 
-                                <Badge variant="secondary" className="md:flex hidden bg-white/5 rounded-sm text-zinc-400 text-xs px-2 py-1 font-medium">
-                                  {v.deliveryType === "automatic_lines" ? "linhas"
-                                    : v.deliveryType === "file" ? "arquivo"
-                                      : v.deliveryType === "manual" ? "manual"
-                                        : v.deliveryType === "manual_chat" ? "manual chat"
-                                          : v.deliveryType === "automatic_text" ? "texto"
-                                            : "misto"}
-                                </Badge>
+                              <Badge variant="secondary" className="justify-center bg-white/5 rounded-sm text-zinc-400 text-xs px-2 py-1 font-medium">
+                                {v.deliveryType === "automatic_lines" ? "linhas"
+                                  : v.deliveryType === "file" ? "arquivo"
+                                    : v.deliveryType === "manual" ? "manual"
+                                      : v.deliveryType === "manual_chat" ? "manual chat"
+                                        : v.deliveryType === "automatic_text" ? "texto"
+                                          : "misto"}
+                              </Badge>
 
-                                {(v.minPurchaseQuantity > 1 || v.maxPurchaseQuantity || v.onePurchasePerUser) && (
-                                  <div className="md:flex hidden flex items-center gap-2">
-                                    {v.minPurchaseQuantity > 1 && (
-                                      <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
-                                        min: {v.minPurchaseQuantity}
-                                      </Badge>
-                                    )}
-                                    {v.maxPurchaseQuantity && (
-                                      <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
-                                        max: {v.maxPurchaseQuantity}
-                                      </Badge>
-                                    )}
-                                    {v.onePurchasePerUser && (
-                                      <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
-                                        1 p/ user
-                                      </Badge>
-                                    )}
-                                  </div>
+                              <div className="flex items-center gap-1 min-w-0">
+                                {v.minPurchaseQuantity > 1 && (
+                                  <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1 shrink-0">
+                                    min: {v.minPurchaseQuantity}
+                                  </Badge>
+                                )}
+                                {v.maxPurchaseQuantity && (
+                                  <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1 shrink-0">
+                                    max: {v.maxPurchaseQuantity}
+                                  </Badge>
+                                )}
+                                {v.onePurchasePerUser && (
+                                  <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1 shrink-0">
+                                    1 p/ user
+                                  </Badge>
                                 )}
                               </div>
 
-                              <div className="md:flex hidden flex items-center gap-6 shrink-0 pr-4">
-                                <div className="flex flex-col items-end">
-                                  {(() => {
-                                    const { stock, label } = getVariantStockLabel(v);
-                                    return (
-                                      <span className={cn(
-                                        "text-sm font-medium",
-                                        stock <= 0 ? "text-red-500" : "text-zinc-300"
-                                      )}>
-                                        {label}
-                                      </span>
-                                    );
-                                  })()}
-                                </div>
+                              {(() => {
+                                const { stock, label } = getVariantStockLabel(v);
+                                return (
+                                  <span className={cn(
+                                    "text-sm font-medium text-center",
+                                    stock <= 0 ? "text-red-500" : "text-zinc-300"
+                                  )}>
+                                    {label}
+                                  </span>
+                                );
+                              })()}
 
-                                <div className="flex flex-col items-end min-w-[70px]">
-                                  <div className="flex items-center gap-1.5">
-                                    {v.comparePrice && Number(v.comparePrice) > 0 && (
-                                      <span className="text-sm text-zinc-500 line-through">
-                                        R${Number(v.comparePrice).toFixed(2)}
-                                      </span>
-                                    )}
-                                    <span className="text-sm font-medium text-white">
-                                      R${Number(v.price).toFixed(2)}
-                                    </span>
-                                  </div>
-                                </div>
+                              <div className="flex items-center justify-end gap-1.5 min-w-0">
+                                {v.comparePrice && Number(v.comparePrice) > 0 && (
+                                  <span className="text-sm text-zinc-500 line-through shrink-0">
+                                    R${Number(v.comparePrice).toFixed(2)}
+                                  </span>
+                                )}
+                                <span className="text-sm font-medium text-white shrink-0">
+                                  R${Number(v.price).toFixed(2)}
+                                </span>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingVariant(v);
+                              }}
+                              className="md:hidden flex-1 min-w-0 font-semibold text-sm text-white/80 truncate text-left"
+                            >
+                              {v.name}
+                            </button>
+
+                            <div className="flex items-center gap-1 shrink-0">
                               <Tooltip>
                                 <TooltipTrigger
                                   render={
@@ -326,22 +383,39 @@ export default function VariantsListPage({ params }: { params: Promise<{ id: str
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Excluir variante</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir <strong>{deleteVariant?.name}</strong>? Esta ação não pode ser desfeita.
-            </DialogDescription>
+            <DialogDescription>Tem certeza que deseja excluir <strong>{deleteVariant?.name}</strong>? Esta ação não pode ser desfeita.</DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteVariant(null)}>Cancelar</Button>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="lg"
+              className="flex-1"
+              onClick={() => setDeleteVariant(null)}
+            >
+              Cancelar
+            </Button>
             <Button
               variant="destructive"
+              className="flex-1"
               disabled={deleteMut.isPending}
               onClick={() => deleteVariant && deleteMut.mutate(deleteVariant.id)}
+              size="lg"
             >
               {deleteMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Excluir"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <VariantMatrixGeneratorDialog
+        open={isMatrixOpen}
+        onOpenChange={(open) => {
+          setIsMatrixOpen(open);
+          if (!open) setLocalVariants(null);
+        }}
+        productId={productId}
+        existingVariants={serverVariants}
+      />
 
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-hidden">

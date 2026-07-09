@@ -708,7 +708,7 @@ export default function AdminChatsPage() {
 
   const formatFileUrl = (url: string) => {
     if (!url) return '';
-    const cdnMatch = url.match(/\/cdn\/([^/?#]+)/i);
+    const cdnMatch = url.match(/\/cdn\/([^#]+)/i);
     if (cdnMatch) {
       return `${API_URL}/cdn/${cdnMatch[1]}`;
     }
@@ -1336,22 +1336,6 @@ export default function AdminChatsPage() {
                       </button>
                     </div>
                   </div>
-
-                  {isMobile && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="shrink-0 border-white/10 text-xs"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setDetailsSheetOpen(true);
-                      }}
-                    >
-                      Detalhes
-                    </Button>
-                  )}
 
                   <div className="hidden sm:flex items-center gap-2 flex-wrap justify-end shrink-0">
                     <Button

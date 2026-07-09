@@ -242,7 +242,7 @@ export default function UsersPage() {
       <div className="hidden md:flex flex-col space-y-3">
         {isLoading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-[#fcb64c]" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : filteredUsers?.length === 0 ? (
           <p className="py-12 text-center text-zinc-500">Nenhum usuário encontrado</p>
@@ -349,7 +349,7 @@ export default function UsersPage() {
       <div className="flex flex-col md:hidden space-y-3">
         {isLoading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-[#fcb64c]" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : filteredUsers?.length === 0 ? (
           <p className="py-12 text-center text-zinc-500">Nenhum usuário encontrado</p>

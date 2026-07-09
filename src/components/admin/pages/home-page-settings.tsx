@@ -95,7 +95,7 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
               Configure o banner principal e outros elementos exibidos na home da loja.
             </p>
           </div>
-          <Can I="settings:manage">
+          <Can I="pages:manage">
             <Button asChild className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto">
               <Link href="/dashboard/admin/banners/new">
                 <PlusCircle className="h-4 w-4" />
@@ -124,7 +124,7 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
           <div className="flex flex-col border border-white/5 p-4">
             {hideHeader && (
               <div className="flex justify-end mb-4">
-                <Can I="settings:manage">
+                <Can I="pages:manage">
                   <Button asChild className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto">
                     <Link href="/dashboard/admin/banners/new">
                       <PlusCircle className="h-4 w-4" />
@@ -189,7 +189,7 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
                               </div>
 
                               <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 mt-4 sm:mt-0">
-                                <Can I="settings:manage">
+                                <Can I="pages:manage">
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button

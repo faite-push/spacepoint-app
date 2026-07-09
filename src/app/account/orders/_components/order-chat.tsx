@@ -30,8 +30,10 @@ interface OrderChatProps {
 
 function formatFileUrl(url: string) {
   if (!url) return '';
-  const cdnMatch = url.match(/\/cdn\/([^/?#]+)/i);
-  if (cdnMatch) return `${API_URL}/cdn/${cdnMatch[1]}`;
+  const cdnMatch = url.match(/\/cdn\/([^#]+)/i);
+  if (cdnMatch) {
+    return `${API_URL}/cdn/${cdnMatch[1]}`;
+  }
   if (url.startsWith('http')) return url;
   const cleanBase = (API_URL || '').replace(/\/$/, '');
   return `${cleanBase}${url.startsWith('/') ? url : `/${url}`}`;

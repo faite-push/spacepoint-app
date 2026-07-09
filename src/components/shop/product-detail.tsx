@@ -102,7 +102,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
         <span className="text-white/80 truncate max-w-[130px] sm:max-w-none">{product.name}</span>
       </nav>
 
-      <div className="rounded-lg border border-white/5 bg-[#111111]/30 p-5 md:p-8 backdrop-blur-md">
+      <div className="rounded-lg border border-white/5 bg-transparent p-5 md:p-8 backdrop-blur-lg">
         <div className="grid gap-8 md:gap-12 lg:grid-cols-[400px_1fr]">
           <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border border-white/5 bg-[#0a0a0a]">
             <Image
@@ -117,8 +117,8 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
 
           <div className="flex flex-col">
             <div className="flex justify-between items-start gap-4 mb-6">
-              <div className="space-y-1">
-                <h1 className="text-xl md:text-xl lg:text-2xl font-bold text-white leading-tight tracking-wide">
+              <div className="flex space-y-1">
+                <h1 className="text-xl md:text-xl lg:text-2xl font-bold text-white">
                   {product.name}
                 </h1>
               </div>
@@ -136,31 +136,53 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
               </button>
             </div>
 
-            <div className="hidden md:flex flex-col gap-2.5 mb-6">
+            {/* <div className="hidden md:flex flex-col gap-2.5 mb-6">
               <div className="flex items-center gap-2.5 text-[14px] text-white/80 font-medium tracking-wide">
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/70">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary/10 text-primary">
                   <Check className="h-3.5 w-3.5" />
                 </div>
                 <span>Jogos 100% Originais com Garantia Vitalícia</span>
               </div>
               <div className="flex items-center gap-2.5 text-[14px] text-white/80 font-medium tracking-wide">
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/70">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary/10 text-primary">
                   <Check className="h-3.5 w-3.5" />
                 </div>
                 <span>Segurança e Tranquilidade Total</span>
               </div>
               <div className="flex items-center gap-2.5 text-[14px] text-white/80 font-medium tracking-wide">
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/70">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary/10 text-primary">
                   <Check className="h-3.5 w-3.5" />
                 </div>
                 <span>Entrega Instantânea e Fácil</span>
+              </div>
+            </div> */}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="flex items-center gap-4 rounded-lg border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-blue-500/20 text-cyan-400">
+                  <Zap className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="text-[15px] font-bold text-white mb-0.5">Entrega imediata</h4>
+                  <p className="text-xs text-white/50 leading-tight">Receba seu pacote imediatamente após confirmação.</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 rounded-lg border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400/20 to-teal-500/20 text-emerald-400">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="text-[15px] font-bold text-white mb-0.5">Segurança total</h4>
+                  <p className="text-xs text-white/50 leading-tight">Sistema 100% testado criptografado de ponta-a-ponta.</p>
+                </div>
               </div>
             </div>
 
             {product.hasVariants && (
               <div className="mb-6 rounded-md border border-white/5 bg-transparent p-4 shadow-inner">
                 <div className="flex justify-between items-center mb-3">
-                  <p className="text-sm font-semibold text-white/70">Escolha a Variante</p>
+                  <p className="text-sm text-white">Escolha a Variante</p>
                   {selectedVariant && selectedVariant.stockQuantity < 10 && selectedVariant.stockQuantity > 0 && (
                     <span className="text-xs font-bold text-orange-400 bg-orange-400/10 px-2.5 py-0.5 rounded-md border border-orange-400/20">
                       🔥 Últimas unidades
@@ -177,10 +199,10 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
                           key={v.id}
                           onClick={() => setSelectedVariantId(v.id)}
                           className={cn(
-                            "flex flex-col cursor-pointer rounded-md p-2.5 sm:p-3 border transition-all duration-200 w-full text-left relative overflow-hidden group",
+                            "flex flex-col cursor-pointer rounded-md p-2.5 sm:p-3 transition-all duration-200 w-full text-left relative overflow-hidden group",
                             active
-                              ? "border-[#a855f7] bg-[#a855f7]/10 ring-1 ring-[#a855f7]/50"
-                              : "border-white/10 bg-transparent hover:bg-white/[0.03] hover:border-white/20"
+                              ? "bg-primary/10"
+                              : "bg-transparent hover:bg-white/[0.03] hover:border-white/20"
                           )}
                         >
                           {active && (
@@ -196,7 +218,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
                             </span>
 
                             <span className={cn(
-                              "font-bold text-[13px] sm:text-[14px] shrink-0",
+                              "font-medium text-[13px] sm:text-[14px]",
                               active ? "text-[#c084fc]" : "text-white/90"
                             )}>
                               {formatPrice(v.price)}
@@ -205,7 +227,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
 
                           <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-medium tracking-wide">
                             <div className={cn(
-                              "w-1.5 h-1.5 rounded-full shrink-0",
+                              "w-1.5 h-1.5 rounded-full shrink-0 animate-pulse",
                               v.stockQuantity > 0 ? "bg-emerald-400" : "bg-red-400"
                             )} />
                             <span className={v.stockQuantity > 0 ? "text-emerald-400/80" : "text-red-400/80"}>
@@ -280,11 +302,11 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
                 </div>
               )}
 
-              <div className="flex flex-row sm:flex-row gap-2">
+              <div className="flex flex-row gap-2">
                 <Button
                   onClick={handleBuyNow}
                   variant="default"
-                  className="flex-2 w-full sm:w-2/4 h-12 py-4 md:h-14 rounded-lg"
+                  className="flex-2 h-12 py-4 md:h-14"
                   disabled={outOfStock || (product.hasVariants && !selectedVariant)}
                 >
                   Comprar agora
@@ -293,45 +315,13 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
                 <Button
                   variant="outline"
                   onClick={handleAdd}
-                  className={cn("flex-1 w-full sm:w-1/2 h-14 py-4 md:h-14 rounded-lg", outOfStock || (product.hasVariants && !selectedVariant) ? "opacity-50" : "hover:bg-[#252525] hover:text-white")}
+                  className={cn("flex-1 h-12 py-4 md:h-14", outOfStock || (product.hasVariants && !selectedVariant) ? "opacity-50" : "hover:bg-[#252525] hover:text-white")}
                   disabled={outOfStock || (product.hasVariants && !selectedVariant)}
                 >
                   Adicionar ao Carrinho
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-        <div className="flex items-center gap-4 rounded-lg border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-blue-500/20 text-cyan-400">
-            <Zap className="h-6 w-6" />
-          </div>
-          <div>
-            <h4 className="text-[15px] font-bold text-white mb-0.5">Entrega imediata</h4>
-            <p className="text-xs text-white/50 leading-tight">Receba seu pacote imediatamente após confirmação.</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 rounded-lg border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400/20 to-teal-500/20 text-emerald-400">
-            <ShieldCheck className="h-6 w-6" />
-          </div>
-          <div>
-            <h4 className="text-[15px] font-bold text-white mb-0.5">Segurança total</h4>
-            <p className="text-xs text-white/50 leading-tight">Sistema 100% testado criptografado de ponta-a-ponta.</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 rounded-lg border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#a855f7]/20 to-purple-600/20 text-[#a855f7]">
-            <CreditCard className="h-6 w-6" />
-          </div>
-          <div>
-            <h4 className="text-[15px] font-bold text-white mb-0.5">Formas de pagamento</h4>
-            <p className="text-xs text-white/50 leading-tight">Aceitamos Pix, Cartão de Crédito e Boleto Bancário.</p>
           </div>
         </div>
       </div>
@@ -362,8 +352,8 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
       </div>
 
       {relatedProducts.length > 0 && (
-        <section className="mt-16 border-t border-white/5 pt-12">
-          <h3 className="text-2xl font-bold text-white mb-8 tracking-tight uppercase">Veja também</h3>
+        <section className="mt-12">
+          <h3 className="text-center text-2xl font-bold text-white mb-8">Veja também</h3>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {relatedProducts.map(rp => (
               <ProductCard key={rp.id} product={rp} />

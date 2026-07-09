@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Plus, Pencil, Trash2, Search, Loader2, Package, ChevronRight, ChevronDown, Check, Filter, PlusCircle, MoreHorizontal, Copy, Layers, ArrowRightLeft, GitBranch, ClipboardCopy, MonitorUp, MoreVertical, Move, ListChecks, Star } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Loader2, Package, ChevronRight, ChevronDown, Check, Filter, PlusCircle, Copy, Layers, MonitorUp, MoreVertical, Move, ListChecks, Star, Tags } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult, DraggableProvided, DraggableStateSnapshot, DragStart } from "@hello-pangea/dnd";
 import { TbGridDots } from "react-icons/tb";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { categoriesApi, productsApi, type AdminProduct, type Category } from "@/lib/admin-api";
 import { ProductForm } from "@/components/admin/forms/product-form";
+import { BulkPriceChangeDialog, BulkVisibilityDialog } from "@/components/admin/products/product-bulk-actions";
 import { Can } from "@/providers/PermissionProvider";
 import { cn } from "@/lib/utils";
 import { TableSkeleton } from "@/components/admin/skeletons/TableSkeleton";
@@ -82,6 +83,8 @@ export default function UnifiedInventoryPage() {
   const [convertTargetId, setConvertTargetId] = useState("");
   const [quickEditProduct, setQuickEditProduct] = useState<AdminProduct | null>(null);
   const [convertSearch, setConvertSearch] = useState<string>("");
+  const [bulkPriceOpen, setBulkPriceOpen] = useState(false);
+  const [bulkVisibilityOpen, setBulkVisibilityOpen] = useState(false);
 
   const [fCatAtivo, setFCatAtivo] = useState(true);
   const [fCatDesativado, setFCatDesativado] = useState(true);
@@ -507,109 +510,105 @@ export default function UnifiedInventoryPage() {
             <div className="flex flex-col">
               <div
                 className={cn(
-                  "group flex items-center justify-between gap-4 py-3 transition-colors", snapshot.isDragging ? "bg-[#111] rounded-md border border-white/10" : "bg-transparent hover:bg-black/20"
+                  "group flex items-center gap-3 py-3 transition-colors",
+                  snapshot.isDragging ? "bg-[#111] rounded-md border border-white/10" : "bg-transparent hover:bg-black/20"
                 )}
                 style={{ paddingLeft: `${indent * 6 + 16}px`, paddingRight: "16px" }}
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div {...provided.dragHandleProps} className="text-white/60 shrink-0 cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 sm:flex p-1">
-                    <TbGridDots className="h-5 w-5" />
-                  </div>
+                <div {...provided.dragHandleProps} className="text-white/60 shrink-0 cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 p-1">
+                  <TbGridDots className="h-5 w-5" />
+                </div>
 
-                  <div className="flex items-center justify-center shrink-0 w-10 h-10 rounded border border-white/10 bg-white/5 overflow-hidden">
-                    {p.imageUrl
-                      ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover select-none pointer-events-none" />
-                      : <Package className="h-4 w-4 text-zinc-500" />}
-                  </div>
+                <div className="flex items-center justify-center shrink-0 w-10 h-10 rounded border border-white/10 bg-white/5 overflow-hidden">
+                  {p.imageUrl
+                    ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover select-none pointer-events-none" />
+                    : <Package className="h-4 w-4 text-zinc-500" />}
+                </div>
 
-                  <div className="min-w-0 flex-1 flex items-center justify-between">
-                    <div className="min-w-0 gap-36 flex">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/dashboard/admin/products/${p.id}/edit`);
-                        }}
-                        className="font-semibold text-sm text-white/80 truncate text-left transition-colors cursor-pointer block"
-                      >
-                        {p.name}
-                      </button>
+                <div className="hidden md:grid flex-1 min-w-0 grid-cols-[minmax(0,1fr)_52px_80px_128px_96px_112px] items-center gap-x-3">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/dashboard/admin/products/${p.id}/edit`);
+                    }}
+                    className="font-semibold text-sm text-white/80 truncate text-left transition-colors cursor-pointer"
+                  >
+                    {p.name}
+                  </button>
 
-                      <span className={cn("md:flex hidden text-xs font-medium px-2 py-1 rounded-sm", p.isVisible ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/10 text-zinc-500")}>
-                        {p.isVisible ? "on" : "off"}
-                      </span>
+                  <span className={cn("text-xs font-medium px-2 py-1 rounded-sm text-center", p.isVisible ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/10 text-zinc-500")}>
+                    {p.isVisible ? "on" : "off"}
+                  </span>
 
-                      <Badge variant="secondary" className="md:flex hidden bg-white/5 rounded-sm text-zinc-400 text-xs px-2 py-1 font-medium">
-                        {p.deliveryType === "automatic_lines" ? "linhas"
-                          : p.deliveryType === "file" ? "arquivo"
-                            : p.deliveryType === "manual" ? "manual"
-                              : p.deliveryType === "manual_chat" ? "manual chat"
-                                : p.deliveryType === "automatic_text" ? "texto"
-                                  : "misto"}
+                  <Badge variant="secondary" className="justify-center bg-white/5 rounded-sm text-zinc-400 text-xs px-2 py-1 font-medium">
+                    {p.deliveryType === "automatic_lines" ? "linhas"
+                      : p.deliveryType === "file" ? "arquivo"
+                        : p.deliveryType === "manual" ? "manual"
+                          : p.deliveryType === "manual_chat" ? "manual chat"
+                            : p.deliveryType === "automatic_text" ? "texto"
+                              : "misto"}
+                  </Badge>
+
+                  <div className="flex items-center gap-1 min-w-0">
+                    {p.minPurchaseQuantity > 1 && (
+                      <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1 shrink-0">
+                        min: {p.minPurchaseQuantity}
                       </Badge>
+                    )}
+                    {p.maxPurchaseQuantity && (
+                      <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1 shrink-0">
+                        max: {p.maxPurchaseQuantity}
+                      </Badge>
+                    )}
+                    {p.onePurchasePerUser && (
+                      <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1 shrink-0">
+                        1 p/ user
+                      </Badge>
+                    )}
+                  </div>
 
-                      {(p.minPurchaseQuantity > 1 || p.maxPurchaseQuantity || p.onePurchasePerUser) && (
-                        <>
-                          <div className="md:flex hidden items-center gap-2">
-                            {p.minPurchaseQuantity > 1 && (
-                              <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
-                                min: {p.minPurchaseQuantity}
-                              </Badge>
-                            )}
-                            {p.maxPurchaseQuantity && (
-                              <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
-                                max: {p.maxPurchaseQuantity}
-                              </Badge>
-                            )}
-                            {p.onePurchasePerUser && (
-                              <Badge className="text-xs bg-white/5 text-zinc-500 rounded-sm px-2 py-1">
-                                1 p/ user
-                              </Badge>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
+                  {variantCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/admin/products/${p.id}/variants`); }}
+                      className="bg-white/5 py-1 px-2 rounded-sm cursor-pointer text-xs font-medium text-white/60 text-center truncate"
+                    >
+                      {variantCount} {variantCount === 1 ? "variante" : "variantes"}
+                    </button>
+                  ) : (
+                    <span className={cn(
+                      "text-sm font-medium text-center",
+                      (p.stockQuantity ?? 0) <= 0 ? "text-red-500" : "text-zinc-300"
+                    )}>
+                      {(p.stockQuantity ?? 0) === 0 ? "sem estoque" : p.stockQuantity}
+                    </span>
+                  )}
 
-                    <div className="md:flex hidden items-center gap-6 shrink-0 pr-4">
-                      {variantCount > 0 ? (
-                        <div className="flex flex-col items-start">
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/admin/products/${p.id}/variants`); }}
-                            className="bg-white/5 py-1 px-2 rounded-sm cursor-pointer text-xs font-medium text-white/60"
-                          >
-                            {variantCount} {variantCount === 1 ? "variante" : "variantes"}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-end">
-                          <span className={cn(
-                            "text-sm font-medium",
-                            (p.stockQuantity ?? 0) <= 0 ? "text-red-500" : "text-zinc-300"
-                          )}>
-                            {(p.stockQuantity ?? 0) === 0 ? "sem estoque" : p.stockQuantity}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="flex flex-col items-end min-w-[70px]">
-                        <div className="flex items-center gap-1.5">
-                          {p.comparePrice && Number(p.comparePrice) > 0 && (
-                            <span className="text-sm text-zinc-500 line-through">
-                              R${Number(p.comparePrice).toFixed(2)}
-                            </span>
-                          )}
-                          <span className="text-sm font-medium text-white">
-                            R${Number(p.price).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-end gap-1.5 min-w-0">
+                    {p.comparePrice && Number(p.comparePrice) > 0 && (
+                      <span className="text-sm text-zinc-500 line-through shrink-0">
+                        R${Number(p.comparePrice).toFixed(2)}
+                      </span>
+                    )}
+                    <span className="text-sm font-medium text-white shrink-0">
+                      R${Number(p.price).toFixed(2)}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/dashboard/admin/products/${p.id}/edit`);
+                  }}
+                  className="md:hidden flex-1 min-w-0 font-semibold text-sm text-white/80 truncate text-left"
+                >
+                  {p.name}
+                </button>
+
+                <div className="flex items-center gap-1 shrink-0">
                   <Can I="products:edit">
                     <Tooltip>
                       <TooltipTrigger
@@ -787,6 +786,16 @@ export default function UnifiedInventoryPage() {
 
   const uncategorized = filteredProducts.filter((p) => !p.categoryId).sort((a, b) => a.sortOrder - b.sortOrder);
 
+  const filteredProductIds = useMemo(
+    () => filteredProducts.map((p) => p.id),
+    [filteredProducts]
+  );
+
+  const allProductIds = useMemo(
+    () => liveProducts.map((p) => p.id),
+    [liveProducts]
+  );
+
   const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
 
   const isLoading = catLoading || prodLoading;
@@ -899,6 +908,27 @@ export default function UnifiedInventoryPage() {
             </div>
           )}
         </div>
+
+        <Can I="products:edit">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "inline-flex items-center bg-background border border-white/5 text-muted-foreground text-sm font-medium gap-2 h-10 px-4 rounded-md cursor-pointer "
+              )}
+            >
+              <Tags className="w-4 h-4" />
+              Ações em massa
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 rounded-md">
+              <DropdownMenuItem className="py-2 px-4 cursor-pointer gap-2 rounded-sm" onClick={() => setBulkPriceOpen(true)}>
+                Alterar preços
+              </DropdownMenuItem>
+              <DropdownMenuItem className="py-2 px-4 cursor-pointer gap-2 rounded-sm" onClick={() => setBulkVisibilityOpen(true)}>
+                Alterar visibilidade
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </Can>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd} onBeforeDragStart={onBeforeDragStart}>
@@ -1139,6 +1169,20 @@ export default function UnifiedInventoryPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <BulkPriceChangeDialog
+        open={bulkPriceOpen}
+        onOpenChange={setBulkPriceOpen}
+        filteredProductIds={filteredProductIds}
+        allProductIds={allProductIds}
+      />
+
+      <BulkVisibilityDialog
+        open={bulkVisibilityOpen}
+        onOpenChange={setBulkVisibilityOpen}
+        filteredProductIds={filteredProductIds}
+        allProductIds={allProductIds}
+      />
     </div>
   );
 };
