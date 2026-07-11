@@ -46,13 +46,13 @@ export function ChatMessageRow({ msg, viewer, clientUserId, clientName, formatFi
     <div className={cn("flex w-full", isRight ? "justify-end" : "justify-start")}>
       <div className={cn("flex max-w-[min(75%,420px)] flex-col gap-1", isRight ? "items-end" : "items-start")}>
         {showHeader && (
-          <div className={cn("flex items-center gap-2 px-0.5", isRight && "flex-row")}>
+          <div className={cn("flex items-center select-none gap-2 px-0.5", isRight && "flex-row")}>
             <MessageAvatar name={senderName || "?"} isBot={showBot} />
             <span className="text-sm font-medium text-white/90">{senderName}</span>
           </div>
         )}
 
-        <div className={cn("w-full rounded-sm px-3 py-2 text-sm leading-relaxed", isSupport ? "bg-blue-500/50 text-white" : "bg-white/25 text-white")}>
+        <div className={cn("w-full select-none rounded-sm px-3 py-2 text-sm leading-relaxed", isSupport ? "bg-blue-500/50 text-white" : "bg-white/25 text-white")}>
           {msg.fileUrl && (
             <img
               src={formatFileUrl(msg.fileUrl)}

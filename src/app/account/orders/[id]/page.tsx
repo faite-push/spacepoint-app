@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-import { Home, CheckCircle2, } from "lucide-react";
+import { Clock, Undo2, XCircle, ArrowRight, Star } from "lucide-react";
 import { FaBasketShopping } from "react-icons/fa6";
 
 import { Tooltip, TooltipContent, TooltipTrigger, } from "@/components/ui/tooltip"
@@ -13,10 +13,11 @@ import { Button } from "@/components/ui/button";
 
 import { OrderDetailsSkeleton } from "../../_components/account-skeletons";
 import { OrderChat } from "../_components/order-chat";
-import { useAuth } from "@/context/auth-context";
 
 import { fetchOrder, formatPrice } from "@/lib/shop-api";
+import { canAccessOrderChat, canReviewOrder, getOrderPaymentUrl, isOrderAwaitingPayment, isOrderRefunded, } from "@/lib/order-account-utils";
 import type { Order } from "@/types/shop";
+import { OrderStatusBadge } from "../../_components/order-status-badge";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -24,7 +25,6 @@ interface PageProps {
 
 export default function OrderDetailsPage(props: PageProps) {
   const params = use(props.params);
-  const { user } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,6 +55,11 @@ export default function OrderDetailsPage(props: PageProps) {
   };
 
   const isApproved = order.status === "PAID" || order.status === "DELIVERED";
+  const awaitingPayment = isOrderAwaitingPayment(order.status);
+  const refunded = isOrderRefunded(order.status);
+  const cancelled = order.status.toUpperCase() === "CANCELLED";
+  const showChat = canAccessOrderChat(order.status);
+  const pendingReview = canReviewOrder(order);
   const statusDate = order.paidAt || order.updatedAt || order.createdAt;
 
   return (
@@ -62,11 +67,107 @@ export default function OrderDetailsPage(props: PageProps) {
       <div className="absolute top-0 right-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
       <div className="absolute bottom-0 left-[-10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
 
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2 text-muted-foreground">
+            <Link href="/account/orders">← Voltar para pedidos</Link>
+          </Button>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-white">Pedido #{order.id.slice(0, 8)}</h1>
+            <OrderStatusBadge status={order.status} />
+          </div>
+        </div>
+      </div>
+
+      {awaitingPayment && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-amber-500/10 rounded-md p-4 gap-4">
+          <div className="flex items-center gap-3">
+            <Clock className="h-5 w-5 shrink-0 text-amber-400 mt-0.5" />
+            <div>
+              <p className="font-semibold text-amber-100">Pagamento pendente</p>
+              <p className="text-sm text-amber-100/80">
+                Este pedido ainda não foi pago. Retome o pagamento para concluir sua compra.
+              </p>
+            </div>
+          </div>
+          <Button asChild className="shrink-0 gap-2">
+            <Link href={getOrderPaymentUrl(order)}>
+              Continuar pagamento
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      )}
+
+      {refunded && (
+        <div className="flex items-center bg-orange-500/10 rounded-md p-4 gap-4">
+          <Undo2 className="h-5 w-5 shrink-0 text-orange-400 mt-0.5" />
+          <div>
+            <p className="font-semibold text-orange-100">Pedido reembolsado</p>
+            <p className="text-sm text-orange-100/80">
+              O valor deste pedido foi estornado. Se tiver dúvidas, entre em contato com o suporte.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {cancelled && (
+        <div className="flex items-center bg-red-500/10 rounded-md p-4 gap-4">
+          <XCircle className="h-6 w-6 shrink-0 text-red-500" />
+          <div>
+            <p className="font-semibold text-red-500">Pedido cancelado</p>
+            <p className="text-sm text-red-100/80">
+              Este pedido foi cancelado ou expirou antes da confirmação do pagamento.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {pendingReview && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-yellow-500/10 rounded-md p-4 gap-4">
+          <div className="flex items-center gap-3">
+            <Star className="h-5 w-5 shrink-0 text-yellow-400" />
+            <div>
+              <p className="font-semibold text-yellow-100">Como foi sua compra?</p>
+              <p className="text-sm text-yellow-100/80">
+                Sua avaliação ajuda outros clientes e melhora nosso atendimento.
+              </p>
+            </div>
+          </div>
+          <Button asChild className="shrink-0 gap-2">
+            <Link href={`/account/orders/${order.id}?review=1`}>
+              Avaliar pedido
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      )}
+
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
-          <div className="space-y-3">
-            <OrderChat orderId={order.id} />
-          </div>
+          {showChat ? (
+            <div className="space-y-3">
+              <Suspense fallback={null}>
+                <OrderChat orderId={order.id} />
+              </Suspense>
+            </div>
+          ) : awaitingPayment ? (
+            <div className="rounded-md border border-white/5 bg-black/10 px-8 py-24 text-center">
+              <Clock className="h-10 w-10 text-amber-400 mx-auto mb-3" />
+              <h2 className="text-lg font-bold text-white mb-2">Chat disponível após o pagamento</h2>
+              <p className="text-sm text-muted-foreground">
+                Assim que o pagamento for confirmado, você poderá acompanhar a entrega por aqui.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border border-white/5 bg-black/10 px-8 py-24 text-center">
+              <FaBasketShopping className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <h2 className="text-lg font-bold text-white mb-2">Sem atendimento ativo</h2>
+              <p className="text-sm text-muted-foreground">
+                Este pedido não possui chat de entrega disponível no momento.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="relative">
@@ -74,9 +175,13 @@ export default function OrderDetailsPage(props: PageProps) {
             <div className="px-6 py-4 border-b border-white/5">
               <div className="flex items-center justify-center">
                 {isApproved ? (
-                  <>
-                    <span className="text-xl font-bold">Pagamento aprovado!</span>
-                  </>
+                  <span className="text-xl font-bold">Pagamento aprovado!</span>
+                ) : awaitingPayment ? (
+                  <span className="text-xl font-bold">Aguardando pagamento</span>
+                ) : refunded ? (
+                  <span className="text-xl font-bold">Pedido reembolsado</span>
+                ) : cancelled ? (
+                  <span className="text-xl font-bold">Pedido cancelado</span>
                 ) : (
                   <span className="font-bold uppercase tracking-wider">{order.status}</span>
                 )}

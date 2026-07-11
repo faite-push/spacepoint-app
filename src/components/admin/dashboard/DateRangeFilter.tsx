@@ -10,11 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { buttonVariants } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import {
-  getRangeForPreset,
-  PRESET_LABELS,
-  type DateRangePreset,
-} from "@/lib/date-range-presets";
+import { getRangeForPreset, PRESET_LABELS, type DateRangePreset, } from "@/lib/date-range-presets";
 
 type DateRange = { from?: Date; to?: Date };
 
@@ -28,19 +24,16 @@ function getDisplayLabel(preset: DateRangePreset, date?: DateRange): string {
     return date.to
       ? `${format(date.from, "dd/MM")} - ${format(date.to, "dd/MM")}`
       : format(date.from, "dd/MM");
-  }
+  };
 
   if (preset !== "custom") {
     return PRESET_LABELS[preset];
-  }
+  };
 
   return PRESET_LABELS["7d"];
 }
 
-export function DateRangeFilter({
-  onRangeChange,
-  defaultPreset = "7d",
-}: DateRangeFilterProps) {
+export function DateRangeFilter({ onRangeChange, defaultPreset = "7d", }: DateRangeFilterProps) {
   const initialRange = getRangeForPreset(defaultPreset);
   const [preset, setPreset] = useState<DateRangePreset>(defaultPreset);
   const [date, setDate] = useState<DateRange>(initialRange);
@@ -71,7 +64,7 @@ export function DateRangeFilter({
         <PopoverContent className="w-auto p-4 bg-background border-white/10 rounded-md" align="start">
           <div className="space-y-4">
             <Select
-              value={preset === "custom" ? undefined : preset}
+              value={preset === "custom" ? "" : preset}
               onValueChange={(value) =>
                 handleSelectPreset(value as Exclude<DateRangePreset, "custom">)
               }
@@ -79,11 +72,11 @@ export function DateRangeFilter({
               <SelectTrigger className="w-full bg-background border cursor-pointer border-white/5 hover:border-primary/70 focus:border-primary/70 focus:ring-none h-10 rounded-sm px-4 text-sm font-medium transition-all duration-200">
                 <SelectValue placeholder="Selecionar período" />
               </SelectTrigger>
-              <SelectContent className="bg-background p-1 border-white/10 rounded-sm">
-                <SelectItem value="today" className="text-sm px-3 cursor-pointer">Hoje</SelectItem>
-                <SelectItem value="7d" className="text-sm px-3 cursor-pointer">Últimos 7 dias</SelectItem>
-                <SelectItem value="30d" className="text-sm px-3 cursor-pointer">Últimos 30 dias</SelectItem>
-                <SelectItem value="all" className="text-sm px-3 cursor-pointer">Todo o período</SelectItem>
+              <SelectContent className="p-1 border-white/10 rounded-sm">
+                <SelectItem value="today" className="text-sm cursor-pointer">Hoje</SelectItem>
+                <SelectItem value="7d" className="text-sm cursor-pointer">Últimos 7 dias</SelectItem>
+                <SelectItem value="30d" className="text-sm cursor-pointer">Últimos 30 dias</SelectItem>
+                <SelectItem value="all" className="text-sm cursor-pointer">Todo o período</SelectItem>
               </SelectContent>
             </Select>
 

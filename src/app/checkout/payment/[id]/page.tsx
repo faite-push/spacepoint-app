@@ -194,15 +194,15 @@ export default function PaymentPage({ params }: PageProps) {
         </Link>
 
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="rounded-sm bg-white/5 border-none text-zinc-400 py-1 px-3">
+          <Badge variant="outline" className="rounded-sm bg-white/5 border-none text-muted-foreground py-1 px-3 break-all truncate">
             ID: {order.id}
           </Badge>
           {isPaid ? (
-            <Badge className="bg-emerald-500/10 text-emerald-500 border-none rounded-full py-1 px-3">
+            <Badge className="bg-emerald-500/10 text-emerald-500 border-none rounded-sm py-1 px-3 text-nowrap">
               <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Pago
             </Badge>
           ) : (
-            <Badge className="bg-amber-500/10 text-amber-500 border-none rounded-sm py-1 px-3">
+            <Badge className="bg-amber-500/10 text-amber-500 border-none rounded-sm py-1 px-3 text-nowrap">
               <Clock className="h-3.5 w-3.5 mr-1.5 animate-pulse" /> Aguardando Pagamento
             </Badge>
           )}
@@ -382,8 +382,21 @@ export default function PaymentPage({ params }: PageProps) {
             <div className="space-y-1">
               <div className="flex justify-between text-sm font-medium">
                 <span className="text-white/40">Subtotal</span>
-                <span className="text-white font-bold">{formatPrice(order.total)}</span>
+                <span className="text-white font-bold">{formatPrice(order.subtotal ?? order.total)}</span>
               </div>
+              {(order.discount ?? 0) > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/40">Desconto</span>
+                  <span className="text-emerald-400 font-medium">- {formatPrice(order.discount!)}</span>
+                </div>
+              )}
+              {(order.deliveryFee ?? 0) > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/40">Entrega expressa</span>
+                  <span className="text-white font-medium">+ {formatPrice(order.deliveryFee!)}</span>
+                </div>
+              )}
+              <Separator className="my-1 bg-white/5" />
               <div className="flex justify-between text-sm font-medium">
                 <span className="text-lg font-bold text-white/60">Valor Total</span>
                 <span className="text-lg font-bold text-white tracking-tight">{formatPrice(order.total)}</span>

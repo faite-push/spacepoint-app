@@ -295,6 +295,115 @@ export const variantsApi = {
     ),
 };
 
+export type InventoryStockStatus = "ok" | "low" | "out";
+
+export interface InventoryVariantItem {
+  id: string;
+  productId: string;
+  productName: string;
+  productSlug: string;
+  categoryName: string | null;
+  name: string;
+  sku: string | null;
+  deliveryType: DeliveryType;
+  isVisible: boolean;
+  available: number;
+  reserved: number;
+  delivered: number;
+  totalCodes: number;
+  stockStatus: InventoryStockStatus;
+}
+
+export interface InventoryCodeItem {
+  id: string;
+  code: string;
+  maskedCode: string;
+  status: string;
+  createdAt: string;
+  deliveredAt: string | null;
+  orderItemId: string | null;
+}
+
+export const inventoryApi = {
+  list: (params?: {
+    search?: string;
+    status?: "all" | InventoryStockStatus;
+    deliveryType?: DeliveryType | "all";
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set("search", params.search);
+    if (params?.status) qs.set("status", params.status);
+    if (params?.deliveryType) qs.set("deliveryType", params.deliveryType);
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
+    const query = qs.toString();
+    return request<{
+      items: InventoryVariantItem[];
+      summary: {
+        totalVariants: number;
+        lowStock: number;
+        outOfStock: number;
+        inStock: number;
+      };
+      pagination: {
+        page: number;
+        pageSize: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/v2/api/admin/inventory${query ? `?${query}` : ""}`);
+  },
+  listCodes: (
+    variantId: string,
+    params?: { status?: string; page?: number; pageSize?: number }
+  ) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set("status", params.status);
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
+    const query = qs.toString();
+    return request<{
+      variant: {
+        id: string;
+        name: string;
+        sku: string | null;
+        deliveryType: DeliveryType;
+        productId: string;
+        productName: string;
+      };
+      codes: InventoryCodeItem[];
+      pagination: {
+        page: number;
+        pageSize: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/v2/api/admin/inventory/variants/${variantId}/codes${query ? `?${query}` : ""}`);
+  },
+  bulkUploadCodes: (variantId: string, payload: { content?: string; lines?: string[] }) =>
+    request<{ success: boolean; added: number; duplicates: number; available: number; totalLines: number }>(
+      `/v2/api/admin/inventory/variants/${variantId}/codes/bulk`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
+  updateManualStock: (variantId: string, stockQuantity: number) =>
+    request<{ success: boolean; variant: { id: string; stockQuantity: number; deliveryType: DeliveryType } }>(
+      `/v2/api/admin/inventory/variants/${variantId}/stock`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ stockQuantity }),
+      }
+    ),
+  removeCode: (codeId: string) =>
+    request<{ success: boolean }>(`/v2/api/admin/inventory/codes/${codeId}`, {
+      method: "DELETE",
+    }),
+};
+
 export interface Banner {
   id: string;
   imageUrl: string;
@@ -711,7 +820,16 @@ export interface OrderItemDetail {
     name: string;
     imageUrl?: string;
   };
-  codes: { code: string; deliveredAt?: string }[];
+  codes: { code: string; deliveredAt?: string; status?: string }[];
+}
+
+export interface AdminOrderPayment {
+  id: string;
+  status: string;
+  provider: string;
+  amount: number;
+  externalId?: string | null;
+  createdAt: string;
 }
 
 export interface AdminOrder {
@@ -732,6 +850,7 @@ export interface AdminOrder {
   paidAt: string | null;
   itemsCount: number;
   adminNotes?: string;
+  payments?: AdminOrderPayment[];
   items?: OrderItemDetail[];
 }
 
@@ -772,6 +891,14 @@ export const ordersApi = {
       method: "PATCH",
       body: JSON.stringify({ ids, status }),
     }),
+  refund: (id: string, payload: { reason?: string; skipGateway?: boolean } = {}) =>
+    request<{ success: boolean; order: AdminOrder; paymentId: string; gatewayRefund?: unknown }>(
+      `/v2/api/admin/orders/${id}/refund`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
 };
 
 // ─── Gateways ───────────────────────────────────────────────────────────────
@@ -1105,4 +1232,87 @@ export const chatApi = {
       method: "POST",
       body: JSON.stringify(payload || {}),
     }),
+};
+
+export type NewsletterSubscriber = {
+  id: string;
+  email: string;
+  source: string;
+  userId: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user?: { id: string; name: string | null; email: string | null } | null;
+};
+
+export const newsletterApi = {
+  list: (params?: { search?: string; page?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set("search", params.search);
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{
+      subscribers: NewsletterSubscriber[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>(`/v2/api/admin/newsletter/subscribers${suffix}`);
+  },
+  remove: (id: string) =>
+    request<{ success: boolean }>(`/v2/api/admin/newsletter/subscribers/${id}`, {
+      method: "DELETE",
+    }),
+  exportCsv: async () => {
+    const res = await fetch(`${API_URL}/v2/api/admin/newsletter/subscribers/export`, {
+      credentials: "include",
+      headers: getApiHeaders(),
+    });
+    if (!res.ok) {
+      let message = "Erro ao exportar inscritos";
+      try {
+        const body = await res.json();
+        message = body?.error || message;
+      } catch {
+      }
+      throw new Error(message);
+    }
+    return res.blob();
+  },
+};
+
+export type AdminAuditLog = {
+  id: string;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  metadata: Record<string, unknown> | null;
+  ip: string | null;
+  createdAt: string;
+  actor: { id: string; name: string | null; email: string | null; image: string | null } | null;
+};
+
+export const auditLogsApi = {
+  list: (params?: {
+    action?: string;
+    actorUserId?: string;
+    targetId?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params?.action) qs.set("action", params.action);
+    if (params?.actorUserId) qs.set("actorUserId", params.actorUserId);
+    if (params?.targetId) qs.set("targetId", params.targetId);
+    if (params?.from) qs.set("from", params.from);
+    if (params?.to) qs.set("to", params.to);
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{
+      logs: AdminAuditLog[];
+      actions: string[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>(`/v2/api/admin/audit-logs${suffix}`);
+  },
 };

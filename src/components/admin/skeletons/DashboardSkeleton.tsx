@@ -1,5 +1,28 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
+export function DashboardContentSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-32 rounded-md border border-white/5 bg-[#0A0A0A]" />
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Skeleton className="h-[400px] rounded-md border border-white/5 bg-[#0A0A0A]" />
+          <Skeleton className="h-[300px] rounded-md border border-white/5 bg-[#0A0A0A]" />
+        </div>
+
+        <div className="lg:col-span-1">
+          <Skeleton className="h-[720px] rounded-md border border-white/5 bg-[#0A0A0A]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardSkeleton() {
   return (
     <div className="relative space-y-8 pb-20 animate-in fade-in duration-700 min-h-screen">
@@ -14,23 +37,8 @@ export function DashboardSkeleton() {
         <Skeleton className="h-10 w-full sm:w-[300px] rounded-md" />
       </div>
 
-      <div className="relative z-10 space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-md border border-white/5 bg-[#0A0A0A]" />
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Skeleton className="h-[400px] rounded-md border border-white/5 bg-[#0A0A0A]" />
-            <Skeleton className="h-[300px] rounded-md border border-white/5 bg-[#0A0A0A]" />
-          </div>
-
-          <div className="lg:col-span-1">
-            <Skeleton className="h-[720px] rounded-md border border-white/5 bg-[#0A0A0A]" />
-          </div>
-        </div>
+      <div className="relative z-10">
+        <DashboardContentSkeleton />
       </div>
     </div>
   );

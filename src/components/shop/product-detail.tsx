@@ -18,10 +18,20 @@ import { useCartStore } from "@/store/cart-store";
 import { useWishlistStore } from "@/store/wishlist-store";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "./product-card";
+import { ProductRatingBadge, ProductReviewsSection } from "./product-reviews-section";
+import type { ProductReviewsResponse } from "@/lib/store-reviews-api";
 import { cn } from "@/lib/utils";
 
 
-export function ProductDetail({ product, relatedProducts = [] }: { product: Product; relatedProducts?: Product[]; }) {
+export function ProductDetail({
+  product,
+  relatedProducts = [],
+  reviewsData,
+}: {
+  product: Product;
+  relatedProducts?: Product[];
+  reviewsData?: ProductReviewsResponse;
+}) {
   const router = useRouter();
   const addProduct = useCartStore((s) => s.addProduct);
   const toggleWishlist = useWishlistStore((s) => s.toggleItem);
@@ -84,7 +94,7 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
   const isFavorite = mounted && isInWishlist;
 
   return (
-    <div className="pb-24 lg:pb-12 -mt-22 py-6 md:py-12 space-y-6 relative">
+    <div className="pb-24 lg:pb-12 -mt-22 py-6 md:py-12 space-y-6 relative select-none">
       <div className="absolute top-0 right-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
       <div className="absolute bottom-[50%] left-[-10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
 
@@ -116,8 +126,9 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
           </div>
 
           <div className="flex flex-col">
-            <div className="flex justify-between items-start gap-4 mb-6">
-              <div className="flex space-y-1">
+            <div className="flex justify-between items-center gap-4 mb-6">
+              <div className="flex flex-col space-y-1">
+                {reviewsData ? <ProductRatingBadge summary={reviewsData.summary} /> : null}
                 <h1 className="text-xl md:text-xl lg:text-2xl font-bold text-white">
                   {product.name}
                 </h1>
@@ -158,9 +169,9 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
             </div> */}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="flex items-center gap-4 rounded-lg border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-blue-500/20 text-cyan-400">
-                  <Zap className="h-6 w-6" />
+              <div className="flex items-center select-none gap-4 rounded-md border border-white/[0.04] bg-card/20 p-4 transition-colors hover:bg-card/30">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-cyan-400/20 to-blue-500/20 text-cyan-400">
+                  <Zap className="h-6 w-6 fill-current" />
                 </div>
                 <div>
                   <h4 className="text-[15px] font-bold text-white mb-0.5">Entrega imediata</h4>
@@ -168,9 +179,9 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 rounded-lg border border-white/[0.04] bg-[#ffffff02] p-4 transition-colors hover:bg-white/[0.02]">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400/20 to-teal-500/20 text-emerald-400">
-                  <ShieldCheck className="h-6 w-6" />
+              <div className="flex items-center select-none gap-4 rounded-md border border-white/[0.04] bg-card/20 p-4 transition-colors hover:bg-card/30">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-emerald-400/20 to-teal-500/20 text-emerald-400">
+                  <ShieldCheck className="h-6 w-6 fill-current" />
                 </div>
                 <div>
                   <h4 className="text-[15px] font-bold text-white mb-0.5">Segurança total</h4>
@@ -275,10 +286,10 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
             <div className="mt-auto mb-6">
               {comparePrice != null && comparePrice > displayPrice && (
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm text-white/40 line-through">
+                  <span className="text-sm text-muted-foreground line-through">
                     {formatPrice(comparePrice)}
                   </span>
-                  <span className="rounded-md bg-[#a855f7]/20 px-2 py-0.5 text-[10px] font-bold text-[#a855f7] border border-[#a855f7]/30 tracking-wider">
+                  <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                     {Math.round((1 - displayPrice / comparePrice) * 100)}% OFF
                   </span>
                 </div>
@@ -350,6 +361,10 @@ export function ProductDetail({ product, relatedProducts = [] }: { product: Prod
           );
         })()}
       </div>
+
+      {reviewsData ? (
+        <ProductReviewsSection productSlug={product.slug} initialData={reviewsData} />
+      ) : null}
 
       {relatedProducts.length > 0 && (
         <section className="mt-12">

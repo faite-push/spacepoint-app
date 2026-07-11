@@ -1,8 +1,8 @@
 "use client";
 
-import { toast } from "sonner";
 import type { PublicSiteConfig } from "@/lib/site-api";
 import { resolveFooterConfig } from "@/lib/footer-config";
+import { NewsletterSubscribeForm } from "@/components/shared/newsletter-subscribe-form";
 
 type HomeNewsletterProps = {
   config?: PublicSiteConfig | null;
@@ -23,21 +23,11 @@ export function HomeNewsletter({ config }: HomeNewsletterProps) {
           </p>
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); toast.success("Obrigado por se inscrever!"); }} className="mx-auto mt-6 flex max-w-xl flex-col gap-3 sm:flex-row sm:items-center">
-          <input
-            name="email"
-            type="email"
-            placeholder={footer.newsletterPlaceholder}
-            className="flex-1 md:h-12 rounded-md border border-white/10 bg-transparent px-5 py-4 text-sm text-white placeholder:text-white/50 focus:border-primary/40 focus:outline-none transition-all duration-300"
-            required
-          />
-          <button
-            type="submit"
-            className="h-12 shrink-0 rounded-md bg-primary px-6 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
-          >
-            {footer.newsletterButtonLabel}
-          </button>
-        </form>
+        <NewsletterSubscribeForm
+          source="home"
+          placeholder={footer.newsletterPlaceholder}
+          buttonLabel={footer.newsletterButtonLabel}
+        />
       </div>
     </section>
   );

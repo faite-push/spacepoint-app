@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Star, Maximize2, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
@@ -65,12 +66,13 @@ function getDeliveryProgress(chat: Chat) {
 
 export function OrderChat({ orderId }: OrderChatProps) {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [showFaq, setShowFaq] = useState(true);
+  const [showFaq, setShowFaq] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [adminTyping, setAdminTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -150,6 +152,9 @@ export function OrderChat({ orderId }: OrderChatProps) {
         if (updatedChat.status === 'CLOSED' && !updatedChat.rating) {
           setShowRating(true);
         }
+        if (updatedChat.order?.status === 'DELIVERED' && !updatedChat.rating) {
+          setShowRating(true);
+        }
       }
     };
 
@@ -179,6 +184,13 @@ export function OrderChat({ orderId }: OrderChatProps) {
       socket.off('messages_read', handleRead);
     };
   }, [socket, chat?.id, orderId, queryClient]);
+
+  useEffect(() => {
+    if (!chat || chat.rating) return;
+    if (searchParams.get('review') === '1') {
+      setShowRating(true);
+    }
+  }, [chat, searchParams]);
 
   useEffect(() => {
     if (!socket || !chat?.id) return;
@@ -316,9 +328,7 @@ export function OrderChat({ orderId }: OrderChatProps) {
       setMessage('');
       setFiles([]);
       if (socket && chat?.id) socket.emit('typing_stop', { chatId: chat.id });
-    } catch {
-      // onError do mutation já exibe toast
-    }
+    } catch { }
   };
 
   if (isLoading) {
@@ -336,8 +346,9 @@ export function OrderChat({ orderId }: OrderChatProps) {
   if (!chat) return null;
 
   const isClosed = chat.status === 'CLOSED';
+  const isDelivered = chat.order?.status === 'DELIVERED';
   const progress = getDeliveryProgress(chat);
-  const canRate = isClosed && !chat.rating;
+  const canRate = !chat.rating && (isClosed || isDelivered);
 
   const messagesList = (
     <ChatMessagesList
@@ -391,7 +402,7 @@ export function OrderChat({ orderId }: OrderChatProps) {
 
   const progressBar = (
     <div className="px-4 py-2 border-b border-white/5 shrink-0">
-      <div className="flex justify-between text-[10px] text-zinc-400 mb-1">
+      <div className="flex justify-between text-xs text-muted-foreground mb-1">
         <span>Progresso da entrega</span>
         <span>{progress}%</span>
       </div>

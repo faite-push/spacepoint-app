@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchProduct, fetchProducts } from "@/lib/shop-api";
 import { fetchPageSeo } from "@/lib/site-api";
+import { fetchProductReviews } from "@/lib/store-reviews-api";
 import { resolvePageMetadata } from "@/lib/seo-utils";
+import { buildProductJsonLd } from "@/lib/json-ld";
+import { JsonLd } from "@/components/seo/json-ld";
 import { ProductDetail } from "@/components/shop/product-detail";
 
 export async function generateMetadata({
@@ -37,13 +40,25 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = await fetchProduct(slug).catch(() => null);
+  const [product, allProducts, reviewsData] = await Promise.all([
+    fetchProduct(slug).catch(() => null),
+    fetchProducts().catch(() => []),
+    fetchProductReviews(slug, { limit: 10 }).catch(() => null),
+  ]);
   if (!product) notFound();
 
-  const allProducts = await fetchProducts().catch(() => []);
   const relatedProducts = allProducts
     .filter((p) => p.slug !== slug)
     .slice(0, 4);
 
-  return <ProductDetail product={product} relatedProducts={relatedProducts} />;
+  return (
+    <>
+      <JsonLd data={buildProductJsonLd(product, reviewsData?.summary)} />
+      <ProductDetail
+        product={product}
+        relatedProducts={relatedProducts}
+        reviewsData={reviewsData ?? undefined}
+      />
+    </>
+  );
 }

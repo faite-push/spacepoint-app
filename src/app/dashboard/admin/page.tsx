@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Package } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { usePermission } from "@/providers/PermissionProvider";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { DateRangeFilter } from "@/components/admin/dashboard/DateRangeFilter";
 import { CustomersChart } from "@/components/admin/dashboard/CustomersChart";
 import { OverviewCards } from "@/components/admin/dashboard/OverviewCards";
 import { MetricSidebar } from "@/components/admin/dashboard/MetricSidebar";
-import { DashboardSkeleton } from "@/components/admin/skeletons/DashboardSkeleton";
+import { DashboardContentSkeleton } from "@/components/admin/skeletons/DashboardSkeleton";
 
 async function fetchStats(from: Date, to: Date) {
   const fromIso = from.toISOString();
@@ -27,9 +27,17 @@ async function fetchStats(from: Date, to: Date) {
     ...data,
     sidebar: {
       ...data.sidebar,
-      latestSales: data.sidebar?.latestSales || [],
-      productStats: data.sidebar?.productStats || { lowStock: [], topSellers: [] }
-    }
+      conversion: data.sidebar?.conversion ?? {
+        total: 0,
+        approvedCount: 0,
+        pendingCount: 0,
+        approvedPct: 0,
+      },
+      methods: data.sidebar?.methods ?? [],
+      gateways: data.sidebar?.gateways ?? [],
+      latestSales: data.sidebar?.latestSales ?? [],
+      productStats: data.sidebar?.productStats ?? { lowStock: [], topSellers: [] },
+    },
   };
 };
 
@@ -37,12 +45,13 @@ export default function AdminDashboard() {
   const { hasPermission } = usePermission();
   const canopyAnalytics = hasPermission('analytics:view');
 
-  const [dateRange, setDateRange] = useState(getRangeForPreset("7d"));
+  const [dateRange, setDateRange] = useState(getRangeForPreset("today"));
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["admin", "stats", dateRange.from.toISOString(), dateRange.to.toISOString()],
     queryFn: () => fetchStats(dateRange.from, dateRange.to),
     enabled: canopyAnalytics,
+    placeholderData: keepPreviousData,
   });
 
   if (!canopyAnalytics) {
@@ -69,8 +78,6 @@ export default function AdminDashboard() {
     );
   };
 
-  if (isLoading) return <DashboardSkeleton />;
-
   return (
     <div className="relative space-y-8 pb-20 animate-in fade-in duration-700 min-h-screen">
       <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/5 rounded-full blur-[120px] z-0 pointer-events-none" />
@@ -86,11 +93,13 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
           <p className="text-muted-foreground">Análises e informações de rendimentos</p>
         </div>
-        <DateRangeFilter onRangeChange={(range) => setDateRange(range)} />
+        <DateRangeFilter defaultPreset="today" onRangeChange={(range) => setDateRange(range)} />
       </div>
 
       <div className="relative z-10">
-        {error || !data ? (
+        {isLoading ? (
+          <DashboardContentSkeleton />
+        ) : error || !data ? (
           <div className="flex h-[50vh] items-center justify-center flex-col gap-4 text-zinc-500">
             <p className="text-lg font-medium text-white">Ops! Algo deu errado.</p>
             <p className="text-sm">Não foi possível carregar as métricas agora.</p>

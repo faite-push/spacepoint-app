@@ -139,10 +139,10 @@ export function AdminHeader({ user, onOpenMenu }: AdminHeaderProps) {
                 alt={user.name}
                 width={32}
                 height={32}
-                className="h-8 w-8 rounded-full object-cover"
+                className="h-8 w-8 rounded-full object-cover select-none pointer-events-none"
               />
             ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#9333EA] text-xs font-bold text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
                 {initials || <User className="h-4 w-4" />}
               </div>
             )}

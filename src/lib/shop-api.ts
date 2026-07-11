@@ -1,9 +1,27 @@
 import { apiFetch, generateIdempotencyKey } from "@/lib/api";
+import type { ProductListParams, ProductListPagination } from "@/lib/product-list-params";
+import { toApiProductParams } from "@/lib/product-list-params";
 import type { Order, Product } from "@/types/shop";
 
-export async function fetchProducts(params?: Record<string, string>): Promise<Product[]> {
-  const query = params ? `?${new URLSearchParams(params).toString()}` : "";
-  const data = await apiFetch<{ products: Product[] }>(`/v2/api/products${query}`);
+export type ProductListResult = {
+  products: Product[];
+  pagination: ProductListPagination;
+  facets?: { platforms: string[] };
+};
+
+export async function fetchProductListing(params?: ProductListParams): Promise<ProductListResult> {
+  const query = params ? `?${new URLSearchParams(toApiProductParams(params)).toString()}` : "";
+  return apiFetch<ProductListResult>(`/v2/api/products${query}`);
+}
+
+export async function fetchProducts(params?: ProductListParams | Record<string, string>): Promise<Product[]> {
+  const normalized =
+    params && ("sortBy" in params || "page" in params)
+      ? toApiProductParams(params as ProductListParams)
+      : (params as Record<string, string> | undefined);
+
+  const query = normalized ? `?${new URLSearchParams(normalized).toString()}` : "";
+  const data = await apiFetch<ProductListResult>(`/v2/api/products${query}`);
   return data.products;
 }
 

@@ -25,7 +25,9 @@ export default function AccountPage() {
     fetchMyOrders()
       .then((orders) => {
         setOrdersCount(orders.length);
-        setPaidCount(orders.filter((o) => o.status === "PAID" || o.status === "DELIVERED").length);
+        setPaidCount(
+          orders.filter((o) => ["PAID", "DELIVERED"].includes(o.status.toUpperCase())).length
+        );
       })
       .catch(() => {
         setOrdersCount(0);

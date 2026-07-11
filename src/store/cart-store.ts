@@ -6,6 +6,7 @@ import { persist } from "zustand/middleware";
 import type { CartItem, Product, ProductVariant } from "@/types/shop";
 import { cartItemKey } from "@/types/shop";
 import { apiFetch } from "@/lib/api";
+import { trackStorefrontAddToCart } from "@/lib/storefront-plugin-events";
 
 export type Coupon = {
   id: string;
@@ -84,6 +85,11 @@ export const useCartStore = create<CartState>()(
             };
           }
           return { items: [...state.items, entry], isOpen: true };
+        });
+        trackStorefrontAddToCart({
+          value: entry.price / 100,
+          contentIds: [entry.productId],
+          numItems: 1,
         });
       },
       removeItem: (cartKey) =>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, CheckCircle, XCircle, Truck, Clock, ChevronLeft, ChevronRight, Eye, MoreVertical, Check, Filter, Loader2, ShoppingCart, DollarSign, Package, ExternalLink, Save, Zap, ChevronDown, MessageSquare } from "lucide-react";
+import { Search, CheckCircle, XCircle, Truck, Clock, ChevronLeft, ChevronRight, Eye, MoreVertical, Check, Filter, Loader2, ShoppingCart, DollarSign, Package, ExternalLink, Save, Zap, ChevronDown, MessageSquare, Undo2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRangeForPreset } from "@/lib/date-range-presets";
 import { format } from "date-fns";
@@ -22,7 +22,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DateRangeFilter } from "@/components/admin/dashboard/DateRangeFilter";
+import { usePermission } from "@/providers/PermissionProvider";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -37,6 +40,7 @@ const STATUS_OPTIONS = [
   { value: "PENDING", label: "Pendente" },
   { value: "PAID", label: "Pago" },
   { value: "DELIVERED", label: "Entregue" },
+  { value: "REFUNDED", label: "Reembolsado" },
   { value: "CANCELLED", label: "Cancelado" },
 ];
 
@@ -93,6 +97,8 @@ export default function OrdersPage() {
         return { label: "Pendente", color: "bg-yellow-500/10 text-yellow-500", icon: Clock };
       case "DELIVERED":
         return { label: "Entregue", color: "bg-purple-500/10 text-purple-500", icon: Truck };
+      case "REFUNDED":
+        return { label: "Reembolsado", color: "bg-orange-500/10 text-orange-500", icon: Undo2 };
       case "CANCELLED":
         return { label: "Cancelado", color: "bg-red-500/10 text-red-500", icon: XCircle };
       default:
@@ -408,10 +414,30 @@ export default function OrdersPage() {
 
 function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any) {
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermission();
+  const canRefund = hasPermission("orders:refund");
+
   const { data: order, isLoading } = useQuery({
     queryKey: ["admin", "orders", "detail", id],
     queryFn: () => ordersApi.getOne(id!),
     enabled: !!id,
+  });
+
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [skipGateway, setSkipGateway] = useState(false);
+
+  const refundMutation = useMutation({
+    mutationFn: (payload: { reason?: string; skipGateway?: boolean }) =>
+      ordersApi.refund(id!, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "orders"] });
+      setRefundOpen(false);
+      setRefundReason("");
+      setSkipGateway(false);
+      toast.success("Pedido reembolsado com sucesso");
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const canUseChat = !!order && (order.status === "PAID" || order.status === "DELIVERED");
@@ -440,6 +466,7 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
       case "PAID": return { label: "Aprovado", color: "text-green-400", bg: "bg-green-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-green-400 animate-ping")}></div> };
       case "PENDING": return { label: "Pendente", color: "text-yellow-400", bg: "bg-yellow-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-yellow-400 animate-ping")}></div> };
       case "DELIVERED": return { label: "Entregue", color: "text-purple-400", bg: "bg-purple-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-purple-400 animate-ping")}></div> };
+      case "REFUNDED": return { label: "Reembolsado", color: "text-orange-400", bg: "bg-orange-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-orange-400 animate-ping")}></div> };
       case "CANCELLED": return { label: "Cancelado", color: "text-red-400", bg: "bg-red-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-red-400 animate-ping")}></div> };
       default: return { label: order.status, color: "text-zinc-400", bg: "bg-zinc-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-zinc-400 animate-ping")}></div> };
     }
@@ -554,38 +581,57 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
                       <span className="text-white/80">Subtotal</span>
                       <span className="text-white font-medium">{formatBRL(order.subtotal ?? order.total)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/80">Desconto</span>
-                      <span className="text-white font-medium">{formatBRL(order.discount ?? 0)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/80">Método de Entrega</span>
-                      <span className={cn(
-                        "font-medium",
-                        express ? "text-amber-400" : "text-white"
-                      )}>
-                        {getDeliveryOptionLabel(order)}
-                      </span>
-                    </div>
+                    {order.discount > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-white/80">Desconto</span>
+                        <span className="text-white font-medium">
+                          {formatBRL(order.discount ?? 0)}
+                        </span>
+                      </div>
+                    )}
+                    {(order.deliveryFee ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-white/80">Método de Entrega</span>
+                        <span className={cn(
+                          "font-medium",
+                          express ? "text-amber-400" : "text-white"
+                        )}>
+                          {getDeliveryOptionLabel(order)}
+                        </span>
+                      </div>
+                    )}
+                    {(order.discount ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-white/80">Cupom</span>
+                        <span className="text-white font-medium">{order.couponCode ? <span className="font-bold uppercase">{order.couponCode}</span> : "Nenhum cupom aplicado"}</span>
+                      </div>
+                    )}
                     {(order.deliveryFee ?? 0) > 0 && (
                       <div className="flex justify-between">
                         <span className="text-white/80">Taxa de entrega</span>
                         <span className="text-amber-400 font-medium">{formatBRL(order.deliveryFee)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between pt-1 border-t border-white/5">
-                      <span className="text-white/80">Valor Total</span>
+                    <div className="flex justify-between">
+                      <span className="text-white/80 text-lg">Valor Total</span>
                       <span className="text-white font-medium text-lg">{formatBRL(order.total)}</span>
                     </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-white/80">Método de Pagamento</span>
-                      <span className="text-white font-medium">{order.paymentMethod || "Não informado"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/80">Cupom</span>
-                      <span className="text-white font-medium">{order.couponCode ? <span className="text-emerald-400 font-bold uppercase">{order.couponCode}</span> : "Nenhum cupom aplicado"}</span>
-                    </div>
+                    {order.payments && order.payments.length > 0 && (
+                      <div className="rounded-md border border-white/5 bg-white/[0.02] p-3 space-y-2">
+                        <p className="text-xs font-medium text-white/50">Pagamentos</p>
+                        {order.payments.map((payment) => (
+                          <div key={payment.id} className="flex items-center justify-between text-sm">
+                            <span className="text-white/70">
+                              {payment.provider}
+                              {payment.externalId ? ` · ${payment.externalId.slice(0, 12)}…` : ""}
+                            </span>
+                            <Badge variant="outline" className="text-xs border-white/10">
+                              {payment.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </section>
 
@@ -640,6 +686,14 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
                         <p className="text-xs text-muted-foreground">Concluído manualmente</p>
                       </div>
                     )}
+
+                    {order.status === "REFUNDED" && (
+                      <div className="relative pl-6">
+                        <div className="absolute left-[-4px] top-4 h-2 w-2 rounded-full bg-orange-500" />
+                        <p className="text-sm font-medium text-white/90">Pedido Reembolsado</p>
+                        <p className="text-xs text-muted-foreground">Estorno processado pelo admin</p>
+                      </div>
+                    )}
                   </div>
                 </section>
 
@@ -674,7 +728,7 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
             </ScrollArea>
 
             <div className="flex gap-3 py-4 px-6">
-              {order.status !== "PAID" && order.status !== "DELIVERED" && (
+              {order.status !== "PAID" && order.status !== "DELIVERED" && order.status !== "REFUNDED" && (
                 <Button
                   className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
                   size="lg"
@@ -684,7 +738,18 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
                 </Button>
               )}
 
-              {order.status !== "CANCELLED" && (
+              {canRefund && (order.status === "PAID" || order.status === "DELIVERED") && (
+                <Button
+                  className="flex-1 bg-orange-600 hover:bg-orange-500 text-white gap-2"
+                  size="lg"
+                  onClick={() => setRefundOpen(true)}
+                >
+                  <Undo2 className="h-4 w-4" />
+                  Reembolsar
+                </Button>
+              )}
+
+              {order.status !== "CANCELLED" && order.status !== "REFUNDED" && order.status !== "PAID" && order.status !== "DELIVERED" && (
                 <Button
                   className="flex-1 bg-destructive hover:bg-destructive/70 text-white"
                   size="lg"
@@ -694,6 +759,68 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
                 </Button>
               )}
             </div>
+
+            <Dialog open={refundOpen} onOpenChange={setRefundOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Reembolsar pedido</DialogTitle>
+                  <DialogDescription>
+                    O estorno será solicitado no gateway (quando suportado), o estoque será revertido e o cliente será notificado por e-mail.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-2">
+                  <div className="rounded-md border border-white/10 bg-white/[0.02] p-3 text-sm">
+                    <p className="text-white/60">Valor do pedido</p>
+                    <p className="text-lg font-bold text-white">{formatBRL(order.total)}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-white/80">Motivo (opcional)</label>
+                    <Textarea
+                      placeholder="Ex.: solicitação do cliente, produto indisponível..."
+                      value={refundReason}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setRefundReason(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <Checkbox
+                      checked={skipGateway}
+                      onCheckedChange={(v) => setSkipGateway(v === true)}
+                      className="mt-0.5"
+                    />
+                    <span className="text-sm text-white/70 leading-snug">
+                      Apenas registrar reembolso (sem estorno automático no gateway). Use se o estorno já foi feito manualmente.
+                    </span>
+                  </label>
+                </div>
+
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => setRefundOpen(false)} disabled={refundMutation.isPending}>
+                    Voltar
+                  </Button>
+                  <Button
+                    className="bg-orange-600 hover:bg-orange-500"
+                    disabled={refundMutation.isPending}
+                    onClick={() => refundMutation.mutate({
+                      reason: refundReason.trim() || undefined,
+                      skipGateway,
+                    })}
+                  >
+                    {refundMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Processando...
+                      </>
+                    ) : (
+                      "Confirmar reembolso"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </>
         )}
       </SheetContent>

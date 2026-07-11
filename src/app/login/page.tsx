@@ -162,7 +162,7 @@ function LoginContent() {
               <form onSubmit={handleSendCode} className="space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-300">
-                    Email:
+                    Email
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />

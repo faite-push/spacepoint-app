@@ -31,6 +31,12 @@ function formatBRL(cents: number) {
 export function MetricSidebar({ data }: MetricSidebarProps) {
   const [productFilter, setProductFilter] = useState<"lowStock" | "topSellers">("topSellers");
 
+  const conversion = data.conversion ?? {
+    total: 0,
+    approvedCount: 0,
+    pendingCount: 0,
+    approvedPct: 0,
+  };
   const sales = data.latestSales || [];
   const products = data.productStats || { lowStock: [], topSellers: [] };
 
@@ -48,7 +54,7 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
               innerRadius="70%"
               outerRadius="100%"
               barSize={12}
-              data={[{ value: data.conversion.approvedPct }]}
+              data={[{ value: conversion.approvedPct }]}
               startAngle={210}
               endAngle={-30}
             >
@@ -64,7 +70,7 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
           </ResponsiveContainer>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
-            <p className="text-lg font-medium text-white">{formatBRL(data.conversion.total)}</p>
+            <p className="text-lg font-medium text-white">{formatBRL(conversion.total)}</p>
             <p className="text-xs font-light text-white/50">Faturamento</p>
           </div>
         </div>
@@ -73,12 +79,12 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-              <span className="text-[11px] font-medium text-zinc-300">Aprovados {data.conversion.approvedPct}%</span>
+              <span className="text-[11px] font-medium text-zinc-300">Aprovados {conversion.approvedPct}%</span>
             </div>
           </div>
           <div className="flex flex-col gap-0.5 text-right">
             <div className="flex items-center gap-1.5 justify-end">
-              <span className="text-[11px] font-medium text-zinc-300">Pendentes {100 - data.conversion.approvedPct}%</span>
+              <span className="text-[11px] font-medium text-zinc-300">Pendentes {100 - conversion.approvedPct}%</span>
               <div className="h-1.5 w-1.5 rounded-full bg-zinc-800" />
             </div>
           </div>

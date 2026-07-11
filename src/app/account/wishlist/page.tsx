@@ -46,7 +46,9 @@ export default function WishlistPage() {
 
       <div>
         <h1 className="text-2xl font-bold text-white">Lista de Desejos</h1>
-        <p className="text-muted-foreground">Produtos salvos para comprar depois.</p>
+        <p className="text-muted-foreground">
+          Produtos salvos para comprar depois. Sincronizados na sua conta quando você está logado.
+        </p>
       </div>
 
       {!hydrated ? (

@@ -68,18 +68,28 @@ export type OrderItem = {
   codes: OrderCode[];
 };
 
+export type OrderChatSummary = {
+  id: string;
+  status: string;
+  rating: number | null;
+  reviewStatus?: string | null;
+};
+
 export type Order = {
   id: string;
   status: string;
   total: number;
   subtotal?: number;
   discount?: number;
+  deliveryFee?: number;
   paymentMethod?: string;
   couponCode?: string | null;
   checkoutData?: Record<string, string> | null;
   createdAt: string;
   updatedAt?: string;
   paidAt: string | null;
+  deliveredAt?: string | null;
+  chat?: OrderChatSummary | null;
   items: OrderItem[];
 };
 

@@ -827,7 +827,7 @@ export default function UnifiedInventoryPage() {
         </Can>
       </div>
 
-      <div className="flex flex-row sm:flex-row gap-3">
+      <div className="flex flex-row gap-2">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <Input

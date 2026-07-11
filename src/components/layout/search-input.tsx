@@ -4,11 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { RiSearch2Fill } from "react-icons/ri";
-import { AiOutlineEnter } from "react-icons/ai";
 import { X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "@/hooks/use-debounce";
-import { fetchProducts, formatPrice } from "@/lib/shop-api";
+import { fetchProductListing, formatPrice } from "@/lib/shop-api";
 import { Product } from "@/types/shop";
 import Link from "next/link";
 
@@ -19,6 +18,7 @@ interface SearchInputProps {
 export function SearchInput({ mobile }: SearchInputProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
+  const [totalResults, setTotalResults] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const debouncedQuery = useDebounce(query, 300);
@@ -43,14 +43,16 @@ export function SearchInput({ mobile }: SearchInputProps) {
     const fetchResults = async () => {
       if (debouncedQuery.length < 2) {
         setResults([]);
+        setTotalResults(0);
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
       try {
-        const products = await fetchProducts({ search: debouncedQuery });
-        setResults(products.slice(0, 5));
+        const data = await fetchProductListing({ search: debouncedQuery, limit: "5" });
+        setResults(data.products);
+        setTotalResults(data.pagination.total);
         setIsOpen(true);
       } catch (error) {
         console.error("Error fetching search results:", error);
@@ -92,8 +94,23 @@ export function SearchInput({ mobile }: SearchInputProps) {
   const handleClear = () => {
     setQuery("");
     setResults([]);
+    setTotalResults(0);
     setIsOpen(false);
     inputRef.current?.focus();
+  };
+
+  const handleSearchAll = () => {
+    const term = query.trim();
+    if (term.length < 2) return;
+    setIsOpen(false);
+    router.push(`/search?q=${encodeURIComponent(term)}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearchAll();
+    }
   };
 
   const handleSelectProduct = (slug: string) => {
@@ -120,6 +137,7 @@ export function SearchInput({ mobile }: SearchInputProps) {
               setQuery(e.target.value);
               setIsOpen(true);
             }}
+            onKeyDown={handleKeyDown}
             placeholder="Pesquisar jogo..."
             className="h-12 w-full border rounded-full bg-white/20 border-black/5 focus:bg-black/3 pl-12 pr-12 text-base text-white placeholder:font-medium placeholder:text-white/50 focus:outline-none focus:ring-0 focus:shadow-md focus:border-black/10 transition-all duration-300"
           />
@@ -166,6 +184,14 @@ export function SearchInput({ mobile }: SearchInputProps) {
                     </div>
                   </button>
                 ))}
+                {totalResults > results.length && (
+                  <button
+                    onClick={handleSearchAll}
+                    className="w-full border-t border-white/10 px-4 py-3 text-left text-sm font-semibold text-primary hover:bg-white/5"
+                  >
+                    Ver todos os {totalResults} resultados
+                  </button>
+                )}
               </div>
             ) : (
               <div className="p-8 text-center text-white/50">
@@ -194,6 +220,7 @@ export function SearchInput({ mobile }: SearchInputProps) {
           setQuery(e.target.value);
           setIsOpen(true);
         }}
+        onKeyDown={handleKeyDown}
         placeholder="Pesquisar jogo..."
         className={`h-11 w-full rounded-full bg-white/10 border text-base text-white placeholder:font-medium placeholder:text-white/50 focus:outline-none focus:ring-0 transition-all duration-300 pl-12 pr-28 ${
           isFocused ? 'focus:border-background/10 focus:bg-white/15' : 'border-black/5 hover:border-black/10'
@@ -234,10 +261,10 @@ export function SearchInput({ mobile }: SearchInputProps) {
       </div>
 
       {isOpen && (debouncedQuery.length >= 2) && (
-        <div className="absolute left-0 right-0 top-full z-[60] mt-3 px-2 overflow-hidden rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute left-0 right-0 top-full z-[60] mt-2 px-2 overflow-hidden rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-2 duration-200">
           {isLoading ? (
             <div className="flex items-center justify-center p-12">
-              <Loader2 className="h-8 w-8 animate-spin text-white/20" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : results.length > 0 ? (
             <div className="py-2">
@@ -246,14 +273,14 @@ export function SearchInput({ mobile }: SearchInputProps) {
                   key={product.id}
                   href={`/product/${product.slug}`}
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-4 px-4 py-3 rounded-xl text-left transition-all hover:bg-white/5 group"
+                  className="flex items-center gap-4 px-3 py-2 rounded-lg text-left transition-all hover:bg-white/5 group"
                 >
-                  <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-white/5 ring-1 ring-white/10 group-hover:ring-white/20">
+                  <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-sm bg-white/5">
                     <Image
                       src={product.imageUrl || product.images[0] || "/placeholder.png"}
                       alt={product.name}
                       fill
-                      className="object-cover transition-transform scale-110 duration-500"
+                      className="object-cover transition-transform scale-110 duration-500 select-none pointer-events-none"
                     />
                   </div>
                   <div className="flex flex-1 flex-col overflow-hidden">
@@ -274,10 +301,18 @@ export function SearchInput({ mobile }: SearchInputProps) {
                   </div>
                 </Link>
               ))}
+              {totalResults > results.length && (
+                <button
+                  onClick={handleSearchAll}
+                  className="w-full border-t border-white/10 px-4 py-3 text-left text-sm font-semibold text-primary hover:bg-white/5"
+                >
+                  Ver todos os {totalResults} resultados
+                </button>
+              )}
             </div>
           ) : (
             <div className="p-12 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center">
                 <RiSearch2Fill className="h-6 w-6 text-white/20" />
               </div>
               <p className="text-sm text-white/50">Nenhum resultado encontrado para</p>

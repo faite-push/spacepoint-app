@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Star, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Check, Star, X } from 'lucide-react';
+
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Toggle } from '@/components/ui/toggle';
 import { cn } from '@/lib/utils';
 
 const RATING_LABELS = ['Péssimo', 'Ruim', 'Regular', 'Bom', 'Excelente'];
@@ -48,24 +50,13 @@ export function ChatRatingDialog({ open, onOpenChange, onSubmit, isSubmitting }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg bg-[#111] border-white/10 p-0 gap-0 overflow-hidden">
-        <DialogTitle className="sr-only">Avalie sua experiência</DialogTitle>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Avalie sua experiência</DialogTitle>
+          <DialogDescription>Avalie agora e ajude a deixar o serviço cada vez melhor.</DialogDescription>
+        </DialogHeader>
 
-        <div className="p-6 pb-4 border-b border-white/5 relative">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="absolute right-4 top-4 text-zinc-500 hover:text-white"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <h2 className="text-xl font-semibold text-white">Avalie sua experiência</h2>
-          <p className="text-sm text-zinc-400 mt-1">
-            Avalie agora e ajude a deixar o serviço cada vez melhor.
-          </p>
-        </div>
-
-        <div className="p-6 space-y-6">
+        <div className="space-y-6">
           <div className="flex flex-col items-center gap-2">
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -75,7 +66,7 @@ export function ChatRatingDialog({ open, onOpenChange, onSubmit, isSubmitting }:
                   onMouseEnter={() => setHover(star)}
                   onMouseLeave={() => setHover(0)}
                   onClick={() => setRating(star)}
-                  className="p-1 transition-transform hover:scale-110"
+                  className="p-1 cursor-pointer transition-transform hover:scale-110"
                 >
                   <Star
                     className={cn(
@@ -93,23 +84,23 @@ export function ChatRatingDialog({ open, onOpenChange, onSubmit, isSubmitting }:
             </span>
           </div>
 
-          <div className="space-y-3">
-            <p className="text-sm text-zinc-400">Escolha as opções abaixo</p>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Escolha as opções abaixo</p>
             <div className="flex flex-wrap gap-2">
               {QUICK_TAGS.map((tag) => (
-                <button
+                <Button
                   key={tag}
                   type="button"
                   onClick={() => toggleTag(tag)}
                   className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                    'px-3 py-1.5 rounded-sm text-xs font-medium transition-colors',
                     selectedTags.includes(tag)
-                      ? 'bg-primary/20 border-primary/40 text-primary'
-                      : 'bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10'
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-white/5 text-muted-foreground hover:bg-white/10'
                   )}
                 >
                   {tag}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -121,7 +112,7 @@ export function ChatRatingDialog({ open, onOpenChange, onSubmit, isSubmitting }:
                 value={comment}
                 onChange={(e) => setComment(e.target.value.slice(0, 256))}
                 placeholder="Escreva seu comentário (opcional)"
-                className="min-h-[100px] bg-white/5 border-white/10 resize-none pr-16"
+                className="min-h-[100px] resize-none pr-16"
               />
               <span className="absolute bottom-2 right-3 text-[10px] text-zinc-500">
                 {comment.length} / 256
@@ -129,29 +120,27 @@ export function ChatRatingDialog({ open, onOpenChange, onSubmit, isSubmitting }:
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsAnonymous(!isAnonymous)}
-            className="flex items-start gap-3 w-full text-left rounded-md border border-white/10 p-3 hover:bg-white/[0.02] transition-colors"
-          >
-            <div
-              className={cn(
-                'mt-0.5 h-5 w-5 rounded border flex items-center justify-center shrink-0',
-                isAnonymous ? 'bg-red-500 border-red-500' : 'border-zinc-600 bg-transparent'
-              )}
+          <div className="flex items-center gap-2 w-full rounded-md border border-white/10 p-3">
+            <Toggle
+              pressed={isAnonymous}
+              onPressedChange={setIsAnonymous}
+              variant="default"
+              size="sm"
+              className="h-8 w-8 rounded-sm"
+              aria-label="Enviar avaliação de forma anônima"
             >
-              {isAnonymous && <X className="h-3 w-3 text-white" />}
-            </div>
+              {isAnonymous ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            </Toggle>
             <div>
               <p className="text-sm font-medium text-white">Avaliação Anônima</p>
               <p className="text-xs text-zinc-500">Enviar avaliação de forma anônima</p>
             </div>
-          </button>
+          </div>
         </div>
 
-        <div className="p-6 pt-0">
+        <div className="pt-0">
           <Button
-            className="w-full h-12 text-base font-semibold bg-violet-600 hover:bg-violet-700"
+            className="w-full h-12"
             onClick={handleSubmit}
             disabled={isSubmitting || rating < 1}
           >

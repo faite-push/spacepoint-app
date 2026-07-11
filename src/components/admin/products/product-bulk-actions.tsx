@@ -284,7 +284,7 @@ export function BulkPriceChangeDialog({ open, onOpenChange, filteredProductIds, 
           ) : null}
         </div>
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex flex-row gap-2">
           <Button
             type="button"
             size="lg"
@@ -415,7 +415,7 @@ export function BulkVisibilityDialog({ open, onOpenChange, filteredProductIds, a
           </div>
         </div>
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex flex-row gap-2">
           <Button type="button" size="lg" variant="ghost" className="flex-1" onClick={() => handleClose(false)}>
             Cancelar
           </Button>

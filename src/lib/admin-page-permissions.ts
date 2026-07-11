@@ -19,6 +19,8 @@ export const ADMIN_ROUTE_PERMISSIONS: AdminRoutePermissionRule[] = [
   { prefix: '/dashboard/admin/roles', permission: 'roles:view', label: 'Cargos' },
   { prefix: '/dashboard/admin/gateways', permission: 'gateways:manage', label: 'Gateways' },
   { prefix: '/dashboard/admin/plugins', permission: 'plugins:manage', label: 'Plugins' },
+  { prefix: '/dashboard/admin/newsletter', permission: 'settings:manage', label: 'Newsletter' },
+  { prefix: '/dashboard/admin/audit-log', permission: 'audit:view', label: 'Auditoria' },
   { prefix: '/dashboard/admin/pages', permission: 'pages:manage', label: 'Páginas do site' },
   { prefix: '/dashboard/admin/banners', permission: 'pages:manage', label: 'Banners' },
   { prefix: '/dashboard/admin/settings', permission: 'pages:manage', label: 'Configurações' },

@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, FolderClosed, BadgeDollarSign, Tag, UserRoundCog, Star, UsersRound, Settings, Globe, Home, PanelBottom, FileText, SlidersHorizontal, Megaphone, MessageSquareQuote, Search, Package, Calendar as CalendarIcon, Wrench, Image as ImageIcon, CreditCard, type LucideIcon, Paintbrush, ReceiptText, ShoppingCart, } from "lucide-react";
+import { LayoutDashboard, FolderClosed, BadgeDollarSign, Tag, UserRoundCog, Star, UsersRound, Settings, Globe, Home, PanelBottom, FileText, SlidersHorizontal, Megaphone, MessageSquareQuote, Search, Package, Calendar as CalendarIcon, Wrench, Image as ImageIcon, CreditCard, type LucideIcon, Paintbrush, ReceiptText, ShoppingCart, Mail, } from "lucide-react";
 import { PiGooglePhotosLogo } from "react-icons/pi";
 import { PiPuzzlePiece } from "react-icons/pi";
 import { RiCustomerService2Fill } from "react-icons/ri";
@@ -22,6 +22,7 @@ export type AdminNavGroup = {
 export const adminMainNavItems: AdminNavItem[] = [
   { href: "/dashboard/admin", icon: LayoutDashboard, label: "Dashboard", permission: "analytics:view" },
   { href: "/dashboard/admin/products", icon: FolderClosed, label: "Produtos", permission: "products:view" },
+  { href: "/dashboard/admin/inventory", icon: Package, label: "Inventário", permission: "products:view" },
   { href: "/dashboard/admin/orders", icon: BadgeDollarSign, label: "Vendas", permission: "orders:view" },
   { href: "/dashboard/admin/coupon", icon: Tag, label: "Cupom", permission: "coupons:view" },
   { href: "/dashboard/admin/gallery", icon: PiGooglePhotosLogo, label: "Galeria", permission: "media:view" },
@@ -50,6 +51,8 @@ export const adminSitePagesGroup: AdminNavGroup = {
 };
 
 export const adminConfigNavItems: AdminNavItem[] = [
+  { href: "/dashboard/admin/newsletter", icon: Mail, label: "Newsletter", permission: "settings:manage" },
+  { href: "/dashboard/admin/audit-log", icon: FileText, label: "Auditoria", permission: "audit:view" },
   { href: "/dashboard/admin/plugins", icon: PiPuzzlePiece, label: "Plugins", permission: "plugins:manage" },
   { href: "/dashboard/admin/team", icon: UsersRound, label: "Equipe", permission: "users:view" },
   { href: "/dashboard/admin/gateways", icon: CreditCard, label: "Gateways", permission: "gateways:manage" },

@@ -24,8 +24,8 @@ export function CustomersChart({ data }: CustomersChartProps) {
     <div className="bg-card/50 border border-white/5 rounded-md p-6">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h3 className="text-lg font-bold text-white tracking-tight">Clientes Recorrentes e Únicos</h3>
-          <p className="text-sm text-white/40">Fidelização e novos compradores por período.</p>
+          <h3 className="text-lg font-bold text-white tracking-tight">Visitantes únicos e recorrentes</h3>
+          <p className="text-sm text-white/40">Tráfego real da loja por período selecionado.</p>
         </div>
 
         <Popover>
@@ -51,7 +51,7 @@ export function CustomersChart({ data }: CustomersChartProps) {
                 />
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <Label htmlFor="unique" className="text-xs font-medium text-white/70 group-hover:text-white cursor-pointer select-none">Únicos</Label>
+                  <Label htmlFor="unique" className="text-xs font-medium text-white/70 group-hover:text-white cursor-pointer select-none">Visitantes únicos</Label>
                 </div>
               </div>
               <div
@@ -66,7 +66,7 @@ export function CustomersChart({ data }: CustomersChartProps) {
                 />
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-primary" />
-                  <Label htmlFor="returning" className="text-xs font-medium text-white/70 group-hover:text-white cursor-pointer select-none">Recorrentes</Label>
+                  <Label htmlFor="returning" className="text-xs font-medium text-white/70 group-hover:text-white cursor-pointer select-none">Visitantes recorrentes</Label>
                 </div>
               </div>
             </div>
@@ -90,7 +90,7 @@ export function CustomersChart({ data }: CustomersChartProps) {
               <Bar dataKey="unique" fill="#10b981" radius={[4, 4, 0, 0]} name="Clientes Únicos" animationDuration={1000} />
             )}
             {series.returning && (
-              <Bar dataKey="returning" fill="#A855F7" radius={[4, 4, 0, 0]} name="Recorrentes" animationDuration={1000} />
+              <Bar dataKey="returning" fill="#A855F7" radius={[4, 4, 0, 0]} name="Visitantes recorrentes" animationDuration={1000} />
             )}
           </BarChart>
         </ResponsiveContainer>

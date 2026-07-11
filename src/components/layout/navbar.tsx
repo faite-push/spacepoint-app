@@ -44,7 +44,7 @@ export function Navbar({ siteConfig }: { siteConfig?: PublicSiteConfig | null })
             alt="Space Point"
             width={160}
             height={50}
-            className="h-18 w-auto object-contain md:h-20"
+            className="h-18 w-auto object-contain md:h-20 select-none pointer-events-none"
             priority
           />
         </Link>
@@ -106,7 +106,7 @@ export function Navbar({ siteConfig }: { siteConfig?: PublicSiteConfig | null })
                     alt={user.name || "Avatar"}
                     width={28}
                     height={28}
-                    className="rounded-full object-cover"
+                    className="rounded-full object-cover select-none pointer-events-none"
                   />
                 ) : (
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20">

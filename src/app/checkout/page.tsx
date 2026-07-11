@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 
-import { ChevronRight, Minus, Plus, Trash2, Ticket, PlusCircle, User, Mail, Zap, ArrowRight, Loader2, ShoppingCart, AlertCircle, Check, Lock, X, CreditCard, Phone, Truck } from "lucide-react";
+import { ChevronRight, Minus, Plus, Trash2, Ticket, PlusCircle, User, Mail, Zap, ArrowRight, Loader2, ShoppingCart, AlertCircle, Check, Lock, X, CreditCard, Phone, Truck, FingerprintPattern } from "lucide-react";
 import { BsCreditCard2FrontFill } from "react-icons/bs";
 import { FaPix } from "react-icons/fa6";
 
@@ -17,15 +17,28 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { createOrder, fetchCheckoutPaymentOptions, formatPrice, fetchProducts } from "@/lib/shop-api";
 import { fetchSiteConfig } from "@/lib/site-api";
+import { API_URL, getApiHeaders } from "@/lib/api";
+import { captureCartEmail, clearAbandonedCart } from "@/lib/cart-api";
+import { getVisitorId } from "@/lib/visitor-id";
+import { trackStorefrontInitiateCheckout } from "@/lib/storefront-plugin-events";
 import { DEFAULT_CHECKOUT_SETTINGS, resolveEffectiveCheckoutFields, formatCpfInput, formatPhoneInput } from "@/lib/checkout-defaults";
+import {
+  clearSavedCheckoutData,
+  getSavedCheckoutData,
+  maskCheckoutValue,
+  saveCheckoutData,
+} from "@/lib/checkout-saved-data";
 import type { CheckoutFieldConfig } from "@/lib/admin-api";
 import { useAuth } from "@/context/auth-context";
 import { useCartStore, useCartHydrated } from "@/store/cart-store";
 import type { Product } from "@/types/shop";
 import { CheckoutAuthModal } from "@/components/checkout/checkout-auth-modal";
+import { Toggle } from "@/components/ui/toggle";
+import { Label } from "@/components/ui/label";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -43,6 +56,11 @@ export default function CheckoutPage() {
   const [deliveryOption, setDeliveryOption] = useState<"standard" | "express">("standard");
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [maskedFields, setMaskedFields] = useState<Record<string, boolean>>({});
+  const [hasLoadedSavedData, setHasLoadedSavedData] = useState(false);
+  const [saveForNextPurchase, setSaveForNextPurchase] = useState(false);
+  const [savePromptOpen, setSavePromptOpen] = useState(false);
+  const [savePromptShown, setSavePromptShown] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const hydrated = useCartHydrated();
@@ -63,6 +81,10 @@ export default function CheckoutPage() {
   const deliverySettings = checkoutSettings.deliveryOptions ?? DEFAULT_CHECKOUT_SETTINGS.deliveryOptions!;
   const deliveryFee = deliveryOption === "express" && deliverySettings.enabled ? deliverySettings.expressFeeCents : 0;
   const orderTotal = total() + deliveryFee;
+  const allFieldsFilled = enabledFields.every((field) => {
+    const value = String(fieldValues[field.key] || "").trim();
+    return !field.required || value.length > 0;
+  }) && Object.keys(fieldErrors).length === 0;
 
   const availableMethods = paymentOptionsQuery.data?.methods || ["PIX"];
   const pixAvailable = availableMethods.includes("PIX");
@@ -80,10 +102,18 @@ export default function CheckoutPage() {
 
     setAcceptedTerms(Boolean(checkoutSettings.termsCheckedByDefault));
 
+    const saved = getSavedCheckoutData(user?.id);
     const initialValues: Record<string, string> = {};
+    const initialMasked: Record<string, boolean> = {};
+
     for (const field of checkoutSettings.fields || []) {
       if (!field.enabled) continue;
-      if (field.prefillFromUser === "name" && checkoutSettings.prefillUserName && user?.name) {
+
+      const savedValue = saved?.values[field.key];
+      if (savedValue) {
+        initialValues[field.key] = savedValue;
+        initialMasked[field.key] = true;
+      } else if (field.prefillFromUser === "name" && checkoutSettings.prefillUserName && user?.name) {
         initialValues[field.key] = user.name;
       } else if (field.prefillFromUser === "email" && checkoutSettings.prefillUserEmail && user?.email) {
         initialValues[field.key] = user.email;
@@ -91,8 +121,19 @@ export default function CheckoutPage() {
         initialValues[field.key] = "";
       }
     }
+
     setFieldValues(initialValues);
-  }, [checkoutSettings, user?.name, user?.email]);
+    setMaskedFields(initialMasked);
+    setHasLoadedSavedData(!!saved);
+    setSaveForNextPurchase(!!saved);
+    setSavePromptShown(false);
+  }, [checkoutSettings, user?.id, user?.name, user?.email]);
+
+  useEffect(() => {
+    if (!allFieldsFilled || hasLoadedSavedData || savePromptShown) return;
+    setSavePromptOpen(true);
+    setSavePromptShown(true);
+  }, [allFieldsFilled, hasLoadedSavedData, savePromptShown]);
 
   useEffect(() => {
     async function loadRecs() {
@@ -107,6 +148,42 @@ export default function CheckoutPage() {
     }
     loadRecs();
   }, [items]);
+
+  useEffect(() => {
+    if (!hydrated || items.length === 0) return;
+
+    trackStorefrontInitiateCheckout({
+      value: orderTotal / 100,
+      contentIds: items.map((item) => item.productId),
+      numItems: items.reduce((sum, item) => sum + item.quantity, 0),
+    });
+  }, [hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const emailField = enabledFields.find((field) => field.key === "email" || field.type === "email");
+    if (!emailField) return;
+
+    const email = String(fieldValues[emailField.key] || "").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+
+    const visitorId = getVisitorId();
+    if (!visitorId) return;
+
+    const nameField = enabledFields.find((field) => field.key === "name" || field.prefillFromUser === "name");
+    const customerName = nameField ? String(fieldValues[nameField.key] || "").trim() : "";
+
+    const timer = setTimeout(() => {
+      captureCartEmail({
+        visitorId,
+        email,
+        customerName: customerName || undefined,
+      }).catch(() => {});
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [fieldValues, enabledFields, hydrated]);
 
   useEffect(() => {
     if (!pixAvailable && paymentMethod === "PIX" && cardAvailable) {
@@ -150,11 +227,52 @@ export default function CheckoutPage() {
     return Object.keys(errors).length === 0;
   }
 
+  function revealField(key: string) {
+    setMaskedFields((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  async function resolvePersistUserId() {
+    if (user?.id) return user.id;
+
+    try {
+      const res = await fetch(`${API_URL}/v2/api/request/me`, {
+        credentials: "include",
+        headers: getApiHeaders({ "Content-Type": "application/json" }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.id || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function persistCheckoutDataPreference(values: Record<string, string>) {
+    const persistUserId = await resolvePersistUserId();
+
+    if (saveForNextPurchase) {
+      saveCheckoutData(values, persistUserId);
+      return;
+    }
+    if (hasLoadedSavedData) {
+      clearSavedCheckoutData(persistUserId);
+    }
+  }
+
   async function createOrderAndRedirect(checkoutDataOverride?: Record<string, string>) {
     setIsSubmitting(true);
     setStatus("Processando seu pedido seguro...");
 
+    const checkoutData = checkoutDataOverride ?? fieldValues;
+
     try {
+      await persistCheckoutDataPreference(checkoutData);
+
       const order = await createOrder(
         items.map((item) => ({
           productId: item.productId,
@@ -164,11 +282,15 @@ export default function CheckoutPage() {
         {
           couponCode: appliedCoupon?.code ?? null,
           paymentMethod,
-          checkoutData: checkoutDataOverride ?? fieldValues,
+          checkoutData,
           deliveryOption,
         }
       );
       clear();
+      const visitorId = getVisitorId();
+      if (visitorId) {
+        clearAbandonedCart(visitorId).catch(() => {});
+      }
       window.location.href = `/checkout/payment/${order.id}?paymentMethod=${paymentMethod}`;
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Erro ao criar pedido");
@@ -234,7 +356,7 @@ export default function CheckoutPage() {
 
         <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
           <div className="space-y-4">
-            <div className="grid grid-cols-2 bg-white/[0.01] border border-primary/5 rounded-md p-6 sm:p-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 bg-white/[0.01] border border-primary/5 rounded-md p-6 sm:p-6 gap-4">
               <section className="">
                 <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
                   Formas de pagamento
@@ -337,8 +459,18 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            <section className="bg-white/[0.01] border border-primary/5 rounded-md p-6 sm:p-6">
+            <section className="bg-white/[0.01] border border-primary/5 rounded-md p-6 sm:p-6 select-none">
               <h2 className="text-xl font-bold mb-3">Informações de contato</h2>
+
+              {hasLoadedSavedData && (
+                <div className="mb-4 flex items-center gap-3 rounded-md bg-primary/10 px-4 py-3 text-sm text-primary">
+                  <Lock className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                  <p>
+                    Seus dados salvos foram carregados com proteção parcial. Clique em um campo para visualizar ou editar.
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 {enabledFields.map((field) => (
                   <CheckoutFieldInput
@@ -346,7 +478,10 @@ export default function CheckoutPage() {
                     field={field}
                     value={fieldValues[field.key] || ""}
                     error={fieldErrors[field.key]}
+                    masked={Boolean(maskedFields[field.key])}
+                    onReveal={() => revealField(field.key)}
                     onChange={(value) => {
+                      revealField(field.key);
                       setFieldValues((prev) => ({ ...prev, [field.key]: value }));
                       setFieldErrors((prev) => {
                         const next = { ...prev };
@@ -357,6 +492,26 @@ export default function CheckoutPage() {
                   />
                 ))}
               </div>
+
+              {allFieldsFilled && (
+                <div className="flex items-center bg-transparent border border-white/5 px-4 py-3 gap-2 mt-4 rounded-lg">
+                  <Toggle
+                    pressed={saveForNextPurchase}
+                    onPressedChange={setSaveForNextPurchase}
+                    variant="default"
+                    size="sm"
+                    className="h-8 w-8 rounded-sm"
+                  >
+                    {saveForNextPurchase ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                  </Toggle>
+                  <Label htmlFor="save-checkout-data" className="cursor-pointer select-none">
+                    <p className="text-sm font-medium text-white">Salvar dados para a próxima compra</p>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      Armazenados apenas neste dispositivo para agilizar seus próximos pedidos.
+                    </p>
+                  </Label>
+                </div>
+              )}
             </section>
 
             {recommendations.length > 0 && (
@@ -652,7 +807,13 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="hidden lg:block mt-8">
+              <div className="hidden lg:block space-y-2 mt-4">
+                {status && (
+                  <div className="bg-emerald-500/10 text-emerald-500 text-center text-sm font-bold py-3 rounded-md">
+                    {status}
+                  </div>
+                )}
+
                 <Button
                   onClick={submitOrder}
                   disabled={!acceptedTerms || items.length === 0 || isSubmitting || authLoading}
@@ -671,12 +832,6 @@ export default function CheckoutPage() {
                   )}
                 </Button>
               </div>
-
-              {status && (
-                <div className="mt-4 text-center text-sm font-bold text-emerald-500 bg-emerald-500/10 py-3 rounded-2xl border border-emerald-500/20">
-                  {status}
-                </div>
-              )}
             </div>
 
             <div className="flex items-center space-x-3 px-2">
@@ -703,14 +858,54 @@ export default function CheckoutPage() {
         onSuccess={handleAuthSuccess}
         initialEmail={fieldValues.email || fieldValues["email"] || ""}
       />
+
+      <Dialog open={savePromptOpen} onOpenChange={setSavePromptOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Salvar dados para a próxima compra?</DialogTitle>
+            <DialogDescription>
+              Podemos guardar suas informações neste dispositivo para preencher o checkout automaticamente da próxima vez.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex flex-row gap-2">
+            <Button
+              variant="ghost"
+              size="lg"
+              className="flex-1"
+              onClick={() => {
+                setSaveForNextPurchase(false);
+                setSavePromptOpen(false);
+              }}
+            >
+              Agora não
+            </Button>
+            <Button
+              variant="default"
+              size="lg"
+              className="flex-1"
+              onClick={() => {
+                setSaveForNextPurchase(true);
+                setSavePromptOpen(false);
+              }}
+            >
+              Sim, salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function CheckoutFieldInput({ field, value, error, onChange, }: { field: CheckoutFieldConfig; value: string; error?: string; onChange: (value: string) => void; }) {
-  const Icon = field.type === "email" ? Mail : field.key === "phone" || field.type === "tel" ? Phone : User;
+function CheckoutFieldInput({ field, value, error, onChange, masked = false, onReveal, }: { field: CheckoutFieldConfig; value: string; error?: string; onChange: (value: string) => void; masked?: boolean; onReveal?: () => void; }) {
+  const iconMap: Record<string, ComponentType<any>> = { email: Mail, phone: Phone, tel: Phone, cpf: FingerprintPattern, };
+  const Icon = iconMap[field.type] || iconMap[field.key] || User;
+  const displayValue = masked ? maskCheckoutValue(field.key, field.type, value) : value;
 
   function handleChange(raw: string) {
+    if (masked) onReveal?.();
+
     if (field.key === "cpf" || field.type === "cpf") {
       onChange(formatCpfInput(raw));
       return;
@@ -728,12 +923,14 @@ function CheckoutFieldInput({ field, value, error, onChange, }: { field: Checkou
       <div className="relative">
         <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-600" />
         <Input
+          id={field.key}
           type={field.type === "cpf" ? "text" : field.type}
           inputMode={field.type === "cpf" || field.type === "tel" ? "numeric" : undefined}
           placeholder={field.placeholder || field.label}
-          value={value}
+          value={displayValue}
+          onFocus={() => masked && onReveal?.()}
           onChange={(e) => handleChange(e.target.value)}
-          className={`h-14 pl-12 bg-transparent border-white/5 rounded-lg focus:border-primary/30 focus:bg-white/1 text-white ${error ? "border-red-500/50" : ""}`}
+          className={`h-14 pl-12 bg-transparent border-white/5 rounded-lg focus:border-primary/30 focus:bg-white/1 text-white ${error ? "border-red-500/50" : ""} ${masked ? "text-white/60 tracking-wide" : ""}`}
         />
       </div>
 

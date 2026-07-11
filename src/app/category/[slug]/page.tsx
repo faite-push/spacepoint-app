@@ -1,10 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon, ChevronRight } from "lucide-react";
+import { Suspense } from "react";
+import { ArrowLeftIcon, Loader2 } from "lucide-react";
 
-import { ProductCard } from "@/components/shop/product-card";
 import { SubcategoryCarousel } from "@/components/shop/storefront/subcategory-carousel";
+import { CategoryProductListing } from "@/components/shop/category-product-listing";
 import type { Metadata } from "next";
 import { fetchCategoryBySlug } from "@/lib/category-api";
 import { fetchPageSeo } from "@/lib/site-api";
@@ -32,17 +33,15 @@ export async function generateMetadata({ params, }: { params: Promise<{ slug: st
   });
 };
 
-export default async function CategoryPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function CategoryPage({ params, }: { params: Promise<{ slug: string }>; }) {
   const { slug } = await params;
   const category = await fetchCategoryBySlug(slug);
   if (!category) notFound();
 
+  const hasSubcategories = category.subcategories.length > 0;
+
   return (
-    <div className="mx-auto max-w-[1540px] space-y-6 py-6 md:py-12 -mt-32 relative">
+    <div className="left-1/2 -translate-x-1/2 min-w-[1540px] space-y-6 py-6 md:py-12 -mt-32 relative">
       <div className="absolute top-0 right-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
       <div className="absolute bottom-0 left-[-10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
 
@@ -94,35 +93,32 @@ export default async function CategoryPage({
         </header>
       )}
 
-      {category.subcategories.length > 0 && (
+      {hasSubcategories && (
         <section className="space-y-4">
           <SubcategoryCarousel subcategories={category.subcategories} />
         </section>
       )}
 
-      {category.products.length > 0 ? (
-        <section className="space-y-4">
-          {category.subcategories.length > 0 && (
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
-              Produtos nesta categoria
-            </h2>
-          )}
-          <div className="grid gap-2 md:gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {category.products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
-      ) : (
-        category.subcategories.length === 0 && (
-          <div className="rounded-md border border border-white/5 bg-transparent backdrop-blur-lg py-32 text-center">
-            <p className="text-zinc-400">Nenhum produto nesta categoria no momento.</p>
-            <Link href="/" className="mt-4 inline-block text-sm text-[#a855f7] hover:underline">
-              Ver todos os produtos
-            </Link>
-          </div>
-        )
-      )}
+      <section className="space-y-4">
+        {hasSubcategories && (
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
+            Produtos nesta categoria
+          </h2>
+        )}
+
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+          }
+        >
+          <CategoryProductListing
+            categorySlug={slug}
+            showIncludeSubcategories={hasSubcategories}
+          />
+        </Suspense>
+      </section>
     </div>
   );
 };

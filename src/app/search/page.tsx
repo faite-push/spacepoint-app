@@ -1,88 +1,57 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { fetchProducts } from "@/lib/shop-api";
-import { Product } from "@/types/shop";
-import { ProductCard } from "@/components/shop/product-card";
 import { Loader2, Search } from "lucide-react";
+import { ProductListing } from "@/components/shop/product-listing";
 
 function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const getResults = async () => {
-      if (!query) {
-        setProducts([]);
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const results = await fetchProducts({ search: query });
-        setProducts(results);
-      } catch (error) {
-        console.error("Error fetching search results:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getResults();
-  }, [query]);
+  if (!query.trim()) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-12">
+        <div className="rounded-md border border-dashed border-white/10 bg-white/[0.02] py-24 text-center">
+          <Search className="mx-auto mb-4 h-12 w-12 text-white/20" />
+          <h1 className="text-2xl font-bold text-white">Buscar produtos</h1>
+          <p className="mt-2 text-white/50">Digite um termo na barra de pesquisa para começar.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12">
+    <div className="left-1/2 -translate-x-1/2 min-w-[1540px] space-y-6 py-6 md:py-12 relative">
       <div className="mb-8 flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-          <Search className="h-8 w-8 text-primary" />
-          Resultados para "{query}"
+        <h1 className="flex items-center text-4xl font-bold text-muted-foreground gap-2">
+          Resultado da busca para <span className="text-white">{query}</span>
         </h1>
-        <p className="text-white/60">
-          Encontramos {products.length} {products.length === 1 ? "produto" : "produtos"} para sua busca.
-        </p>
       </div>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-white/40 text-lg animate-pulse">Buscando os melhores jogos...</p>
-        </div>
-      ) : products.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="bg-white/5 p-6 rounded-full mb-6">
-                <Search className="h-12 w-12 text-white/20" />
-            </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Poxa, não encontramos nada!</h2>
-          <p className="text-white/50 max-w-md">
-            Não encontramos nenhum resultado para sua pesquisa. Tente usar palavras-chave diferentes ou verifique a ortografia.
-          </p>
-        </div>
-      )}
+      <ProductListing
+        searchQueryKey="q"
+        emptyTitle="Poxa, não encontramos nada!"
+        emptyDescription="Não encontramos nenhum resultado para sua pesquisa. Tente usar palavras-chave diferentes ou ajuste os filtros."
+      />
     </div>
   );
-}
+};
 
 export default function SearchPage() {
   return (
-    <main className="min-h-screen bg-[#0F0A1E]">
-      <Suspense fallback={
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      }>
+    <main className="left-1/2 -translate-x-1/2 min-w-[1540px] space-y-6 py-6 md:py-12 -mt-42 relative bg-transparent">
+      <div className="absolute top-0 right-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+      <div className="absolute bottom-0 left-[-10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          </div>
+        }
+      >
         <SearchResults />
       </Suspense>
     </main>
   );
-}
+};

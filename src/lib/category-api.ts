@@ -10,6 +10,27 @@ export type PublicSubcategory = {
   productCount: number;
 };
 
+export type PublicCategoryTreeNode = {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl?: string | null;
+  subcategories?: PublicCategoryTreeNode[];
+};
+
+export async function fetchPublicCategories(): Promise<PublicCategoryTreeNode[]> {
+  try {
+    const res = await fetch(`${API_URL}/v2/api/categories`, {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { categories?: PublicCategoryTreeNode[] };
+    return data.categories ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export type PublicCategoryPage = {
   id: string;
   name: string;

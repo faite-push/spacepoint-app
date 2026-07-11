@@ -1,11 +1,12 @@
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, XCircle, Truck } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Truck, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_MAP: Record<string, { label: string; className: string; icon: typeof Clock }> = {
   PENDING: { label: "Aguardando pagamento", className: "bg-amber-500/10 text-amber-400", icon: Clock },
   PAID: { label: "Pago", className: "bg-emerald-500/10 text-emerald-400", icon: CheckCircle2 },
   DELIVERED: { label: "Entregue", className: "bg-blue-500/10 text-blue-400", icon: Truck },
+  REFUNDED: { label: "Reembolsado", className: "bg-orange-500/10 text-orange-400", icon: Undo2 },
   CANCELLED: { label: "Cancelado", className: "bg-red-500/10 text-red-400", icon: XCircle },
 };
 

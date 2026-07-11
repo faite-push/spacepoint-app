@@ -6,6 +6,7 @@ import { ArrowUpRight } from "lucide-react";
 import * as Fa from "react-icons/fa";
 import Noise from "@/components/ui/noise";
 import type { ResolvedFooterConfig } from "@/lib/footer-config";
+import { NewsletterSubscribeForm } from "@/components/shared/newsletter-subscribe-form";
 
 function LinkColumn({ title, items }: { title: string; items: ResolvedFooterConfig["categoryLinks"] }) {
   if (!items.length) return null;
@@ -65,7 +66,27 @@ export function FooterContent({ footer, isHome = false, compact = false }: { foo
           </div>
         )}
 
-        <div className="relative z-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1.2fr] lg:gap-10">
+        <div className="relative z-10 grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:gap-10">
+          <div className="space-y-2 max-w-xl">
+            <h3 className="text-base font-semibold">{footer.aboutTitle}</h3>
+            <p className="text-sm leading-relaxed text-white/90">{footer.aboutText}</p>
+          </div>
+
+          {footer.newsletterEnabled && (
+            <div className="lg:justify-self-end w-full lg:max-w-md">
+              <NewsletterSubscribeForm
+                source="footer"
+                placeholder={footer.newsletterPlaceholder}
+                buttonLabel={footer.newsletterButtonLabel}
+                layout="inline"
+                buttonClassName="shrink-0 rounded-full bg-white/95 px-4 py-2 text-sm font-semibold transition-colors hover:bg-white sm:px-5 disabled:opacity-60"
+                buttonStyle={{ color: footer.buttonTextColor }}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="relative z-10 mt-8 grid gap-8 sm:grid-cols-2 lg:mt-12 lg:grid-cols-[1fr_1fr_1fr] lg:gap-10">
           <div className="flex items-start">
             <Link href={footer.logoHref} className="block">
               <Image
@@ -81,11 +102,6 @@ export function FooterContent({ footer, isHome = false, compact = false }: { foo
 
           <LinkColumn title={footer.categoryColumnTitle} items={footer.categoryLinks} />
           <LinkColumn title={footer.supportColumnTitle} items={footer.supportLinks} />
-          
-          <div className="space-y-2 sm:col-span-2 lg:col-span-1">
-            <h3 className="text-sm font-semibold">{footer.aboutTitle}</h3>
-            <p className="text-sm leading-relaxed text-white/90">{footer.aboutText}</p>
-          </div>
         </div>
 
         <div className="relative z-10 mt-8 h-px w-full bg-white/15 lg:mt-12" />
