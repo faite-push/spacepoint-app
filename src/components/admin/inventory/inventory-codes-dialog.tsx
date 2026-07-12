@@ -142,7 +142,7 @@ export function InventoryCodesDialog({ open, onOpenChange, variant }: Props) {
                       {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                     {code.status === "AVAILABLE" ? (
-                      <Can permission="products:edit">
+                      <Can I="products:edit">
                         <Button
                           type="button"
                           size="icon"
