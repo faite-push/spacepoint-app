@@ -80,7 +80,7 @@ function getProductOfferPrice(product: Product) {
   return product.price / 100;
 }
 
-function stripRichText(value: unknown) {
+function stripRichText(value: unknown): string {
   if (typeof value === "string") return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   if (Array.isArray(value)) return value.map(stripRichText).join(" ").trim();
   if (value && typeof value === "object") {
