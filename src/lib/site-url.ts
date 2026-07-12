@@ -1,13 +1,30 @@
 import { resolveMediaUrl } from "@/lib/media";
 
+function normalizeSiteUrl(url: string) {
+  return url.replace(/\/$/, "");
+}
+
 export function getSiteUrl() {
-  const url =
+  const fromEnv =
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.SITE_URL ||
-    process.env.FRONTEND_URL ||
-    "http://localhost:3000";
+    process.env.FRONTEND_URL;
 
-  return url.replace(/\/$/, "");
+  if (fromEnv?.trim()) {
+    return normalizeSiteUrl(fromEnv.trim());
+  }
+
+  // Fallback em deploys Vercel quando a env da loja não foi configurada.
+  const vercelProduction = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (vercelProduction?.trim()) {
+    return normalizeSiteUrl(`https://${vercelProduction.trim()}`);
+  }
+
+  if (process.env.VERCEL_URL?.trim()) {
+    return normalizeSiteUrl(`https://${process.env.VERCEL_URL.trim()}`);
+  }
+
+  return "http://localhost:3000";
 }
 
 export function toAbsoluteUrl(path?: string | null, siteUrl = getSiteUrl()) {
