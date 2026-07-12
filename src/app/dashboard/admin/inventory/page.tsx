@@ -3,50 +3,23 @@
 import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import {
-  Search,
-  Package,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  ArrowLeft,
-  Loader2,
-  Save,
-  Upload,
-  Eye,
-  Edit2,
-  Layers,
-} from "lucide-react";
 import { toast } from "sonner";
+
+import { Search, Package, AlertTriangle, CheckCircle2, XCircle, ArrowLeft, Loader2, Save, Upload, Eye, Edit2, Layers, Check, } from "lucide-react";
+import { RiAlarmWarningFill } from "react-icons/ri";
+import { TbListDetails, TbListCheck } from "react-icons/tb";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  inventoryApi,
-  type DeliveryType,
-  type InventoryStockStatus,
-  type InventoryVariantItem,
-} from "@/lib/admin-api";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { inventoryApi, type DeliveryType, type InventoryStockStatus, type InventoryVariantItem, } from "@/lib/admin-api";
 import { InventoryBulkUploadDialog } from "@/components/admin/inventory/inventory-bulk-upload-dialog";
 import { InventoryCodesDialog } from "@/components/admin/inventory/inventory-codes-dialog";
 import { Can } from "@/providers/PermissionProvider";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 const DELIVERY_LABELS: Record<DeliveryType, string> = {
   automatic_lines: "Linhas automáticas",
@@ -149,67 +122,75 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="space-y-6 pb-10 animate-in fade-in duration-500">
+    <div className="relative space-y-6 pb-10 animate-in fade-in duration-500 select-none">
+      <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+
+      <div className="absolute bottom-0 right-[10%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[10%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
+
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link href="/dashboard/admin" className="text-zinc-500 hover:text-white transition-colors">
+        <div className="flex flex-row items-center gap-2">
+          <Link href="/dashboard/admin/products" className="text-zinc-500 hover:text-white transition-colors">
+            <Button variant="ghost" size="icon-lg">
               <ArrowLeft size={16} />
-            </Link>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Inventário por Variante</h1>
-          </div>
-          <p className="text-sm text-zinc-500">
-            Controle códigos, estoque disponível e alertas por variante de cada produto.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-white/5 bg-[#0A0A0A] p-5 flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-            <AlertTriangle className="text-amber-500" size={24} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Estoque baixo</p>
-            <p className="text-xl font-black text-white">{summary?.lowStock ?? 0}</p>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-white/5 bg-[#0A0A0A] p-5 flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-            <XCircle className="text-red-500" size={24} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Sem estoque</p>
-            <p className="text-xl font-black text-white">{summary?.outOfStock ?? 0}</p>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-white/5 bg-[#0A0A0A] p-5 flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-            <CheckCircle2 className="text-emerald-500" size={24} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Em dia</p>
-            <p className="text-xl font-black text-white">{summary?.inStock ?? 0}</p>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-white/5 bg-[#0A0A0A] p-5 flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-            <Layers className="text-purple-400" size={24} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Variantes</p>
-            <p className="text-xl font-black text-white">{summary?.totalVariants ?? 0}</p>
+            </Button>
+          </Link>
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-bold text-white">Gerenciador de estoque</h1>
+            <p className="text-sm text-muted-foreground">
+              Controle códigos, estoque disponível e alertas por variante de cada produto.
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-3xl border border-white/5 bg-[#0A0A0A] p-4 md:p-6 space-y-6">
-        <div className="flex flex-col lg:flex-row gap-4 justify-between">
-          <div className="relative w-full lg:w-96">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="flex items-center gap-3 relative group select-none overflow-hidden rounded-md border border-white/3 bg-background/50 px-4 py-4 md:px-6 md:py-5 transition-all duration-300">
+          <div className="flex bg-white/5 rounded-md h-10 w-10 items-center justify-center text-white">
+            <RiAlarmWarningFill className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-lg md:text-xl font-medium text-white tracking-tight">{summary?.lowStock ?? 0}</p>
+            <h3 className="text-xs md:text-sm text-white/60">Estoque baixo</h3>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 relative group select-none overflow-hidden rounded-md border border-white/3 bg-background/50 px-4 py-4 md:px-6 md:py-5 transition-all duration-300">
+          <div className="flex bg-white/5 rounded-md h-10 w-10 items-center justify-center text-white">
+            <TbListDetails className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-lg md:text-xl font-medium text-white tracking-tight">{summary?.outOfStock ?? 0}</p>
+            <h3 className="text-xs md:text-sm text-white/60">Sem estoque</h3>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 relative group select-none overflow-hidden rounded-md border border-white/3 bg-background/50 px-4 py-4 md:px-6 md:py-5 transition-all duration-300">
+          <div className="flex bg-white/5 rounded-md h-10 w-10 items-center justify-center text-white">
+            <TbListCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-lg md:text-xl font-medium text-white tracking-tight">{summary?.inStock ?? 0}</p>
+            <h3 className="text-xs md:text-sm text-white/60">Em dia</h3>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 relative group select-none overflow-hidden rounded-md border border-white/3 bg-background/50 px-4 py-4 md:px-6 md:py-5 transition-all duration-300">
+          <div className="flex bg-white/5 rounded-md h-10 w-10 items-center justify-center text-white">
+            <Layers className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-lg md:text-xl font-medium text-white tracking-tight">{summary?.totalVariants ?? 0}</p>
+            <h3 className="text-xs md:text-sm text-white/60">Variantes</h3>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-md border border-white/5 bg-transparent">
+        <div className="flex flex-col lg:flex-row justify-between px-4 py-4">
+          <div className="relative w-full lg:w-112">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
             <Input
               placeholder="Buscar produto, variante ou SKU..."
-              className="bg-[#0D0D0D] border-white/5 pl-10 h-11"
+              className="pl-8"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -217,6 +198,7 @@ export default function InventoryPage() {
               }}
             />
           </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <Select
               value={statusFilter}
@@ -225,7 +207,7 @@ export default function InventoryPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-[170px] bg-[#0D0D0D] border-white/10 h-11">
+              <SelectTrigger className="w-[170px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -242,7 +224,7 @@ export default function InventoryPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-[190px] bg-[#0D0D0D] border-white/10 h-11">
+              <SelectTrigger className="w-[190px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -258,210 +240,210 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/5 overflow-hidden">
-          <Table>
-            <TableHeader className="bg-white/[0.02]">
-              <TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-600 pl-6 py-4">
-                  Variante
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-600">
-                  Tipo
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-600">
-                  Status
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">
-                  Disponível
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">
-                  Reservado
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">
-                  Entregue
-                </TableHead>
-                <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-zinc-600 pr-6">
-                  Ações
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={i} className="border-white/5 animate-pulse">
-                    <TableCell colSpan={7} className="h-14 bg-white/[0.01]" />
-                  </TableRow>
-                ))
-              ) : grouped.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-40 text-center text-zinc-500 italic">
-                    Nenhuma variante encontrada.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                grouped.map((group) => (
-                  <Fragment key={group.productId}>
-                    <TableRow className="border-white/5 bg-white/[0.02]">
-                      <TableCell colSpan={7} className="py-3 pl-6">
-                        <div className="flex items-center gap-3">
-                          <Package className="h-4 w-4 text-purple-400" />
-                          <span className="text-sm font-bold text-white">{group.productName}</span>
-                          <Badge variant="outline" className="text-[10px] border-white/10 text-zinc-500">
-                            {group.items.length} variante(s)
-                          </Badge>
-                          <Link
-                            href={`/dashboard/admin/products/${group.productId}/variants`}
-                            className="text-[10px] text-purple-400 hover:text-purple-300 uppercase font-bold tracking-wider"
-                          >
-                            Gerenciar variantes
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    {group.items.map((variant) => {
-                      const status = getStockStatusMeta(variant.stockStatus);
-                      const StatusIcon = status.icon;
-                      const isEditing = editingId === variant.id;
-                      const isAutomatic = supportsBulkUpload(variant.deliveryType);
+        <Separator className="bg-white/5" />
 
-                      return (
-                        <TableRow
-                          key={variant.id}
-                          className="border-white/5 hover:bg-white/[0.01] transition-colors group"
+        <Table className="w-full text-left border-collapse px-4 py-4">
+          <TableHeader className="bg-card/2 sticky top-0 z-20">
+            <TableRow className="border-white/5 hover:bg-transparent">
+              <TableHead className="text-sm font-medium text-muted-foreground pl-6 py-4">
+                Variante
+              </TableHead>
+              <TableHead className="text-sm font-medium text-muted-foreground">
+                Tipo
+              </TableHead>
+              <TableHead className="text-sm font-medium text-muted-foreground">
+                Status
+              </TableHead>
+              <TableHead className="text-sm font-medium text-muted-foreground text-center">
+                Disponível
+              </TableHead>
+              <TableHead className="text-sm font-medium text-muted-foreground text-center">
+                Reservado
+              </TableHead>
+              <TableHead className="text-sm font-medium text-muted-foreground text-center">
+                Entregue
+              </TableHead>
+              <TableHead className="text-right text-sm font-medium text-muted-foreground pr-6">
+                Ações
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <TableRow key={i} className="border-white/5 animate-pulse">
+                  <TableCell colSpan={7} className="h-14 bg-white/[0.01]" />
+                </TableRow>
+              ))
+            ) : grouped.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-40 text-center text-zinc-500 italic">
+                  Nenhuma variante encontrada.
+                </TableCell>
+              </TableRow>
+            ) : (
+              grouped.map((group) => (
+                <Fragment key={group.productId}>
+                  <TableRow className="border-white/5 bg-white/[0.02]">
+                    <TableCell colSpan={7} className="py-3 pl-6">
+                      <div className="flex items-center justify-between gap-3">
+                        <Link href={`/dashboard/admin/products/${group.productId}/edit`} className="text-sm font-bold text-white">
+                          {group.productName}
+                        </Link>
+
+                        <Link
+                          href={`/dashboard/admin/products/${group.productId}/variants`}
+                          className="bg-primary p-2 py-1.5 rounded-sm text-xs font-medium text-black"
                         >
-                          <TableCell className="pl-10 py-4">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-white">{variant.name}</span>
-                              <span className="text-[10px] text-zinc-600 uppercase font-bold tracking-tighter">
-                                {variant.sku ? `SKU: ${variant.sku}` : `ID: #${variant.id}`}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-[10px] bg-white/5 border-white/10 text-zinc-400">
-                              {DELIVERY_LABELS[variant.deliveryType]}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div
-                              className={cn(
-                                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider",
-                                status.bg,
-                                status.color
-                              )}
-                            >
-                              <StatusIcon size={12} />
-                              {status.label}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {isEditing && !isAutomatic ? (
-                              <div className="flex items-center justify-center gap-2">
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  value={editValue}
-                                  onChange={(e) => setEditValue(parseInt(e.target.value, 10) || 0)}
-                                  className="h-9 w-20 bg-[#0D0D0D] border-purple-500/50 text-white font-bold text-center"
-                                />
-                                <Button
-                                  size="icon"
-                                  className="h-9 w-9 bg-emerald-500 hover:bg-emerald-600 text-white"
-                                  onClick={() => updateMutation.mutate({ id: variant.id, stock: editValue })}
-                                  disabled={updateMutation.isPending}
-                                >
-                                  {updateMutation.isPending ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                  ) : (
-                                    <Save size={14} />
-                                  )}
-                                </Button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (!isAutomatic) {
-                                    setEditingId(variant.id);
-                                    setEditValue(variant.available);
-                                  }
-                                }}
-                                className={cn(
-                                  "text-sm font-black text-white",
-                                  !isAutomatic && "hover:text-purple-400 transition-colors"
-                                )}
-                              >
-                                {variant.available}
-                                {!isAutomatic ? (
-                                  <Edit2
-                                    size={10}
-                                    className="inline ml-1 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  />
-                                ) : null}
-                              </button>
+                          Gerenciar variantes
+                        </Link>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+
+                  {group.items.map((variant) => {
+                    const status = getStockStatusMeta(variant.stockStatus);
+                    const StatusIcon = status.icon;
+                    const isEditing = editingId === variant.id;
+                    const isAutomatic = supportsBulkUpload(variant.deliveryType);
+
+                    return (
+                      <TableRow
+                        key={variant.id}
+                        className="border-white/5 hover:bg-white/[0.01] transition-colors group"
+                      >
+                        <TableCell className="pl-10 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-white">{variant.name}</span>
+                            <span className="bg-white/5 max-w-fit rounded py-1 px-2 mt-0.5 text-xs text-muted-foreground">
+                              {variant.sku ? `SKU: ${variant.sku}` : `ID: #${variant.id}`}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs bg-white/5 rounded lowercase border-none text-muted-foreground">
+                            {DELIVERY_LABELS[variant.deliveryType]}
+                          </Badge>
+                        </TableCell>
+
+                        <TableCell>
+                          <div
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded border-none text-xs font-medium lowercase",
+                              status.bg,
+                              status.color
                             )}
-                          </TableCell>
-                          <TableCell className="text-center text-sm text-amber-400 font-semibold">
+                          >
+                            {status.label}
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          {isEditing && !isAutomatic ? (
+                            <div className="flex items-center justify-center">
+                              <Input
+                                type="number"
+                                min={0}
+                                value={editValue}
+                                onChange={(e) => setEditValue(parseInt(e.target.value, 10) || 0)}
+                                className="h-9 w-15 border-none bg-transparent text-center"
+                              />
+                              <Button
+                                size="icon"
+                                className="h-9 w-9 bg-transparent text-white"
+                                onClick={() => updateMutation.mutate({ id: variant.id, stock: editValue })}
+                                disabled={updateMutation.isPending}
+                              >
+                                {updateMutation.isPending ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <Check className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!isAutomatic) {
+                                  setEditingId(variant.id);
+                                  setEditValue(variant.available);
+                                }
+                              }}
+                              className={cn("text-sm font-medium text-white cursor-pointer")}
+                            >
+                              {variant.available}
+                            </button>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center max-w-fit bg-amber-500/10 text-amber-500 rounded py-1 px-6 gap-1 text-sm font-medium">
                             {variant.reserved}
-                          </TableCell>
-                          <TableCell className="text-center text-sm text-blue-400 font-semibold">
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                        <div className="flex items-center justify-center max-w-fit bg-blue-500/10 text-blue-500 rounded py-1 px-6 gap-1 text-sm font-medium">
                             {variant.delivered}
-                          </TableCell>
-                          <TableCell className="text-right pr-6">
-                            <div className="flex items-center justify-end gap-1">
-                              {isAutomatic ? (
-                                <>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-right pr-6">
+                          <div className="flex items-center justify-end gap-1">
+                            {isAutomatic ? (
+                              <>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 gap-1 text-xs"
+                                  onClick={() => setCodesVariant(variant)}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  Códigos
+                                </Button>
+                                <Can I="products:edit">
                                   <Button
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    className="h-8 gap-1 text-xs"
-                                    onClick={() => setCodesVariant(variant)}
+                                    className="h-8 gap-1 text-xs text-purple-400 hover:text-purple-300"
+                                    onClick={() => setUploadVariant(variant)}
                                   >
-                                    <Eye className="h-3.5 w-3.5" />
-                                    Códigos
-                                  </Button>
-                                  <Can permission="products:edit">
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-8 gap-1 text-xs text-purple-400 hover:text-purple-300"
-                                      onClick={() => setUploadVariant(variant)}
-                                    >
-                                      <Upload className="h-3.5 w-3.5" />
-                                      Adicionar
-                                    </Button>
-                                  </Can>
-                                </>
-                              ) : (
-                                <Can permission="products:edit">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 gap-1 text-xs"
-                                    onClick={() => {
-                                      setEditingId(variant.id);
-                                      setEditValue(variant.available);
-                                    }}
-                                  >
-                                    <Edit2 className="h-3.5 w-3.5" />
-                                    Editar
+                                    <Upload className="h-3.5 w-3.5" />
+                                    Adicionar
                                   </Button>
                                 </Can>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </Fragment>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                              </>
+                            ) : (
+                              <Can I="products:edit">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 gap-1 text-xs"
+                                  onClick={() => {
+                                    setEditingId(variant.id);
+                                    setEditValue(variant.available);
+                                  }}
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                  Editar
+                                </Button>
+                              </Can>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </Fragment>
+              ))
+            )}
+          </TableBody>
+        </Table>
 
         {pagination && pagination.totalPages > 1 ? (
           <div className="flex items-center justify-between">
@@ -502,4 +484,4 @@ export default function InventoryPage() {
       />
     </div>
   );
-}
+};

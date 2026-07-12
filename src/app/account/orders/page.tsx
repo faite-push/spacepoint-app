@@ -51,7 +51,7 @@ export default function OrdersPage() {
 
       {reviewCount > 0 && (
         <div className="flex items-center gap-2 rounded-md bg-yellow-500/10 px-4 py-3 text-sm text-yellow-500">
-          <Star className="h-4 w-4 shrink-0" />
+          <Star className="h-4 w-4 shrink-0 fill-current" />
           <p>
             Você tem {reviewCount} {reviewCount === 1 ? "pedido aguardando avaliação" : "pedidos aguardando avaliação"}.
           </p>

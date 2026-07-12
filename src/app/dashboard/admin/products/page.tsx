@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Search, Loader2, Package, ChevronRight, ChevronDown, Check, Filter, PlusCircle, Copy, Layers, MonitorUp, MoreVertical, Move, ListChecks, Star, Tags } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult, DraggableProvided, DraggableStateSnapshot, DragStart } from "@hello-pangea/dnd";
 import { TbGridDots } from "react-icons/tb";
+import { MdOutlineInventory2 } from "react-icons/md";
 import { toast } from "sonner";
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
@@ -908,6 +909,17 @@ export default function UnifiedInventoryPage() {
             </div>
           )}
         </div>
+
+        <Can I="products:edit">
+          <Link href="/dashboard/admin/inventory">
+            <Button
+              variant="outline"
+              className="px-4 py-5 gap-2 shrink-0"
+            >
+              <MdOutlineInventory2 className="h-4 w-4" />Gerenciar estoque
+            </Button>
+          </Link>
+        </Can>
 
         <Can I="products:edit">
           <DropdownMenu>

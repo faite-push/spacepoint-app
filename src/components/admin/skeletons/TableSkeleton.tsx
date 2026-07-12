@@ -19,6 +19,7 @@ export function TableSkeleton({ rows = 5 }: TableSkeletonProps) {
         <Skeleton className="h-10 flex-1 max-w-md rounded-md" />
         <Skeleton className="h-10 w-24 rounded-md" />
         <Skeleton className="h-10 w-24 rounded-md" />
+        <Skeleton className="h-10 w-24 rounded-md" />
       </div>
 
       <div className="space-y-3">
