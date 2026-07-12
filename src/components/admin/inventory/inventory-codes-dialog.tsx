@@ -27,9 +27,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  AVAILABLE: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  RESERVED: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  DELIVERED: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  AVAILABLE: "bg-emerald-500/10 text-emerald-500",
+  RESERVED: "bg-amber-500/10 text-amber-500",
+  DELIVERED: "bg-blue-500/10 text-blue-500",
 };
 
 export function InventoryCodesDialog({ open, onOpenChange, variant }: Props) {
@@ -66,19 +66,17 @@ export function InventoryCodesDialog({ open, onOpenChange, variant }: Props) {
       setRevealed({});
     }
     onOpenChange(next);
-  }
+  };
 
   const codes = data?.codes ?? [];
   const pagination = data?.pagination;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl h-[45vh]">
         <DialogHeader>
           <DialogTitle>Códigos da variante</DialogTitle>
-          <DialogDescription>
-            {variant ? `${variant.productName} — ${variant.name}` : "Visualize e gerencie os códigos."}
-          </DialogDescription>
+          <DialogDescription>{variant ? `${variant.productName} — ${variant.name}` : "Visualize e gerencie os códigos."}</DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center gap-3">
@@ -89,7 +87,7 @@ export function InventoryCodesDialog({ open, onOpenChange, variant }: Props) {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-[180px] bg-[#0D0D0D] border-white/10">
+            <SelectTrigger className="w-[200px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -106,7 +104,7 @@ export function InventoryCodesDialog({ open, onOpenChange, variant }: Props) {
           ) : null}
         </div>
 
-        <div className="flex-1 overflow-y-auto rounded-xl border border-white/5 bg-[#0A0A0A]">
+        <div className="flex-1 overflow-y-auto rounded-md border border-white/5 bg-transparent">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -123,13 +121,15 @@ export function InventoryCodesDialog({ open, onOpenChange, variant }: Props) {
                   <div key={code.id} className="flex items-center gap-3 px-4 py-3">
                     <Badge
                       variant="outline"
-                      className={cn("text-[10px] uppercase", STATUS_COLORS[code.status] || "")}
+                      className={cn("text-xs rounded border-none lowercase", STATUS_COLORS[code.status] || "")}
                     >
                       {STATUS_LABELS[code.status] || code.status}
                     </Badge>
+
                     <code className="flex-1 text-sm font-mono text-white truncate">
                       {isRevealed ? code.code : code.maskedCode}
                     </code>
+
                     <Button
                       type="button"
                       size="icon"
@@ -141,6 +141,7 @@ export function InventoryCodesDialog({ open, onOpenChange, variant }: Props) {
                     >
                       {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
+
                     {code.status === "AVAILABLE" ? (
                       <Can I="products:edit">
                         <Button
@@ -190,4 +191,4 @@ export function InventoryCodesDialog({ open, onOpenChange, variant }: Props) {
       </DialogContent>
     </Dialog>
   );
-}
+};

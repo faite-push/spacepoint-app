@@ -914,7 +914,7 @@ export default function UnifiedInventoryPage() {
           <Link href="/dashboard/admin/inventory">
             <Button
               variant="outline"
-              className="px-4 py-5 gap-2 shrink-0"
+              className="h-10 px-4"
             >
               <MdOutlineInventory2 className="h-4 w-4" />Gerenciar estoque
             </Button>
@@ -1027,12 +1027,20 @@ export default function UnifiedInventoryPage() {
               Tem certeza que deseja excluir <strong>{deleteCategory?.name}</strong>? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteCategory(null)}>Cancelar</Button>
+          <DialogFooter className="flex flex-row">
             <Button
-              variant="destructive"
+              variant="ghost"
+              size="lg"
+              className="flex-1"
+              onClick={() => setDeleteCategory(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="lg"
               disabled={deleteCatMutation.isPending}
               onClick={() => deleteCategory && deleteCatMutation.mutate(deleteCategory.id)}
+              className="flex-1 text-white bg-destructive hover:bg-destructive/80"
             >
               {deleteCatMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Excluir"}
             </Button>
@@ -1048,12 +1056,16 @@ export default function UnifiedInventoryPage() {
               Tem certeza que deseja excluir <strong>{deleteProduct?.name}</strong>? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost"
+          <DialogFooter className="flex flex-row">
+            <Button
+              variant="ghost"
+              size="lg"
+              className="flex-1"
               onClick={() => setDeleteProduct(null)}>Cancelar
             </Button>
             <Button
-              variant="destructive"
+              size="lg"
+              className="flex-1 text-white bg-destructive hover:bg-destructive/80"
               disabled={deleteProdMutation.isPending}
               onClick={() => deleteProduct && deleteProdMutation.mutate(deleteProduct.id)}
             >
@@ -1077,13 +1089,12 @@ export default function UnifiedInventoryPage() {
               placeholder="Buscar pacote de destino..."
               value={convertSearch}
               onChange={(e) => setConvertSearch(e.target.value)}
-              className="bg-[#111] border-white/10"
             />
             <Select value={convertTargetId} onValueChange={setConvertTargetId}>
-              <SelectTrigger className="w-full bg-[#111] border-white/10">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecionar pacote de destino..." />
               </SelectTrigger>
-              <SelectContent className="bg-[#141414] border-white/10 max-h-64">
+              <SelectContent>
                 {allProducts
                   .filter((prod) => prod.id !== convertProduct?.id)
                   .filter((prod) =>
@@ -1098,11 +1109,13 @@ export default function UnifiedInventoryPage() {
               </SelectContent>
             </Select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setConvertProduct(null); setConvertTargetId(""); setConvertSearch(""); }}>
+          <DialogFooter className="flex flex-row">
+            <Button variant="ghost" className="flex-1" size="lg" onClick={() => { setConvertProduct(null); setConvertTargetId(""); setConvertSearch(""); }}>
               Cancelar
             </Button>
             <Button
+              size="lg"
+              className="flex-1"
               disabled={!convertTargetId || convertToVariantMutation.isPending}
               onClick={() =>
                 convertProduct &&
@@ -1133,10 +1146,10 @@ export default function UnifiedInventoryPage() {
           </DialogHeader>
           <div className="py-2">
             <Select value={transferCatId} onValueChange={setTransferCatId}>
-              <SelectTrigger className="w-full bg-[#111] border-white/10">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecionar categoria..." />
               </SelectTrigger>
-              <SelectContent className="bg-[#141414] border-white/10">
+              <SelectContent>
                 <SelectItem value="__none__">Sem categoria</SelectItem>
                 {allCatsFlat.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
@@ -1146,9 +1159,11 @@ export default function UnifiedInventoryPage() {
               </SelectContent>
             </Select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setTransferProduct(null); setTransferCatId(""); }}>Cancelar</Button>
+          <DialogFooter className="flex flex-row">
+            <Button variant="ghost" className="flex-1" size="lg" onClick={() => { setTransferProduct(null); setTransferCatId(""); }}>Cancelar</Button>
             <Button
+              size="lg"
+              className="flex-1"
               disabled={transferProdMutation.isPending}
               onClick={() => transferProduct && transferProdMutation.mutate({
                 id: transferProduct.id,
