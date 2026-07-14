@@ -22,16 +22,7 @@ import { ProductRatingBadge, ProductReviewsSection } from "./product-reviews-sec
 import type { ProductReviewsResponse } from "@/lib/store-reviews-api";
 import { cn } from "@/lib/utils";
 
-
-export function ProductDetail({
-  product,
-  relatedProducts = [],
-  reviewsData,
-}: {
-  product: Product;
-  relatedProducts?: Product[];
-  reviewsData?: ProductReviewsResponse;
-}) {
+export function ProductDetail({ product, relatedProducts = [], reviewsData, }: { product: Product; relatedProducts?: Product[]; reviewsData?: ProductReviewsResponse; }) {
   const router = useRouter();
   const addProduct = useCartStore((s) => s.addProduct);
   const toggleWishlist = useWishlistStore((s) => s.toggleItem);
@@ -369,7 +360,7 @@ export function ProductDetail({
       {relatedProducts.length > 0 && (
         <section className="mt-12">
           <h3 className="text-center text-2xl font-bold text-white mb-8">Veja também</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {relatedProducts.map(rp => (
               <ProductCard key={rp.id} product={rp} />
             ))}

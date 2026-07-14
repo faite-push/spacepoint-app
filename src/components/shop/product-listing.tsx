@@ -112,8 +112,8 @@ export function ProductListing({ categorySlug, searchQueryKey = "search", showIn
         </div>
       )}
 
-      <div className="flex flex-row items-center justify-between gap-2">
-        <div className="flex flex-row items-center justify-start gap-2">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <Select
             value={params.platform || "all"}
             onValueChange={(value) =>
@@ -133,7 +133,7 @@ export function ProductListing({ categorySlug, searchQueryKey = "search", showIn
             </SelectContent>
           </Select>
 
-          <div className="flex items-center gap-2 border border-white/10 rounded-md px-2 py-1.5">
+          <div className="flex items-center gap-2 border border-white/10 rounded-md px-2 py-1.5 w-full sm:w-auto">
             <Toggle
               pressed={params.inStock === "true"}
               onPressedChange={(pressed) =>
@@ -141,7 +141,7 @@ export function ProductListing({ categorySlug, searchQueryKey = "search", showIn
               }
               variant="default"
               size="sm"
-              className="h-6.5 w-6.5 rounded-sm"
+              className="h-6.5 w-6.5 rounded-sm shrink-0"
               aria-label="Apenas em estoque"
             >
               {params.inStock === "true" ? <Check className="h-5 w-5" /> : <X className="h-5 w-5" />}
@@ -151,8 +151,8 @@ export function ProductListing({ categorySlug, searchQueryKey = "search", showIn
             </Label>
           </div>
         </div>
-        
-        <div className="flex flex-row items-center justify-end gap-2">
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
           <Select
             value={currentSortKey}
             onValueChange={(value) => {
@@ -176,7 +176,7 @@ export function ProductListing({ categorySlug, searchQueryKey = "search", showIn
           </Select>
 
           {showIncludeSubcategories && (
-            <div className="flex items-center gap-2 rounded-md border border-white/10 px-3 py-2">
+            <div className="flex items-center gap-2 rounded-md border border-white/10 px-3 py-2 w-full sm:w-auto">
               <Checkbox
                 id="include-subcategories"
                 checked={params.includeSubcategories === "true"}

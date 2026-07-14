@@ -1,8 +1,5 @@
 import { fetchSiteConfig } from "@/lib/site-api";
-import {
-  buildGoogleMerchantFeedXml,
-  fetchAllProductsForFeed,
-} from "@/lib/merchant-feed";
+import { buildGoogleMerchantFeedXml, fetchAllProductsForFeed, } from "@/lib/merchant-feed";
 import { getSiteUrl } from "@/lib/site-url";
 
 export const revalidate = 3600;

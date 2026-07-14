@@ -683,7 +683,25 @@ function RolesPageContent() {
         <p className="text-sm text-zinc-500">Gerencie os cargos dos usuários</p>
       </div>
 
-      <TeamNav />
+      <div className="flex flex-row gap-6">
+        <TeamNav />
+
+        <Can I="roles:manage">
+          <Button
+            size="lg"
+            className={cn("px-5 md:hidden flex", saveMutation.isPending && "opacity-50 cursor-not-allowed")}
+            onClick={() => saveMutation.mutate()}
+            disabled={!name.trim() || isProtected || saveMutation.isPending}
+          >
+            {saveMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            Salvar
+          </Button>
+        </Can>
+      </div>
 
       <div className="flex items-center gap-3">
         <Button
@@ -724,7 +742,7 @@ function RolesPageContent() {
         <Can I="roles:manage">
           <Button
             size="lg"
-            className={cn("px-5", saveMutation.isPending && "opacity-50 cursor-not-allowed")}
+            className={cn("px-5 md:flex hidden", saveMutation.isPending && "opacity-50 cursor-not-allowed")}
             onClick={() => saveMutation.mutate()}
             disabled={!name.trim() || isProtected || saveMutation.isPending}
           >
