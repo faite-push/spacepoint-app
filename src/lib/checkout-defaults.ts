@@ -48,7 +48,7 @@ export const DEFAULT_CHECKOUT_SETTINGS: CheckoutSettings = {
     standardLabel: "Entrega padrão",
     standardDescription: "Processamento normal do pedido",
     expressLabel: "Entrega expressa",
-    expressDescription: "Prioridade no atendimento e entrega mais rápida",
+    expressDescription: "Envio expresso de 10min à 1h - por email.",
     expressFeeCents: 999,
   },
 };

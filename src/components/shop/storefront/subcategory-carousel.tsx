@@ -30,7 +30,7 @@ export function SubcategoryCarousel({ subcategories }: SubcategoryGridProps) {
                   src={visual}
                   alt={sub.name}
                   fill
-                  className="object-cover select-none pointer-events-none object-center transition-transform duration-500 ease-out"
+                  className="object-cover select-none pointer-events-none object-center transition-transform duration-500 ease-out group-hover:scale-105"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
               ) : (
@@ -42,13 +42,19 @@ export function SubcategoryCarousel({ subcategories }: SubcategoryGridProps) {
                         "radial-gradient(ellipse 70% 80% at 50% 50%, rgba(147,51,234,0.45), transparent 70%)",
                     }}
                   />
-                  <div className="absolute inset-0 flex items-center justify-center px-6">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6">
                     <h3 className="text-center text-lg font-black uppercase leading-[1.1] tracking-tight sm:text-xl">
                       <span className="bg-gradient-to-b from-white via-white to-primary-200 bg-clip-text text-transparent drop-shadow-[0_2px_16px_rgba(0,0,0,0.9)]">
                         {sub.name}
                       </span>
                     </h3>
                   </div>
+                </div>
+              )}
+
+              {visual && typeof sub.productCount === "number" && (
+                <div className="absolute bottom-3 left-3 rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-sm">
+                  {sub.productCount} {sub.productCount === 1 ? "produto" : "produtos"}
                 </div>
               )}
 

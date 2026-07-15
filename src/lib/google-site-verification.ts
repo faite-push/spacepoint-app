@@ -19,11 +19,8 @@ export function getGoogleSiteVerificationFromPlugins(
   const entry = pluginsConfig?.["google-merchant"];
   if (!entry?.enabled || !entry.config) return null;
 
-  const candidates = [
-    entry.config.siteVerification,
-    entry.config.verificationCode,
-    entry.config.merchantId,
-  ];
+  // Nunca usar merchantId aqui — é um número de conta, não o token da meta tag.
+  const candidates = [entry.config.siteVerification, entry.config.verificationCode];
 
   for (const candidate of candidates) {
     const parsed = extractGoogleSiteVerification(candidate);
@@ -31,4 +28,14 @@ export function getGoogleSiteVerificationFromPlugins(
   }
 
   return null;
+}
+
+export function resolveGoogleSiteVerification(
+  pluginsConfig?: Record<string, { enabled?: boolean; config?: Record<string, string> }> | null
+): string | null {
+  return (
+    getGoogleSiteVerificationFromPlugins(pluginsConfig) ||
+    extractGoogleSiteVerification(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION) ||
+    extractGoogleSiteVerification(process.env.GOOGLE_SITE_VERIFICATION)
+  );
 }

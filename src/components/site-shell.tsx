@@ -66,8 +66,9 @@ export function SiteShell({
       <PromoTopBar config={siteConfig} />
       {!isMaintenance && <Navbar siteConfig={siteConfig} />}
       <main
-        className={`mx-auto w-full max-w-7xl flex-1 px-4 ${isMaintenance ? "pt-12" : hasTopBar ? "pt-36" : "pt-32"
-          }`}
+        className={`mx-auto w-full max-w-[1580px] flex-1 px-4 sm:px-6 lg:px-8 ${
+          isMaintenance ? "pt-12" : hasTopBar ? "pt-36" : "pt-32"
+        }`}
       >
         {children}
       </main>

@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { categoriesApi, productsApi, type AdminProduct, type Category } from "@/lib/admin-api";
 import { ProductForm } from "@/components/admin/forms/product-form";
 import { BulkPriceChangeDialog, BulkVisibilityDialog } from "@/components/admin/products/product-bulk-actions";
+import { MerchantImportDialog } from "@/components/admin/products/merchant-import-dialog";
 import { Can } from "@/providers/PermissionProvider";
 import { cn } from "@/lib/utils";
 import { TableSkeleton } from "@/components/admin/skeletons/TableSkeleton";
@@ -86,6 +87,7 @@ export default function UnifiedInventoryPage() {
   const [convertSearch, setConvertSearch] = useState<string>("");
   const [bulkPriceOpen, setBulkPriceOpen] = useState(false);
   const [bulkVisibilityOpen, setBulkVisibilityOpen] = useState(false);
+  const [merchantImportOpen, setMerchantImportOpen] = useState(false);
 
   const [fCatAtivo, setFCatAtivo] = useState(true);
   const [fCatDesativado, setFCatDesativado] = useState(true);
@@ -161,7 +163,7 @@ export default function UnifiedInventoryPage() {
 
   const { data: prodData, isLoading: prodLoading } = useQuery({
     queryKey: ["admin", "products"],
-    queryFn: () => productsApi.list({}),
+    queryFn: () => productsApi.listAll({}),
   });
 
   const reorderCatMutation = useMutation({
@@ -291,8 +293,9 @@ export default function UnifiedInventoryPage() {
       if (fStockQtd !== "" && !isNaN(Number(fStockQtd)) && stock !== Number(fStockQtd)) return false;
       if (p.deliveryType === "automatic_lines" && !fTypeSerie) return false;
       if (p.deliveryType === "file" && !fTypeTexto) return false;
-      if (p.deliveryType === "manual_chat" && !fTypeManual) return false;
+      if ((p.deliveryType === "manual_chat" || p.deliveryType === "manual") && !fTypeManual) return false;
       if (p.deliveryType === "mixed" && !fTypeMisto) return false;
+      if (p.deliveryType === "automatic_text" && !fTypeTexto) return false;
       return true;
     });
   }, [liveProducts, search, fProdAtivo, fProdDesativado, fEstoqueIn, fEstoqueOut, fStockQtd, fTypeSerie, fTypeTexto, fTypeManual, fTypeMisto]);
@@ -806,7 +809,7 @@ export default function UnifiedInventoryPage() {
   if (!isDndReady) return null;
 
   return (
-    <div className="relative space-y-6">
+    <div className="relative space-y-3">
       <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
       <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
 
@@ -816,131 +819,147 @@ export default function UnifiedInventoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white lg:text-2xl">Categorias</h1>
-          <p className="text-muted-foreground">Gerencie os produtos e categorias da loja</p>
+          <p className="text-muted-foreground text-sm sm:text-base">Gerencie os produtos e categorias da loja</p>
         </div>
         <Can I="products:create">
-          <Button asChild variant="default" className="px-4 py-5 gap-2 shrink-0">
-            <Link href="/dashboard/admin/categories/new">
-              <PlusCircle className="h-4 w-4" />
-              Criar Categoria
-            </Link>
-          </Button>
+          <div className="flex flex-row sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              className="flex-1 px-4 py-5 gap-2"
+              onClick={() => setMerchantImportOpen(true)}
+            >
+              <MonitorUp className="h-4 w-4" />
+              Importar XML
+            </Button>
+            <Button asChild variant="default" className="flex-1 px-4 py-5 gap-2">
+              <Link href="/dashboard/admin/categories/new">
+                <PlusCircle className="h-4 w-4" />
+                Criar Categoria
+              </Link>
+            </Button>
+          </div>
         </Can>
       </div>
 
-      <div className="flex flex-row gap-2">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-          <Input
-            placeholder="Pesquisar por produto ou categoria"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex flex-row gap-2 w-full max-w-lg">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar por produto ou categoria"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-        <div className="relative" ref={filterRef}>
-          <Button
-            className={cn(
-              "inline-flex items-center gap-2 h-10 px-4 rounded-md cursor-pointer border transition-all text-sm font-medium",
-              isFilterActive
-                ? "bg-primary/10 text-primary hover:bg-primary/20"
-                : "text-zinc-300"
-            )}
-            onClick={() => setShowFilters((v) => !v)}
-          >
-            <div className="relative">
-              <Filter className="w-4 h-4" />
-              {isFilterActive && (
-                <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-[#9333EA] ring-[2px] ring-black" />
+          <div className="relative">
+            <Button
+              className={cn(
+                "inline-flex items-center gap-2 h-10 px-4 rounded-md cursor-pointer border transition-all text-sm font-medium w-full sm:w-auto",
+                isFilterActive
+                  ? "bg-primary/10 text-primary hover:bg-primary/20"
+                  : "text-zinc-300"
               )}
-            </div>
-            Filtros
-          </Button>
+              onClick={() => setShowFilters((v) => !v)}
+            >
+              <div className="relative">
+                <Filter className="w-4 h-4" />
+                {isFilterActive && (
+                  <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-[#9333EA] ring-[2px] ring-black" />
+                )}
+              </div>
+              Filtros
+            </Button>
 
-          {showFilters && (
-            <div className="absolute right-0 sm:left-0 sm:right-auto top-full mt-2 w-80 sm:w-96 rounded-md border border-white/5 bg-card z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-              <div className="p-4 space-y-5">
-                <div>
-                  <h4 className="text-white font-medium text-sm mb-2">Categoria</h4>
-                  <div className="space-y-1">
-                    <FilterCheckbox checked={fCatAtivo} onChange={setFCatAtivo} label="Ativo" />
-                    <FilterCheckbox checked={fCatDesativado} onChange={setFCatDesativado} label="Desativado" />
-                  </div>
-                </div>
-                <div className="h-px bg-white/5" />
-                <div>
-                  <h4 className="text-white font-medium text-sm mb-2">Quantidade em Estoque</h4>
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-10 items-center rounded-md border border-white/10 bg-card px-3 text-sm text-white w-24 shrink-0">Igual a</div>
-                    <Input
-                      type="number" placeholder="Qtd" value={fStockQtd}
-                      onChange={(e) => setFStockQtd(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="h-px bg-white/5" />
-                <div className="grid grid-cols-2 gap-4">
+            {showFilters && (
+              <div className="absolute left-[-190%] md:left-auto md:right-0 top-full mt-2 w-72 sm:w-96 rounded-md border border-white/5 bg-card z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <div className="p-4 space-y-5">
                   <div>
-                    <h4 className="text-white font-medium text-sm mb-2">Produto — Status</h4>
+                    <h4 className="text-white font-medium text-sm mb-2">Categoria</h4>
                     <div className="space-y-1">
-                      <FilterCheckbox checked={fProdAtivo} onChange={setFProdAtivo} label="Ativo" />
-                      <FilterCheckbox checked={fProdDesativado} onChange={setFProdDesativado} label="Desativado" />
+                      <FilterCheckbox checked={fCatAtivo} onChange={setFCatAtivo} label="Ativo" />
+                      <FilterCheckbox checked={fCatDesativado} onChange={setFCatDesativado} label="Desativado" />
                     </div>
                   </div>
+                  <div className="h-px bg-white/5" />
                   <div>
-                    <h4 className="text-white font-medium text-sm mb-2">Produto — Estoque</h4>
-                    <div className="space-y-1">
-                      <FilterCheckbox checked={fEstoqueOut} onChange={setFEstoqueOut} label="Esgotado" />
-                      <FilterCheckbox checked={fEstoqueIn} onChange={setFEstoqueIn} label="Não esgotado" />
+                    <h4 className="text-white font-medium text-sm mb-2">Quantidade em Estoque</h4>
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-10 items-center rounded-md border border-white/10 bg-card px-3 text-sm text-white w-24 shrink-0">Igual a</div>
+                      <Input
+                        type="number" placeholder="Qtd" value={fStockQtd}
+                        onChange={(e) => setFStockQtd(e.target.value)}
+                      />
                     </div>
                   </div>
-                </div>
-                <div>
-                  <h4 className="text-white font-medium text-sm mb-2">Produto — Tipo</h4>
-                  <div className="grid grid-cols-2 gap-y-1">
-                    <FilterCheckbox checked={fTypeSerie} onChange={setFTypeSerie} label="Série (Linhas)" />
-                    <FilterCheckbox checked={fTypeTexto} onChange={setFTypeTexto} label="Texto (Arquivo)" />
-                    <FilterCheckbox checked={fTypeManual} onChange={setFTypeManual} label="Manual" />
-                    <FilterCheckbox checked={fTypeMisto} onChange={setFTypeMisto} label="Variante (Misto)" />
+                  <div className="h-px bg-white/5" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-white font-medium text-sm mb-2">Produto — Status</h4>
+                      <div className="space-y-1">
+                        <FilterCheckbox checked={fProdAtivo} onChange={setFProdAtivo} label="Ativo" />
+                        <FilterCheckbox checked={fProdDesativado} onChange={setFProdDesativado} label="Desativado" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-white font-medium text-sm mb-2">Produto — Estoque</h4>
+                      <div className="space-y-1">
+                        <FilterCheckbox checked={fEstoqueOut} onChange={setFEstoqueOut} label="Esgotado" />
+                        <FilterCheckbox checked={fEstoqueIn} onChange={setFEstoqueIn} label="Não esgotado" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="h-px bg-white/5" />
+                  <div>
+                    <h4 className="text-white font-medium text-sm mb-2">Produto — Tipo</h4>
+                    <div className="grid grid-cols-2 gap-y-1">
+                      <FilterCheckbox checked={fTypeSerie} onChange={setFTypeSerie} label="Série (Linhas)" />
+                      <FilterCheckbox checked={fTypeTexto} onChange={setFTypeTexto} label="Texto (Arquivo)" />
+                      <FilterCheckbox checked={fTypeManual} onChange={setFTypeManual} label="Manual" />
+                      <FilterCheckbox checked={fTypeMisto} onChange={setFTypeMisto} label="Variante (Misto)" />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <Can I="products:edit">
-          <Link href="/dashboard/admin/inventory">
-            <Button
-              variant="outline"
-              className="px-4 py-5 gap-2 shrink-0"
-            >
-              <MdOutlineInventory2 className="h-4 w-4" />Gerenciar estoque
-            </Button>
-          </Link>
-        </Can>
+        <div className="flex flex-row gap-2" ref={filterRef}>
+          <Can I="products:edit">
+            <Link href="/dashboard/admin/inventory" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                className="h-10 px-4 w-full justify-center"
+              >
+                <MdOutlineInventory2 className="h-4 w-4 mr-2" />
+                Gerenciar estoque
+              </Button>
+            </Link>
+          </Can>
 
-        <Can I="products:edit">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={cn(
-                "inline-flex items-center bg-background border border-white/5 text-muted-foreground text-sm font-medium gap-2 h-10 px-4 rounded-md cursor-pointer "
-              )}
-            >
-              <Tags className="w-4 h-4" />
-              Ações em massa
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded-md">
-              <DropdownMenuItem className="py-2 px-4 cursor-pointer gap-2 rounded-sm" onClick={() => setBulkPriceOpen(true)}>
-                Alterar preços
-              </DropdownMenuItem>
-              <DropdownMenuItem className="py-2 px-4 cursor-pointer gap-2 rounded-sm" onClick={() => setBulkVisibilityOpen(true)}>
-                Alterar visibilidade
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </Can>
+          <Can I="products:edit">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  "inline-flex items-center justify-center bg-background border border-white/5 text-muted-foreground text-sm font-medium gap-2 h-10 px-4 rounded-md cursor-pointer w-full sm:w-auto"
+                )}
+              >
+                <Tags className="w-4 h-4" />
+                Ações em massa
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-md">
+                <DropdownMenuItem className="py-2 px-4 cursor-pointer gap-2 rounded-sm" onClick={() => setBulkPriceOpen(true)}>
+                  Alterar preços
+                </DropdownMenuItem>
+                <DropdownMenuItem className="py-2 px-4 cursor-pointer gap-2 rounded-sm" onClick={() => setBulkVisibilityOpen(true)}>
+                  Alterar visibilidade
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Can>
+        </div>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd} onBeforeDragStart={onBeforeDragStart}>
@@ -1027,12 +1046,20 @@ export default function UnifiedInventoryPage() {
               Tem certeza que deseja excluir <strong>{deleteCategory?.name}</strong>? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteCategory(null)}>Cancelar</Button>
+          <DialogFooter className="flex flex-row">
             <Button
-              variant="destructive"
+              variant="ghost"
+              size="lg"
+              className="flex-1"
+              onClick={() => setDeleteCategory(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="lg"
               disabled={deleteCatMutation.isPending}
               onClick={() => deleteCategory && deleteCatMutation.mutate(deleteCategory.id)}
+              className="flex-1 text-white bg-destructive hover:bg-destructive/80"
             >
               {deleteCatMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Excluir"}
             </Button>
@@ -1048,12 +1075,16 @@ export default function UnifiedInventoryPage() {
               Tem certeza que deseja excluir <strong>{deleteProduct?.name}</strong>? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost"
+          <DialogFooter className="flex flex-row">
+            <Button
+              variant="ghost"
+              size="lg"
+              className="flex-1"
               onClick={() => setDeleteProduct(null)}>Cancelar
             </Button>
             <Button
-              variant="destructive"
+              size="lg"
+              className="flex-1 text-white bg-destructive hover:bg-destructive/80"
               disabled={deleteProdMutation.isPending}
               onClick={() => deleteProduct && deleteProdMutation.mutate(deleteProduct.id)}
             >
@@ -1077,13 +1108,12 @@ export default function UnifiedInventoryPage() {
               placeholder="Buscar pacote de destino..."
               value={convertSearch}
               onChange={(e) => setConvertSearch(e.target.value)}
-              className="bg-[#111] border-white/10"
             />
             <Select value={convertTargetId} onValueChange={setConvertTargetId}>
-              <SelectTrigger className="w-full bg-[#111] border-white/10">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecionar pacote de destino..." />
               </SelectTrigger>
-              <SelectContent className="bg-[#141414] border-white/10 max-h-64">
+              <SelectContent>
                 {allProducts
                   .filter((prod) => prod.id !== convertProduct?.id)
                   .filter((prod) =>
@@ -1098,11 +1128,13 @@ export default function UnifiedInventoryPage() {
               </SelectContent>
             </Select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setConvertProduct(null); setConvertTargetId(""); setConvertSearch(""); }}>
+          <DialogFooter className="flex flex-row">
+            <Button variant="ghost" className="flex-1" size="lg" onClick={() => { setConvertProduct(null); setConvertTargetId(""); setConvertSearch(""); }}>
               Cancelar
             </Button>
             <Button
+              size="lg"
+              className="flex-1"
               disabled={!convertTargetId || convertToVariantMutation.isPending}
               onClick={() =>
                 convertProduct &&
@@ -1133,10 +1165,10 @@ export default function UnifiedInventoryPage() {
           </DialogHeader>
           <div className="py-2">
             <Select value={transferCatId} onValueChange={setTransferCatId}>
-              <SelectTrigger className="w-full bg-[#111] border-white/10">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecionar categoria..." />
               </SelectTrigger>
-              <SelectContent className="bg-[#141414] border-white/10">
+              <SelectContent>
                 <SelectItem value="__none__">Sem categoria</SelectItem>
                 {allCatsFlat.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
@@ -1146,9 +1178,11 @@ export default function UnifiedInventoryPage() {
               </SelectContent>
             </Select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setTransferProduct(null); setTransferCatId(""); }}>Cancelar</Button>
+          <DialogFooter className="flex flex-row">
+            <Button variant="ghost" className="flex-1" size="lg" onClick={() => { setTransferProduct(null); setTransferCatId(""); }}>Cancelar</Button>
             <Button
+              size="lg"
+              className="flex-1"
               disabled={transferProdMutation.isPending}
               onClick={() => transferProduct && transferProdMutation.mutate({
                 id: transferProduct.id,
@@ -1194,6 +1228,15 @@ export default function UnifiedInventoryPage() {
         onOpenChange={setBulkVisibilityOpen}
         filteredProductIds={filteredProductIds}
         allProductIds={allProductIds}
+      />
+
+      <MerchantImportDialog
+        open={merchantImportOpen}
+        onOpenChange={setMerchantImportOpen}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+          queryClient.invalidateQueries({ queryKey: ["admin", "categories"] });
+        }}
       />
     </div>
   );

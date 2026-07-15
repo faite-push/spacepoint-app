@@ -30,7 +30,7 @@ export function InventoryBulkUploadDialog({ open, onOpenChange, variant, onSucce
     onSuccess: (data) => {
       toast.success(
         `${data.added} código(s) adicionado(s)` +
-          (data.duplicates ? ` · ${data.duplicates} duplicado(s) ignorado(s)` : "")
+        (data.duplicates ? ` · ${data.duplicates} duplicado(s) ignorado(s)` : "")
       );
       setContent("");
       onOpenChange(false);
@@ -46,7 +46,7 @@ export function InventoryBulkUploadDialog({ open, onOpenChange, variant, onSucce
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Adicionar códigos em massa</DialogTitle>
           <DialogDescription>
@@ -63,24 +63,31 @@ export function InventoryBulkUploadDialog({ open, onOpenChange, variant, onSucce
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={"XXXX-XXXX-XXXX\nYYYY-YYYY-YYYY"}
-            className="min-h-[220px] font-mono text-sm bg-[#0D0D0D] border-white/10"
+            className="min-h-[220px]"
           />
           <p className="text-xs text-muted-foreground">
             Duplicados são ignorados automaticamente. Máximo de 5.000 linhas por upload.
           </p>
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => handleClose(false)}>
+        <DialogFooter className="flex flex-row">
+          <Button
+            type="button"
+            size="lg"
+            variant="ghost"
+            onClick={() => handleClose(false)}
+            className="flex-1"
+          >
             Cancelar
           </Button>
           <Button
             type="button"
+            size="lg"
             disabled={!content.trim() || mutation.isPending}
             onClick={() => mutation.mutate()}
-            className="gap-2"
+            className="flex-1"
           >
-            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="hidden h-4 w-4" />}
             Adicionar códigos
           </Button>
         </DialogFooter>

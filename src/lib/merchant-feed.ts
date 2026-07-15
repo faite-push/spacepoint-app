@@ -1,13 +1,13 @@
 import { fetchProductListing } from "@/lib/shop-api";
 import type { PublicSiteConfig } from "@/lib/site-api";
-import type { Product, ProductVariant } from "@/types/shop";
+import { stripRichText } from "@/lib/strip-rich-text";
+import type { Product } from "@/types/shop";
 import { getSiteUrl, toAbsolutePath, toAbsoluteUrl } from "@/lib/site-url";
 
 const GOOGLE_PRODUCT_CATEGORY = "1279";
 
 type FeedItem = {
   id: string;
-  itemGroupId?: string;
   title: string;
   description: string;
   link: string;
@@ -30,25 +30,12 @@ function escapeXml(value: string) {
     .replace(/'/g, "&apos;");
 }
 
-function stripRichText(value: unknown) {
-  if (typeof value === "string") return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  if (Array.isArray(value)) return value.map(stripRichText).join(" ").trim();
-  if (value && typeof value === "object") {
-    return Object.values(value as Record<string, unknown>).map(stripRichText).join(" ").trim();
-  }
-  return "";
-}
-
 function formatMerchantPrice(cents: number) {
   return `${(cents / 100).toFixed(2)} BRL`;
 }
 
-function getProductImages(product: Product, variant?: ProductVariant | null) {
-  const rawImages = [
-    variant?.imageUrl,
-    product.imageUrl,
-    ...(product.images || []),
-  ].filter(Boolean) as string[];
+function getProductImages(product: Product) {
+  const rawImages = [product.imageUrl, ...(product.images || [])].filter(Boolean) as string[];
 
   const unique = [...new Set(rawImages)];
   return unique
@@ -56,80 +43,74 @@ function getProductImages(product: Product, variant?: ProductVariant | null) {
     .filter((image): image is string => Boolean(image));
 }
 
+function getProductPriceCents(product: Product) {
+  if (product.hasVariants && product.variants.length > 0) {
+    return Math.min(...product.variants.map((variant) => variant.price));
+  }
+  return product.price;
+}
+
+function getProductComparePriceCents(product: Product, priceCents: number) {
+  if (product.hasVariants && product.variants.length > 0) {
+    const matches = product.variants.filter((variant) => variant.price === priceCents);
+    const compare = matches
+      .map((variant) => variant.comparePrice)
+      .filter((value): value is number => typeof value === "number" && value > priceCents);
+    if (compare.length) return Math.min(...compare);
+    return null;
+  }
+
+  if (product.comparePrice && product.comparePrice > priceCents) {
+    return product.comparePrice;
+  }
+
+  return null;
+}
+
+function getProductStock(product: Product) {
+  if (product.hasVariants && product.variants.length > 0) {
+    return product.variants.reduce((sum, variant) => sum + (variant.stockQuantity || 0), 0);
+  }
+  return product.stockQuantity ?? 0;
+}
+
 function getAvailability(stockQuantity: number) {
   return stockQuantity > 0 ? "in stock" : "out of stock";
 }
 
-function buildDescription(product: Product, variant?: ProductVariant | null) {
-  const fromVariant = stripRichText(variant?.description);
-  const fromProduct = stripRichText(product.description);
-  const base = fromVariant || fromProduct;
-
+function buildDescription(product: Product) {
+  const base = stripRichText(product.description);
   if (base) return base.slice(0, 5000);
-
-  const label = variant ? `${product.name} — ${variant.name}` : product.name;
-  return `Compre ${label} com entrega digital na Space Point.`;
+  return `Compre ${product.name} com entrega digital na Space Point.`;
 }
 
-function buildFeedItems(product: Product, siteUrl: string): FeedItem[] {
+function buildFeedItem(product: Product, siteUrl: string): FeedItem {
+  const images = getProductImages(product);
+  const price = getProductPriceCents(product);
+  const comparePrice = getProductComparePriceCents(product, price);
   const brand = product.platform?.trim() || "PlayStation";
   const productType = product.isDigital === false ? "Produto físico" : "Jogo digital";
 
-  if (product.hasVariants && product.variants.length > 0) {
-    return product.variants.map((variant) => {
-      const images = getProductImages(product, variant);
-      const title = `${product.name} — ${variant.name}`;
-      const link = toAbsolutePath(`/product/${product.slug}`, siteUrl);
-      const price = variant.price;
-      const comparePrice =
-        variant.comparePrice && variant.comparePrice > price ? variant.comparePrice : null;
-
-      return {
-        id: `${product.id}:${variant.id}`,
-        itemGroupId: product.id,
-        title,
-        description: buildDescription(product, variant),
-        link,
-        imageLink: images[0] || toAbsolutePath("/placeholder.svg", siteUrl),
-        additionalImageLinks: images.slice(1, 10),
-        availability: getAvailability(variant.stockQuantity),
-        price: formatMerchantPrice(comparePrice ?? price),
-        salePrice: comparePrice ? formatMerchantPrice(price) : undefined,
-        brand,
-        condition: "new",
-        productType,
-      };
-    });
-  }
-
-  const images = getProductImages(product);
-  const price = product.price;
-  const comparePrice =
-    product.comparePrice && product.comparePrice > price ? product.comparePrice : null;
-
-  return [
-    {
-      id: product.id,
-      title: product.name,
-      description: buildDescription(product),
-      link: toAbsolutePath(`/product/${product.slug}`, siteUrl),
-      imageLink: images[0] || toAbsolutePath("/placeholder.svg", siteUrl),
-      additionalImageLinks: images.slice(1, 10),
-      availability: getAvailability(product.stockQuantity ?? 0),
-      price: formatMerchantPrice(comparePrice ?? price),
-      salePrice: comparePrice ? formatMerchantPrice(price) : undefined,
-      brand,
-      condition: "new",
-      productType,
-    },
-  ];
+  return {
+    id: product.id,
+    title: product.name,
+    description: buildDescription(product),
+    link: toAbsolutePath(`/product/${product.slug}`, siteUrl),
+    imageLink: images[0] || toAbsolutePath("/placeholder.svg", siteUrl),
+    additionalImageLinks: images.slice(1, 10),
+    availability: getAvailability(getProductStock(product)),
+    price: formatMerchantPrice(comparePrice ?? price),
+    salePrice: comparePrice ? formatMerchantPrice(price) : undefined,
+    brand,
+    condition: "new",
+    productType,
+  };
 }
 
 function renderFeedItem(item: FeedItem) {
   const lines = [
     "    <item>",
     `      <g:id>${escapeXml(item.id)}</g:id>`,
-    item.itemGroupId ? `      <g:item_group_id>${escapeXml(item.itemGroupId)}</g:item_group_id>` : null,
     `      <g:title>${escapeXml(item.title)}</g:title>`,
     `      <g:description>${escapeXml(item.description)}</g:description>`,
     `      <g:link>${escapeXml(item.link)}</g:link>`,
@@ -186,8 +167,7 @@ export function buildGoogleMerchantFeedXml({
     config?.metaDescription?.trim() ||
     "Jogos digitais originais para PlayStation com entrega segura e instantânea.";
 
-  const items = products.flatMap((product) => buildFeedItems(product, siteUrl));
-
+  const items = products.map((product) => buildFeedItem(product, siteUrl));
   const itemXml = items.map(renderFeedItem).join("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>

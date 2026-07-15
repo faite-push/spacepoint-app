@@ -185,7 +185,7 @@ export default function InventoryPage() {
       </div>
 
       <div className="rounded-md border border-white/5 bg-transparent">
-        <div className="flex flex-col lg:flex-row justify-between px-4 py-4">
+        <div className="flex flex-col lg:flex-row justify-between px-4 py-4 space-y-2">
           <div className="relative w-full lg:w-112">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
             <Input
@@ -199,7 +199,7 @@ export default function InventoryPage() {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-row items-center gap-2">
             <Select
               value={statusFilter}
               onValueChange={(val: "all" | InventoryStockStatus) => {
@@ -385,7 +385,7 @@ export default function InventoryPage() {
                         </TableCell>
 
                         <TableCell className="text-center">
-                        <div className="flex items-center justify-center max-w-fit bg-blue-500/10 text-blue-500 rounded py-1 px-6 gap-1 text-sm font-medium">
+                          <div className="flex items-center justify-center max-w-fit bg-blue-500/10 text-blue-500 rounded py-1 px-6 gap-1 text-sm font-medium">
                             {variant.delivered}
                           </div>
                         </TableCell>
@@ -444,31 +444,35 @@ export default function InventoryPage() {
             )}
           </TableBody>
         </Table>
-
-        {pagination && pagination.totalPages > 1 ? (
-          <div className="flex items-center justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Anterior
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              Página {pagination.page} de {pagination.totalPages}
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={page >= pagination.totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Próxima
-            </Button>
-          </div>
-        ) : null}
       </div>
+
+      {pagination && pagination.totalPages > 1 ? (
+        <div className="flex items-center justify-between gap-12">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1 max-w-md"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Anterior
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Página {pagination.page} de {pagination.totalPages}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1 max-w-md"
+            disabled={page >= pagination.totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Próxima
+          </Button>
+        </div>
+      ) : null}
 
       <InventoryBulkUploadDialog
         open={Boolean(uploadVariant)}

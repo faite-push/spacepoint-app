@@ -29,6 +29,66 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
+export type MerchantImportSample = {
+  name: string;
+  price: number;
+  comparePrice: number | null;
+  category: string;
+  variants: string[];
+  imageUrl: string | null;
+};
+
+export type MerchantImportResult = {
+  dryRun: boolean;
+  itemCount: number;
+  productCount: number;
+  variantCount: number;
+  categoryParents: string[];
+  sample: MerchantImportSample[];
+  created?: number;
+  skipped?: number;
+  variantsCreated?: number;
+  categoriesCreated?: number;
+  errors?: { product: string; error: string }[];
+};
+
+async function uploadMerchantXml<T>(
+  path: string,
+  file: File,
+  fields?: Record<string, string | boolean | undefined>
+): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+  if (fields) {
+    for (const [key, value] of Object.entries(fields)) {
+      if (value === undefined) continue;
+      form.append(key, String(value));
+    }
+  }
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      ...getApiHeaders(),
+      "X-CSRF-Token": getCsrfToken(),
+    },
+    body: form,
+  });
+
+  if (!res.ok) {
+    let message = "Erro inesperado";
+    try {
+      const body = await res.json();
+      message = body?.error || message;
+    } catch {
+    }
+    throw new Error(message);
+  }
+
+  return (await res.json()) as T;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -184,16 +244,31 @@ export interface ProductPayload {
 }
 
 export const productsApi = {
-  list: (params: { search?: string; categoryId?: string; page?: number } = {}) => {
+  list: (params: { search?: string; categoryId?: string; page?: number; pageSize?: number } = {}) => {
     const qs = new URLSearchParams();
     if (params.search) qs.set("search", params.search);
     if (params.categoryId) qs.set("categoryId", params.categoryId);
     if (params.page) qs.set("page", String(params.page));
+    if (params.pageSize) qs.set("pageSize", String(params.pageSize));
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     return request<{
       products: AdminProduct[];
       pagination: { page: number; pageSize: number; total: number; totalPages: number };
     }>(`/v2/api/admin/products${suffix}`);
+  },
+  listAll: async (params: { search?: string; categoryId?: string } = {}) => {
+    const pageSize = 500;
+    let page = 1;
+    const products: AdminProduct[] = [];
+
+    while (page <= 20) {
+      const result = await productsApi.list({ ...params, page, pageSize });
+      products.push(...result.products);
+      if (page >= result.pagination.totalPages) break;
+      page += 1;
+    }
+
+    return { products };
   },
   get: (id: string) => request<AdminProduct>(`/v2/api/admin/products/${id}`),
   create: (payload: ProductPayload) =>
@@ -226,6 +301,17 @@ export const productsApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  previewMerchantImport: (file: File) =>
+    uploadMerchantXml<MerchantImportResult>(
+      "/v2/api/admin/products/import/merchant/preview",
+      file
+    ),
+  importMerchantXml: (file: File, options?: { skipExisting?: boolean }) =>
+    uploadMerchantXml<MerchantImportResult>(
+      "/v2/api/admin/products/import/merchant",
+      file,
+      { skipExisting: options?.skipExisting !== false }
+    ),
   update: (id: string, payload: Partial<ProductPayload>) =>
     request<AdminProduct>(`/v2/api/admin/products/${id}`, {
       method: "PUT",

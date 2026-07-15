@@ -14,7 +14,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Providers } from "@/components/shared/providers";
 import { fetchSiteConfig, fetchHomeReviews, fetchPageSeo, fetchFooterCategories } from "@/lib/site-api";
 import { fetchStoreReviews } from "@/lib/store-reviews-api";
-import { getGoogleSiteVerificationFromPlugins } from "@/lib/google-site-verification";
+import { resolveGoogleSiteVerification } from "@/lib/google-site-verification";
 import { getSiteUrl } from "@/lib/site-url";
 import { JsonLd } from "@/components/seo/json-ld";
 import { buildOrganizationJsonLd, buildWebsiteJsonLd } from "@/lib/json-ld";
@@ -45,7 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
     homeSeo?.metaDescription?.trim() ||
     config?.metaDescription?.trim() ||
     "Jogos digitais originais para PlayStation com entrega segura e instantânea.";
-  const googleVerification = getGoogleSiteVerificationFromPlugins(config?.pluginsConfig);
+  const googleVerification = resolveGoogleSiteVerification(config?.pluginsConfig);
 
   return {
     metadataBase: new URL(getSiteUrl()),

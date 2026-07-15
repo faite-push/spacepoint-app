@@ -12,7 +12,10 @@ export function TableSkeleton({ rows = 5 }: TableSkeletonProps) {
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-64" />
         </div>
-        <Skeleton className="h-10 w-40 rounded-md" />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Skeleton className="h-10 w-40 rounded-md" />
+          <Skeleton className="h-10 w-24 rounded-md" />
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

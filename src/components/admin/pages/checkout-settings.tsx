@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { siteSettingsApi, type CheckoutAuthMode, type CheckoutFieldConfig, type CheckoutSettings, } from "@/lib/admin-api";
@@ -283,22 +284,36 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
           </div>
 
           <div className="space-y-1.5">
-            <Label>Taxa expressa (centavos)</Label>
-            <Input
-              type="number"
-              min={0}
-              value={settings.deliveryOptions?.expressFeeCents ?? 999}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  deliveryOptions: {
-                    ...DEFAULT_SETTINGS.deliveryOptions!,
-                    ...s.deliveryOptions,
-                    expressFeeCents: Math.max(0, Number(e.target.value) || 0),
-                  },
-                }))
-              }
-            />
+            <Label>Taxa expressa</Label>
+            <InputGroup>
+              <InputGroupInput
+                type="text"
+                placeholder="0,00"
+                value={
+                  (
+                    (settings.deliveryOptions?.expressFeeCents ??
+                      DEFAULT_SETTINGS.deliveryOptions?.expressFeeCents ??
+                      999) / 100
+                  ).toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })
+                }
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  const cents = val ? Number(val) : 0;
+                  setSettings((s) => ({
+                    ...s,
+                    deliveryOptions: {
+                      ...DEFAULT_SETTINGS.deliveryOptions!,
+                      ...s.deliveryOptions,
+                      expressFeeCents: cents,
+                    },
+                  }));
+                }}
+              />
+              <InputGroupAddon>R$</InputGroupAddon>
+            </InputGroup>
           </div>
         </div>
       </div>

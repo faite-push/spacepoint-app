@@ -1,6 +1,7 @@
 import type { PublicSiteConfig } from "@/lib/site-api";
 import type { Product } from "@/types/shop";
 import type { ProductReviewsSummary } from "@/lib/store-reviews-api";
+import { stripRichText } from "@/lib/strip-rich-text";
 import { getSiteUrl, toAbsolutePath, toAbsoluteUrl } from "@/lib/site-url";
 
 export function buildOrganizationJsonLd(config: PublicSiteConfig | null) {
@@ -78,15 +79,6 @@ function getProductOfferPrice(product: Product) {
     return Math.min(...prices) / 100;
   }
   return product.price / 100;
-}
-
-function stripRichText(value: unknown) {
-  if (typeof value === "string") return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  if (Array.isArray(value)) return value.map(stripRichText).join(" ").trim();
-  if (value && typeof value === "object") {
-    return Object.values(value as Record<string, unknown>).map(stripRichText).join(" ").trim();
-  }
-  return "";
 }
 
 export function buildProductJsonLd(
