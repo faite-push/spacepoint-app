@@ -1287,7 +1287,7 @@ export type AdminAuditLog = {
   metadata: Record<string, unknown> | null;
   ip: string | null;
   createdAt: string;
-  actor: { id: string; name: string | null; email: string | null; image: string | null } | null;
+  actor: { id: string; name: string | null; email: string | null; image: string | null; role?: { name: string } | null } | null;
 };
 
 export const auditLogsApi = {
