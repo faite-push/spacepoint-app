@@ -1,5 +1,5 @@
 import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from "recharts";
-import { CreditCard, Smartphone, History, PackageSearch, TrendingUp, AlertCircle, ShoppingBag, Layers } from "lucide-react";
+import { PackageSearch, ShoppingBag, Layers } from "lucide-react";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -7,6 +7,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { RiAlarmWarningFill } from "react-icons/ri";
+import { MASK_COUNT, MASK_MONEY, MASK_PERCENT } from "@/components/admin/dashboard/privacy-mode";
+import Link from "next/link";
 
 interface MetricSidebarProps {
   data: {
@@ -18,7 +20,8 @@ interface MetricSidebarProps {
       lowStock: { id: string; name: string; stock: number; price: number }[];
       topSellers: { id: string; name: string; salesCount: number; price: number }[];
     };
-  }
+  };
+  valuesHidden?: boolean;
 }
 
 function formatBRL(cents: number) {
@@ -28,7 +31,7 @@ function formatBRL(cents: number) {
   }).format(cents / 100);
 }
 
-export function MetricSidebar({ data }: MetricSidebarProps) {
+export function MetricSidebar({ data, valuesHidden = false }: MetricSidebarProps) {
   const [productFilter, setProductFilter] = useState<"lowStock" | "topSellers">("topSellers");
 
   const conversion = data.conversion ?? {
@@ -39,13 +42,16 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
   };
   const sales = data.latestSales || [];
   const products = data.productStats || { lowStock: [], topSellers: [] };
+  const gaugePct = valuesHidden ? 87 : conversion.approvedPct;
 
   return (
     <div className="space-y-4">
       <div className="bg-card/50 border border-white/5 rounded-md p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-white">Conversão</h3>
-          <button className="cursor-pointer text-xs font-medium text-primary hover:underline">Ver pedidos</button>
+          <Link href="/dashboard/admin/orders">
+            <button className="cursor-pointer text-xs font-medium text-primary hover:underline">Ver pedidos</button>
+          </Link>
         </div>
 
         <div className="relative h-[160px] w-full flex items-center justify-center">
@@ -54,7 +60,7 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
               innerRadius="70%"
               outerRadius="100%"
               barSize={12}
-              data={[{ value: conversion.approvedPct }]}
+              data={[{ value: gaugePct }]}
               startAngle={210}
               endAngle={-30}
             >
@@ -70,7 +76,9 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
           </ResponsiveContainer>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
-            <p className="text-lg font-medium text-white">{formatBRL(conversion.total)}</p>
+            <p className="text-lg font-medium text-white">
+              {valuesHidden ? MASK_MONEY : formatBRL(conversion.total)}
+            </p>
             <p className="text-xs font-light text-white/50">Faturamento</p>
           </div>
         </div>
@@ -79,12 +87,16 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-              <span className="text-[11px] font-medium text-zinc-300">Aprovados {conversion.approvedPct}%</span>
+              <span className="text-[11px] font-medium text-zinc-300">
+                Aprovados {valuesHidden ? MASK_PERCENT : `${conversion.approvedPct}%`}
+              </span>
             </div>
           </div>
           <div className="flex flex-col gap-0.5 text-right">
             <div className="flex items-center gap-1.5 justify-end">
-              <span className="text-[11px] font-medium text-zinc-300">Pendentes {100 - conversion.approvedPct}%</span>
+              <span className="text-[11px] font-medium text-zinc-300">
+                Pendentes {valuesHidden ? MASK_PERCENT : `${100 - conversion.approvedPct}%`}
+              </span>
               <div className="h-1.5 w-1.5 rounded-full bg-zinc-800" />
             </div>
           </div>
@@ -122,7 +134,9 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
                     <p className="text-xs font-medium text-white truncate">{sale.customer}</p>
                     <p className="text-[10px] text-white/40">{formattedTime}</p>
                   </div>
-                  <p className="text-xs font-semibold text-white">{formatBRL(sale.value)}</p>
+                  <p className="text-xs font-semibold text-white">
+                    {valuesHidden ? MASK_MONEY : formatBRL(sale.value)}
+                  </p>
                 </div>
               );
             })}
@@ -183,11 +197,19 @@ export function MetricSidebar({ data }: MetricSidebarProps) {
               <div key={p.id} className="flex flex-col gap-1.5 p-2 rounded-md hover:bg-white/5 transition-colors border border-transparent hover:border-white/5">
                 <div className="flex justify-between items-start">
                   <p className="text-xs font-medium text-white/90 line-clamp-1 flex-1 pr-2">{p.name}</p>
-                  <span className="text-xs font-bold text-white whitespace-nowrap">{formatBRL(p.price)}</span>
+                  <span className="text-xs font-bold text-white whitespace-nowrap">
+                    {valuesHidden ? MASK_MONEY : formatBRL(p.price)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-white/40">
-                    {productFilter === "topSellers" ? `${p.salesCount} vendas` : `${p.stock} em estoque`}
+                    {valuesHidden
+                      ? productFilter === "topSellers"
+                        ? `${MASK_COUNT} vendas`
+                        : `${MASK_COUNT} em estoque`
+                      : productFilter === "topSellers"
+                        ? `${p.salesCount} vendas`
+                        : `${p.stock} em estoque`}
                   </span>
                   <div className="h-1.5 w-24 bg-white/5 rounded-full overflow-hidden">
                     <div

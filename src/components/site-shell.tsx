@@ -11,7 +11,7 @@ import { MaintenanceGate } from "@/components/storefront/maintenance-gate";
 import { ConversionPopup } from "@/components/home/conversion-popup";
 import { StorefrontPlugins } from "@/components/storefront/storefront-plugins";
 import type { PublicHomeReview, PublicSiteConfig, FooterLink } from "@/lib/site-api";
-import type { PublicStoreReview } from "@/lib/store-reviews-api";
+import type { ProductReviewsSummary, PublicStoreReview } from "@/lib/store-reviews-api";
 
 function resolveReviewsSettings(config?: PublicSiteConfig | null) {
   const raw = config?.reviewsSettings;
@@ -29,12 +29,14 @@ export function SiteShell({
   siteConfig,
   homeReviews = [],
   storeReviews = [],
+  storeReviewsSummary,
   footerCategoryLinks = [],
 }: {
   children: React.ReactNode;
   siteConfig?: PublicSiteConfig | null;
   homeReviews?: PublicHomeReview[];
   storeReviews?: PublicStoreReview[];
+  storeReviewsSummary?: ProductReviewsSummary;
   footerCategoryLinks?: FooterLink[];
 }) {
   const pathname = usePathname();
@@ -76,6 +78,7 @@ export function SiteShell({
       {showStoreReviews && (
         <StoreReviewsCarousel
           reviews={storeReviews}
+          summary={storeReviewsSummary}
           title={reviewsSettings.homeTitle}
           subtitle={reviewsSettings.homeSubtitle}
         />

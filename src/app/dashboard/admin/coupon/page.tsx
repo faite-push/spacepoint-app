@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Search, Copy, Edit, Trash2, Ticket, ToggleLeft, ToggleRight, PlusCircle, MoreVertical, Pencil } from "lucide-react";
@@ -23,14 +24,18 @@ import { format } from "date-fns";
 import { getRangeForPreset } from "@/lib/date-range-presets";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogFooter, DialogDescription, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 
 export default function CouponsPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState(getRangeForPreset("7d"));
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const [couponToDelete, setCouponToDelete] = useState<Coupon | null>(null);
 
   const { data: couponsData, isLoading: isLoadingCoupons } = useQuery({
     queryKey: ["admin", "coupons", search],
@@ -46,10 +51,17 @@ export default function CouponsPage() {
     mutationFn: (id: string) => couponsApi.remove(id),
     onSuccess: () => {
       toast.success("Cupom excluído");
+      setIsDeleteModalOpen(false);
+      setCouponToDelete(null);
       queryClient.invalidateQueries({ queryKey: ["admin", "coupons"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const openDeleteModal = (coupon: Coupon) => {
+    setCouponToDelete(coupon);
+    setIsDeleteModalOpen(true);
+  };
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string, isActive: boolean }) =>
@@ -172,13 +184,20 @@ export default function CouponsPage() {
                 <></>
               ) : (
                 couponsData?.coupons.map((coupon) => (
-                  <TableRow key={coupon.id} className="border-white/5 bg-background hover:bg-black/5 cursor-pointer transition-colors group select-none">
+                  <TableRow
+                    key={coupon.id}
+                    className="border-white/5 bg-background hover:bg-black/5 cursor-pointer transition-colors group select-none"
+                    onClick={() => router.push(`/dashboard/admin/coupon/${coupon.id}`)}
+                  >
                     <TableCell className="pl-6">
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
                           <code className="text-sm font-bold text-white uppercase font-medium">{coupon.code}</code>
                           <Button
-                            onClick={() => copyToClipboard(coupon.code)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(coupon.code);
+                            }}
                             variant="ghost"
                             size="icon-sm"
                             className="cursor-pointer"
@@ -212,26 +231,26 @@ export default function CouponsPage() {
                     <TableCell>
                       {getStatusBadge(coupon)}
                     </TableCell>
-                    <TableCell className="pr-6 text-right">
+                    <TableCell className="pr-6 text-right" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost" }), "h-8 w-8 p-0 hover:bg-white/10")}>
                           <MoreVertical className="h-4 w-4 text-zinc-400" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-md text-white min-w-[220px] p-1">
                           <DropdownMenuGroup className="cursor-pointer">
-                            <DropdownMenuItem className="rounded-sm text-sm p-2 gap-2 cursor-pointer focus:bg-white/5" onClick={() => handleEdit(coupon)}>
-                              <Pencil className="h-4 w-4" />
+                            <DropdownMenuItem
+                              className="rounded-sm text-sm px-3 py-2 gap-2 cursor-pointer focus:bg-white/5"
+                              onClick={() => router.push(`/dashboard/admin/coupon/${coupon.id}`)}
+                            >
+                              Ver estatísticas
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="rounded-sm text-sm px-3 py-2 gap-2 cursor-pointer focus:bg-white/5" onClick={() => handleEdit(coupon)}>
                               Editar Dados
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              className="rounded-sm text-sm p-2 gap-2 cursor-pointer"
-                              onClick={() => {
-                                if (confirm("Tem certeza que deseja excluir este cupom?")) {
-                                  deleteMutation.mutate(coupon.id);
-                                }
-                              }}
+                              className="rounded-sm text-sm px-3 py-2 gap-2 cursor-pointer"
+                              onClick={() => openDeleteModal(coupon)}
                             >
-                              <Trash2 className="h-4 w-4" />
                               Excluir
                             </DropdownMenuItem>
                           </DropdownMenuGroup>
@@ -270,8 +289,8 @@ export default function CouponsPage() {
             couponsData?.coupons.map((coupon) => (
               <div
                 key={coupon.id}
-                className="rounded-lg border border-white/5 bg-card p-4 space-y-4 hover:bg-white/[0.02] transition-colors group relative"
-                onClick={() => handleEdit(coupon)}
+                className="rounded-lg border border-white/5 bg-card p-4 space-y-4 hover:bg-white/[0.02] transition-colors group relative cursor-pointer"
+                onClick={() => router.push(`/dashboard/admin/coupon/${coupon.id}`)}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex flex-col gap-1">
@@ -295,6 +314,7 @@ export default function CouponsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(coupon)}
+
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         asChild
@@ -307,12 +327,16 @@ export default function CouponsPage() {
                       <DropdownMenuContent align="end" className="bg-[#0D0D0D] border-white/10 text-white min-w-[200px]">
                         <DropdownMenuGroup>
                           <DropdownMenuLabel className="text-[10px] uppercase font-bold text-zinc-600">Ações</DropdownMenuLabel>
+                          <DropdownMenuItem
+                            className="gap-2 cursor-pointer focus:bg-white/5"
+                            onClick={() => router.push(`/dashboard/admin/coupon/${coupon.id}`)}
+                          >
+                            Ver estatísticas
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-white/5" onClick={() => handleEdit(coupon)}>
-                            <Edit className="h-3.5 w-3.5" />
                             Editar Dados
                           </DropdownMenuItem>
                           <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-white/5" onClick={() => duplicateMutation.mutate(coupon.id)}>
-                            <Copy className="h-3.5 w-3.5" />
                             Duplicar Cupom
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -325,11 +349,7 @@ export default function CouponsPage() {
                           <DropdownMenuSeparator className="bg-white/5" />
                           <DropdownMenuItem
                             className="gap-2 cursor-pointer text-red-500 focus:bg-red-500/10 focus:text-red-500"
-                            onClick={() => {
-                              if (confirm("Tem certeza que deseja excluir este cupom?")) {
-                                deleteMutation.mutate(coupon.id);
-                              }
-                            }}
+                            onClick={() => openDeleteModal(coupon)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                             Excluir
@@ -369,6 +389,51 @@ export default function CouponsPage() {
       </div>
 
       <CouponModal open={isModalOpen} onOpenChange={(v) => { setIsModalOpen(v); if (!v) setSelectedCoupon(null); }} coupon={selectedCoupon} />
+
+      <Dialog
+        open={isDeleteModalOpen}
+        onOpenChange={(open) => {
+          setIsDeleteModalOpen(open);
+          if (!open) setCouponToDelete(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Apagar Cupom</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja apagar o cupom{" "}
+              <span className="font-semibold text-white uppercase">
+                {couponToDelete?.code}
+              </span>
+              ? Essa ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-row">
+            <Button
+              variant="ghost"
+              size="lg"
+              className="flex-1"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setCouponToDelete(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              size="lg"
+              className="flex-1"
+              disabled={!couponToDelete || deleteMutation.isPending}
+              onClick={() => {
+                if (couponToDelete) deleteMutation.mutate(couponToDelete.id);
+              }}
+            >
+              {deleteMutation.isPending ? "Apagando..." : "Apagar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -87,6 +87,36 @@ export interface CouponStats {
   totalConverted: number;
 }
 
+export interface CouponDetailStats {
+  totalUses: number;
+  totalDiscounted: number;
+  totalConverted: number;
+}
+
+export interface CouponSale {
+  id: string;
+  discount: number;
+  createdAt: string;
+  user: { id: string; name: string | null; email: string | null; image: string | null } | null;
+  order: {
+    id: string;
+    status: string;
+    total: number;
+    subtotal: number;
+    discount: number;
+    paymentMethod: string | null;
+    createdAt: string;
+    paidAt: string | null;
+  } | null;
+}
+
+export interface CouponDetailResponse {
+  coupon: Coupon;
+  stats: CouponDetailStats;
+  sales: CouponSale[];
+  pagination: { page: number; limit: number; total: number; pages: number };
+}
+
 export const couponsApi = {
   list: (search?: string) => {
     const qs = search ? `?search=${encodeURIComponent(search)}` : "";
@@ -101,7 +131,27 @@ export const couponsApi = {
     const period = range || "all";
     return request<CouponStats>(`/v2/api/admin/coupons/stats?period=${period}`);
   },
-  get: (id: string) => request<Coupon>(`/v2/api/admin/coupons/${id}`),
+  get: (
+    id: string,
+    params?: {
+      from?: Date;
+      to?: Date;
+      search?: string;
+      status?: string;
+      page?: number;
+      limit?: number;
+    }
+  ) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set("from", params.from.toISOString());
+    if (params?.to) qs.set("to", params.to.toISOString());
+    if (params?.search) qs.set("search", params.search);
+    if (params?.status && params.status !== "all") qs.set("status", params.status);
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<CouponDetailResponse>(`/v2/api/admin/coupons/${id}${suffix}`);
+  },
   create: (payload: CouponPayload) =>
     request<Coupon>("/v2/api/admin/coupons", {
       method: "POST",

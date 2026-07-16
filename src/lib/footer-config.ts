@@ -29,6 +29,11 @@ export const FOOTER_DEFAULTS = {
     { label: "Política de Privacidade", href: "/privacy" },
     { label: "Política de Trocas e Devoluções", href: "/refunds" },
   ] as FooterLink[],
+  socialLinks: [
+    { platform: "FaFacebook", url: "https://www.facebook.com/spacepointbr" },
+    { platform: "FaInstagram", url: "https://www.instagram.com/spacepointbr" },
+    { platform: "FaYoutube", url: "https://www.youtube.com/@spacenosgames" },
+  ] as { platform: string; url: string }[],
   trustSeals: [
     {
       id: "reclame-aqui",
@@ -94,6 +99,41 @@ function parseLinks(raw: FooterLink[] | null | undefined, fallback: FooterLink[]
   return Array.isArray(raw) && raw.length > 0 ? raw : fallback;
 }
 
+function resolveSocialLinks(
+  config?: PublicSiteConfig | null
+): { platform: string; url: string }[] {
+  if (Array.isArray(config?.socialLinks) && config.socialLinks.length > 0) {
+    return config.socialLinks
+      .map((link) => ({
+        platform: String(link.platform || "").trim(),
+        url: String(link.url || "").trim(),
+      }))
+      .filter((link) => link.platform && link.url);
+  }
+
+  const fromLegacy = [
+    { platform: "FaFacebook", url: config?.socialFacebook?.trim() || "" },
+    { platform: "FaInstagram", url: config?.socialInstagram?.trim() || "" },
+    { platform: "FaTwitter", url: config?.socialTwitter?.trim() || "" },
+    { platform: "FaLinkedin", url: config?.socialLinkedin?.trim() || "" },
+    { platform: "FaYoutube", url: config?.socialYoutube?.trim() || "" },
+  ].filter((link) => link.url);
+
+  return fromLegacy.length > 0 ? fromLegacy : [...FOOTER_DEFAULTS.socialLinks];
+}
+
+function socialUrlByPlatform(
+  links: { platform: string; url: string }[],
+  platform: string,
+  fallbackIndex: number
+) {
+  return (
+    links.find((link) => link.platform === platform)?.url ||
+    FOOTER_DEFAULTS.socialLinks[fallbackIndex]?.url ||
+    null
+  );
+}
+
 export function resolveFooterConfig(
   config?: PublicSiteConfig | null,
   footerCategoryLinks?: FooterLink[]
@@ -105,6 +145,8 @@ export function resolveFooterConfig(
       ? copyrightRaw.replace(/\{year\}/g, String(year))
       : copyrightRaw
     : `${FOOTER_DEFAULTS.copyrightBase} © Todos os direitos reservados, ${year}.`;
+
+  const socialLinks = resolveSocialLinks(config);
 
   return {
     aboutTitle: config?.footerAboutTitle?.trim() || FOOTER_DEFAULTS.aboutTitle,
@@ -146,20 +188,12 @@ export function resolveFooterConfig(
     supportLinks: parseLinks(config?.footerSupportLinks, FOOTER_DEFAULTS.supportLinks),
     legalLinks: parseLinks(config?.footerLegalLinks, FOOTER_DEFAULTS.legalLinks),
     copyright,
-    socialFacebook: config?.socialFacebook?.trim() || null,
-    socialInstagram: config?.socialInstagram?.trim() || null,
-    socialTwitter: config?.socialTwitter?.trim() || null,
-    socialLinkedin: config?.socialLinkedin?.trim() || null,
-    socialYoutube: config?.socialYoutube?.trim() || null,
-    socialLinks: config?.socialLinks?.length
-      ? config.socialLinks
-      : ([
-          { platform: "FaFacebook", url: config?.socialFacebook },
-          { platform: "FaInstagram", url: config?.socialInstagram },
-          { platform: "FaTwitter", url: config?.socialTwitter },
-          { platform: "FaLinkedin", url: config?.socialLinkedin },
-          { platform: "FaYoutube", url: config?.socialYoutube },
-        ].filter((l) => l.url?.trim()) as { platform: string; url: string }[]),
+    socialFacebook: socialUrlByPlatform(socialLinks, "FaFacebook", 0),
+    socialInstagram: socialUrlByPlatform(socialLinks, "FaInstagram", 1),
+    socialTwitter: socialUrlByPlatform(socialLinks, "FaTwitter", 2),
+    socialYoutube: socialUrlByPlatform(socialLinks, "FaYoutube", 3),
+    socialLinkedin: socialUrlByPlatform(socialLinks, "FaLinkedin", 4),
+    socialLinks,
     trustSeals: FOOTER_DEFAULTS.trustSeals,
   };
 }

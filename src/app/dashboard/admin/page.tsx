@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Package } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Eye, EyeOff, Package } from "lucide-react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { usePermission } from "@/providers/PermissionProvider";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { API_URL } from "@/lib/api";
 import { getRangeForPreset } from "@/lib/date-range-presets";
+import { cn } from "@/lib/utils";
 
 import { PerformanceChart } from "@/components/admin/dashboard/PerformanceChart";
 import { DateRangeFilter } from "@/components/admin/dashboard/DateRangeFilter";
@@ -15,6 +16,8 @@ import { CustomersChart } from "@/components/admin/dashboard/CustomersChart";
 import { OverviewCards } from "@/components/admin/dashboard/OverviewCards";
 import { MetricSidebar } from "@/components/admin/dashboard/MetricSidebar";
 import { DashboardContentSkeleton } from "@/components/admin/skeletons/DashboardSkeleton";
+
+const PRIVACY_STORAGE_KEY = "spacepoint:dashboard-values-hidden";
 
 async function fetchStats(from: Date, to: Date) {
   const fromIso = from.toISOString();
@@ -46,6 +49,27 @@ export default function AdminDashboard() {
   const canopyAnalytics = hasPermission('analytics:view');
 
   const [dateRange, setDateRange] = useState(getRangeForPreset("today"));
+  const [valuesHidden, setValuesHidden] = useState(false);
+
+  useEffect(() => {
+    try {
+      setValuesHidden(localStorage.getItem(PRIVACY_STORAGE_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function toggleValuesHidden() {
+    setValuesHidden((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(PRIVACY_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["admin", "stats", dateRange.from.toISOString(), dateRange.to.toISOString()],
@@ -93,7 +117,26 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
           <p className="text-muted-foreground">Análises e informações de rendimentos</p>
         </div>
-        <DateRangeFilter defaultPreset="today" onRangeChange={(range) => setDateRange(range)} />
+        <div className="flex items-center gap-2">
+          <DateRangeFilter defaultPreset="today" onRangeChange={(range) => setDateRange(range)} />
+          <button
+            type="button"
+            onClick={toggleValuesHidden}
+            aria-pressed={valuesHidden}
+            title={valuesHidden ? "Mostrar valores" : "Ocultar valores"}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "h-10 w-10 shrink-0 rounded-md border-none p-0",
+              valuesHidden && ""
+            )}
+          >
+            {valuesHidden ? (
+              <EyeOff className="h-4.5 w-4.5 text-white" />
+            ) : (
+              <Eye className="h-4.5 w-4.5 text-white" />
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="relative z-10">
@@ -107,16 +150,16 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <>
-            <OverviewCards metrics={data.metrics} />
+            <OverviewCards metrics={data.metrics} valuesHidden={valuesHidden} />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
               <div className="lg:col-span-2 space-y-6">
-                <PerformanceChart data={data.charts.performance} />
-                <CustomersChart data={data.charts.customers} />
+                <PerformanceChart data={data.charts.performance} valuesHidden={valuesHidden} />
+                <CustomersChart data={data.charts.customers} valuesHidden={valuesHidden} />
               </div>
 
               <div className="lg:col-span-1">
-                <MetricSidebar data={data.sidebar} />
+                <MetricSidebar data={data.sidebar} valuesHidden={valuesHidden} />
               </div>
             </div>
           </>

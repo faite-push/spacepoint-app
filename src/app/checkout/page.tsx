@@ -179,7 +179,7 @@ export default function CheckoutPage() {
         visitorId,
         email,
         customerName: customerName || undefined,
-      }).catch(() => {});
+      }).catch(() => { });
     }, 1500);
 
     return () => clearTimeout(timer);
@@ -289,7 +289,7 @@ export default function CheckoutPage() {
       clear();
       const visitorId = getVisitorId();
       if (visitorId) {
-        clearAbandonedCart(visitorId).catch(() => {});
+        clearAbandonedCart(visitorId).catch(() => { });
       }
       window.location.href = `/checkout/payment/${order.id}?paymentMethod=${paymentMethod}`;
     } catch (error) {
@@ -581,7 +581,13 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            <div className="lg:hidden">
+            <div className="lg:hidden space-y-2">
+              {status && (
+                <div className="bg-emerald-500/10 text-emerald-500 text-center text-sm font-bold py-3 rounded-md">
+                  {status}
+                </div>
+              )}
+
               <Button
                 onClick={submitOrder}
                 disabled={!acceptedTerms || items.length === 0 || isSubmitting || authLoading}

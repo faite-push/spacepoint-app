@@ -257,11 +257,11 @@ export const productsApi = {
     }>(`/v2/api/admin/products${suffix}`);
   },
   listAll: async (params: { search?: string; categoryId?: string } = {}) => {
-    const pageSize = 500;
+    const pageSize = 2000;
     let page = 1;
     const products: AdminProduct[] = [];
 
-    while (page <= 20) {
+    while (page <= 50) {
       const result = await productsApi.list({ ...params, page, pageSize });
       products.push(...result.products);
       if (page >= result.pagination.totalPages) break;
@@ -1376,6 +1376,13 @@ export type AdminAuditLog = {
   actor: { id: string; name: string | null; email: string | null; image: string | null; role?: { name: string } | null } | null;
 };
 
+export type AdminAuditActor = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+};
+
 export const auditLogsApi = {
   list: (params?: {
     action?: string;
@@ -1397,7 +1404,9 @@ export const auditLogsApi = {
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     return request<{
       logs: AdminAuditLog[];
+      actors: AdminAuditActor[];
       actions: string[];
+      actionLabels: Record<string, string>;
       pagination: { page: number; limit: number; total: number; pages: number };
     }>(`/v2/api/admin/audit-logs${suffix}`);
   },

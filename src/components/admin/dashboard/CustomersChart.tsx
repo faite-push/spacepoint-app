@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ListFilter } from "lucide-react";
 
@@ -9,16 +9,26 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import {
+  buildPrivacyCustomersData,
+  HiddenValuesBadge,
+} from "@/components/admin/dashboard/privacy-mode";
 
 interface CustomersChartProps {
   data: any[];
+  valuesHidden?: boolean;
 }
 
-export function CustomersChart({ data }: CustomersChartProps) {
+export function CustomersChart({ data, valuesHidden = false }: CustomersChartProps) {
   const [series, setSeries] = useState({
     unique: true,
     returning: true
   });
+
+  const chartData = useMemo(
+    () => (valuesHidden ? buildPrivacyCustomersData() : data),
+    [valuesHidden, data]
+  );
 
   return (
     <div className="bg-card/50 border border-white/5 rounded-md p-6">
@@ -74,26 +84,31 @@ export function CustomersChart({ data }: CustomersChartProps) {
         </Popover>
       </div>
 
-      <div className="h-[250px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }} barGap={8}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
-            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }} dy={10} interval="preserveStartEnd" />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }} allowDecimals={false} />
-            <Tooltip 
-                cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                contentStyle={{ backgroundColor: '#0F0F11', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
-                labelStyle={{ fontSize: '10px', color: '#666', marginBottom: '4px', textTransform: 'uppercase' }}
-            />
-            {series.unique && (
-              <Bar dataKey="unique" fill="#10b981" radius={[4, 4, 0, 0]} name="Clientes Únicos" animationDuration={1000} />
-            )}
-            {series.returning && (
-              <Bar dataKey="returning" fill="#A855F7" radius={[4, 4, 0, 0]} name="Visitantes recorrentes" animationDuration={1000} />
-            )}
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="relative h-[250px] w-full">
+        {valuesHidden ? <HiddenValuesBadge /> : null}
+        <div className={cn("h-full w-full", valuesHidden && "select-none blur-[7px]")}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }} barGap={8}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }} dy={10} interval="preserveStartEnd" />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }} allowDecimals={false} />
+              {!valuesHidden && (
+                <Tooltip
+                  cursor={{ fill: "rgba(255,255,255,0.02)" }}
+                  contentStyle={{ backgroundColor: "#0F0F11", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px" }}
+                  itemStyle={{ fontSize: "11px", fontWeight: "bold" }}
+                  labelStyle={{ fontSize: "10px", color: "#666", marginBottom: "4px", textTransform: "uppercase" }}
+                />
+              )}
+              {series.unique && (
+                <Bar dataKey="unique" fill="#10b981" radius={[4, 4, 0, 0]} name="Clientes Únicos" animationDuration={1000} />
+              )}
+              {series.returning && (
+                <Bar dataKey="returning" fill="#A855F7" radius={[4, 4, 0, 0]} name="Visitantes recorrentes" animationDuration={1000} />
+              )}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

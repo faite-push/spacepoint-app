@@ -1,25 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ListFilter } from "lucide-react";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import {
+  buildPrivacyPerformanceData,
+  HiddenValuesBadge,
+} from "@/components/admin/dashboard/privacy-mode";
 
 interface PerformanceChartProps {
   data: any[];
+  valuesHidden?: boolean;
 }
 
-export function PerformanceChart({ data }: PerformanceChartProps) {
+export function PerformanceChart({ data, valuesHidden = false }: PerformanceChartProps) {
   const [series, setSeries] = useState({
     revenue: true,
     sales: true,
     unitsSold: true
   });
+
+  const chartData = useMemo(
+    () => (valuesHidden ? buildPrivacyPerformanceData() : data),
+    [valuesHidden, data]
+  );
 
   return (
     <div className="bg-card/50 border border-white/5 rounded-md p-6">
@@ -92,74 +102,77 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
         </Popover>
       </div>
 
-      <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-            <defs>
-              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#A855F7" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#A855F7" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#00c950" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#00c950" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="colorUnits" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#2b7fff" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#2b7fff" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }}
-              dy={10}
-              interval="preserveStartEnd"
-            />
-            {/* Left axis: Revenue in R$ */}
-            <YAxis
-              yAxisId="revenue"
-              orientation="left"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }}
-              tickFormatter={(v) => v === 0 ? "0" : `R$${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
-              width={52}
-            />
-            {/* Right axis: counts (sales, units) */}
-            <YAxis
-              yAxisId="count"
-              orientation="right"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }}
-              width={28}
-              allowDecimals={false}
-            />
-            <Tooltip
-              contentStyle={{ backgroundColor: '#0F0F11', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '10px 14px' }}
-              itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
-              labelStyle={{ fontSize: '10px', color: '#666', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
-              formatter={(value: any, name: any) => {
-                if (name === "Faturamento (R$)") {
-                  return [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, name];
-                }
-                return [value, name];
-              }}
-            />
-            {series.revenue && (
-              <Area yAxisId="revenue" type="monotone" dataKey="revenue" stroke="#A855F7" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" animationDuration={1500} name="Faturamento (R$)" />
-            )}
-            {series.sales && (
-              <Area yAxisId="count" type="monotone" dataKey="sales" stroke="#00c950" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" animationDuration={1500} name="Vendas (Qtd)" />
-            )}
-            {series.unitsSold && (
-              <Area yAxisId="count" type="monotone" dataKey="unitsSold" stroke="#2b7fff" strokeWidth={3} fillOpacity={1} fill="url(#colorUnits)" animationDuration={1500} name="Itens Vendidos" />
-            )}
-          </AreaChart>
-        </ResponsiveContainer>
+      <div className="relative h-[300px] w-full">
+        {valuesHidden ? <HiddenValuesBadge /> : null}
+        <div className={cn("h-full w-full", valuesHidden && "select-none blur-[7px]")}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#A855F7" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#A855F7" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#00c950" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#00c950" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorUnits" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#2b7fff" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#2b7fff" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
+              <XAxis
+                dataKey="label"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }}
+                dy={10}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                yAxisId="revenue"
+                orientation="left"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }}
+                tickFormatter={(v) => (v === 0 ? "0" : `R$${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`)}
+                width={52}
+              />
+              <YAxis
+                yAxisId="count"
+                orientation="right"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }}
+                width={28}
+                allowDecimals={false}
+              />
+              {!valuesHidden && (
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#0F0F11", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", padding: "10px 14px" }}
+                  itemStyle={{ fontSize: "11px", fontWeight: "bold" }}
+                  labelStyle={{ fontSize: "10px", color: "#666", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" }}
+                  formatter={(value: any, name: any) => {
+                    if (name === "Faturamento (R$)") {
+                      return [`R$ ${Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, name];
+                    }
+                    return [value, name];
+                  }}
+                />
+              )}
+              {series.revenue && (
+                <Area yAxisId="revenue" type="monotone" dataKey="revenue" stroke="#A855F7" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" animationDuration={1500} name="Faturamento (R$)" />
+              )}
+              {series.sales && (
+                <Area yAxisId="count" type="monotone" dataKey="sales" stroke="#00c950" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" animationDuration={1500} name="Vendas (Qtd)" />
+              )}
+              {series.unitsSold && (
+                <Area yAxisId="count" type="monotone" dataKey="unitsSold" stroke="#2b7fff" strokeWidth={3} fillOpacity={1} fill="url(#colorUnits)" animationDuration={1500} name="Itens Vendidos" />
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

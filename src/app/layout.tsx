@@ -60,12 +60,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children, }: Readonly<{ children: React.ReactNode; }>) {
-  const [siteConfig, homeReviews, storeReviews, footerCategoryLinks] = await Promise.all([
+  const [siteConfig, homeReviews, storeReviewsPayload, footerCategoryLinks] = await Promise.all([
     fetchSiteConfig(),
     fetchHomeReviews(),
     fetchStoreReviews(),
     fetchFooterCategories(),
   ]);
+  const storeReviews = storeReviewsPayload.reviews;
+  const storeReviewsSummary = storeReviewsPayload.summary;
 
   return (
     <html
@@ -94,6 +96,7 @@ export default async function RootLayout({ children, }: Readonly<{ children: Rea
                   siteConfig={siteConfig}
                   homeReviews={homeReviews}
                   storeReviews={storeReviews}
+                  storeReviewsSummary={storeReviewsSummary}
                   footerCategoryLinks={footerCategoryLinks}
                 >
                   {children}

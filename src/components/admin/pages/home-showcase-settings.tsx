@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { homeShowcaseApi, type HomeShowcaseSectionRecord, } from "@/lib/admin-api";
-import { cn } from "@/lib/utils";
+import { cn, decodeHtmlEntities } from "@/lib/utils";
 
 type SectionForm = {
   title: string;
@@ -361,7 +361,9 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
                           )}
                         />
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-white">{product.name}</p>
+                          <p className="truncate text-sm font-medium text-white">
+                            {decodeHtmlEntities(product.name)}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {product.isActive && product.isVisible
                               ? "Visível na loja"
@@ -374,7 +376,7 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
                         size="sm"
                         pressed={selected}
                         onPressedChange={() => toggleProduct(product.id)}
-                        aria-label={`Incluir ${product.name} na seção`}
+                        aria-label={`Incluir ${decodeHtmlEntities(product.name)} na seção`}
                       >
                         {selected ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                       </Toggle>

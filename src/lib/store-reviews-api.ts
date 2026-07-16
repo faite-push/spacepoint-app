@@ -38,17 +38,47 @@ export type ProductReviewsResponse = {
   };
 };
 
-export async function fetchStoreReviews(): Promise<PublicStoreReview[]> {
+export type StoreReviewsHomePayload = {
+  reviews: PublicStoreReview[];
+  summary: ProductReviewsSummary;
+};
+
+const EMPTY_SUMMARY: ProductReviewsSummary = {
+  averageRating: 0,
+  total: 0,
+  distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+};
+
+function summarizeFromReviews(reviews: PublicStoreReview[]): ProductReviewsSummary {
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as ProductReviewsSummary["distribution"];
+  let sum = 0;
+  for (const review of reviews) {
+    const rating = Math.min(5, Math.max(1, Number(review.rating) || 0)) as 1 | 2 | 3 | 4 | 5;
+    sum += rating;
+    distribution[rating] += 1;
+  }
+  const total = reviews.length;
+  return {
+    averageRating: total ? Math.round((sum / total) * 100) / 100 : 0,
+    total,
+    distribution,
+  };
+}
+
+export async function fetchStoreReviews(): Promise<StoreReviewsHomePayload> {
+  const empty: StoreReviewsHomePayload = { reviews: [], summary: EMPTY_SUMMARY };
   try {
     const r = await fetch(`${API_URL}/v2/api/store-reviews`, {
       next: { revalidate: 60 },
       headers: getApiHeaders(),
     });
-    if (!r.ok) return [];
+    if (!r.ok) return empty;
     const data = await r.json();
-    return data.reviews ?? [];
+    const reviews = (data.reviews ?? []) as PublicStoreReview[];
+    const summary = (data.summary as ProductReviewsSummary | undefined) ?? summarizeFromReviews(reviews);
+    return { reviews, summary };
   } catch {
-    return [];
+    return empty;
   }
 }
 

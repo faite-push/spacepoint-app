@@ -119,7 +119,14 @@ export function FooterSettings({ hideHeader = false }: { hideHeader?: boolean })
   });
 
   useEffect(() => {
-    if (data?.config) setForm(data.config);
+    if (!data?.config) return;
+    setForm({
+      ...data.config,
+      socialLinks:
+        Array.isArray(data.config.socialLinks) && data.config.socialLinks.length > 0
+          ? data.config.socialLinks
+          : FOOTER_DEFAULTS.socialLinks.map((link) => ({ ...link })),
+    });
   }, [data?.config]);
 
   const previewFooter = useMemo(
@@ -459,7 +466,11 @@ export function FooterSettings({ hideHeader = false }: { hideHeader?: boolean })
                 <p className="text-xs text-zinc-500 mt-0.5">Ícones aparecem à direita na barra inferior quando a URL estiver preenchida.</p>
               </div>
               <SocialLinksEditor
-                links={form.socialLinks ?? []}
+                links={
+                  form.socialLinks?.length
+                    ? form.socialLinks
+                    : FOOTER_DEFAULTS.socialLinks.map((link) => ({ ...link }))
+                }
                 onChange={(links) => set("socialLinks", links)}
               />
             </div>
