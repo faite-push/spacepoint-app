@@ -47,7 +47,7 @@ export function StorefrontPlugins({ config }: StorefrontPluginsProps) {
   const measurementId = clean(googleAnalytics?.measurementId, /^G-[A-Z0-9]+$/);
   const pixelId = clean(facebook?.pixelId, /^\d+$/);
   const tiktokPixelId = clean(tiktok?.pixelId, /^[A-Z0-9]+$/);
-  const utmifyKey = utmify?.apiKey?.trim() || null;
+  const utmifyEnabled = Boolean(utmify);
   const crispWebsiteId = clean(crisp?.websiteId, /^[a-f0-9-]{36}$/i);
   const tawkPropertyId = clean(tawk?.propertyId, /^[a-zA-Z0-9]+$/);
   const tawkWidgetId = clean(tawk?.widgetId, /^[a-zA-Z0-9/_-]+$/) ?? "default";
@@ -111,11 +111,10 @@ t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,do
         </Script>
       )}
 
-      {utmifyKey && (
+      {utmifyEnabled && (
         <Script
           id="spacepoint-utmify"
           src="https://cdn.utmify.com.br/scripts/utms/latest.js"
-          data-utmify={utmifyKey}
           strategy="afterInteractive"
         />
       )}

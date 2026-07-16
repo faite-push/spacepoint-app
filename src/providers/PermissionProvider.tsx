@@ -21,6 +21,7 @@ export function PermissionProvider({
 }) {
   const hasPermission = (key: string) => {
     if (isSuperOwner) return true;
+    if (userPermissions.includes("system:admin")) return true;
     return userPermissions.includes(key);
   };
 

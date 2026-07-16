@@ -27,48 +27,150 @@ function getApiOrigin() {
   }
 }
 
+/** Origens extras (ex.: Chatwoot self-hosted). Separadas por vírgula. */
+function getPluginCspExtraOrigins() {
+  const raw =
+    process.env.PLUGIN_CSP_EXTRA_ORIGINS ||
+    process.env.NEXT_PUBLIC_PLUGIN_CSP_EXTRA_ORIGINS ||
+    "";
+  return raw
+    .split(",")
+    .map((s) => s.trim().replace(/\/$/, ""))
+    .filter((s) => /^https?:\/\/[^\s]+$/i.test(s));
+}
+
+function unique(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
+}
+
 function buildContentSecurityPolicy(isDev: boolean) {
   const apiOrigin = getApiOrigin();
-  const scriptSrc = [
+  const extraOrigins = getPluginCspExtraOrigins();
+
+  const scriptSrc = unique([
     "'self'",
     "'unsafe-inline'",
     ...(isDev ? ["'unsafe-eval'"] : []),
+    // Google (Ads, Analytics, GTM)
     "https://www.googletagmanager.com",
+    "https://*.googletagmanager.com",
     "https://www.google-analytics.com",
+    "https://tagmanager.google.com",
+    "https://www.googleadservices.com",
+    "https://googleads.g.doubleclick.net",
+    "https://www.google.com",
+    // Meta / Facebook
     "https://connect.facebook.net",
+    // TikTok
     "https://analytics.tiktok.com",
+    // Utmify
     "https://cdn.utmify.com.br",
+    // Crisp
     "https://client.crisp.chat",
+    // Tawk
     "https://embed.tawk.to",
+    "https://cdn.jsdelivr.net",
+    // Chatwoot cloud + self-hosted via env
     "https://*.chatwoot.com",
-  ];
+    "https://app.chatwoot.com",
+    ...extraOrigins,
+  ]);
 
-  const connectSrc = [
+  const connectSrc = unique([
     "'self'",
     ...(apiOrigin ? [apiOrigin] : []),
+    // Google
     "https://www.google-analytics.com",
+    "https://*.google-analytics.com",
+    "https://*.analytics.google.com",
+    "https://analytics.google.com",
+    "https://www.googletagmanager.com",
+    "https://*.googletagmanager.com",
+    "https://*.g.doubleclick.net",
+    "https://stats.g.doubleclick.net",
+    "https://www.google.com",
+    "https://www.googleadservices.com",
+    "https://pagead2.googlesyndication.com",
+    // Meta / Facebook
+    "https://www.facebook.com",
+    "https://connect.facebook.net",
+    "https://graph.facebook.com",
+    // TikTok
     "https://analytics.tiktok.com",
+    "https://*.tiktok.com",
+    "https://business-api.tiktok.com",
+    // Utmify
+    "https://cdn.utmify.com.br",
+    "https://*.utmify.com.br",
+    // Crisp
     "https://client.crisp.chat",
+    "https://*.crisp.chat",
+    "wss://client.relay.crisp.chat",
+    "wss://*.crisp.chat",
+    // Tawk
+    "https://*.tawk.to",
+    "wss://*.tawk.to",
+    // Chatwoot
+    "https://*.chatwoot.com",
+    "https://app.chatwoot.com",
+    "wss://*.chatwoot.com",
+    ...extraOrigins,
+    ...extraOrigins.map((o) => o.replace(/^http/i, "ws")),
     "wss:",
     ...(isDev ? ["ws:", "http://localhost:*", "http://127.0.0.1:*"] : []),
-  ];
+  ]);
 
-  const imgSrc = [
+  const frameSrc = unique([
+    "'self'",
+    "https://www.googletagmanager.com",
+    "https://td.doubleclick.net",
+    "https://www.facebook.com",
+    "https://*.facebook.com",
+    "https://game.crisp.chat",
+    "https://*.tawk.to",
+    "https://*.chatwoot.com",
+    "https://app.chatwoot.com",
+    ...extraOrigins,
+  ]);
+
+  const styleSrc = unique([
+    "'self'",
+    "'unsafe-inline'",
+    "https://fonts.googleapis.com",
+    "https://www.googletagmanager.com",
+    "https://tagmanager.google.com",
+    "https://*.tawk.to",
+    "https://cdn.jsdelivr.net",
+    "https://client.crisp.chat",
+  ]);
+
+  const fontSrc = unique([
+    "'self'",
+    "data:",
+    "https://fonts.gstatic.com",
+    "https://client.crisp.chat",
+    "https://*.tawk.to",
+  ]);
+
+  const imgSrc = unique([
     "'self'",
     "data:",
     "blob:",
     "https:",
     ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*"] : []),
-  ];
+  ]);
+
+  const workerSrc = unique(["'self'", "blob:"]);
 
   const directives = [
     "default-src 'self'",
     `script-src ${scriptSrc.join(" ")}`,
-    `style-src 'self' 'unsafe-inline'`,
+    `style-src ${styleSrc.join(" ")}`,
     `img-src ${imgSrc.join(" ")}`,
-    `font-src 'self' data:`,
+    `font-src ${fontSrc.join(" ")}`,
     `connect-src ${connectSrc.join(" ")}`,
-    "frame-src 'self' https://www.googletagmanager.com",
+    `frame-src ${frameSrc.join(" ")}`,
+    `worker-src ${workerSrc.join(" ")}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

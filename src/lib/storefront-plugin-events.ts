@@ -20,6 +20,37 @@ export type CartEventPayload = {
   numItems?: number;
 };
 
+const PURCHASE_TRACK_STORAGE_KEY = "spacepoint:tracked-purchases";
+const PURCHASE_TRACK_MAX = 40;
+
+function readTrackedPurchaseIds(): string[] {
+  try {
+    const raw = window.localStorage.getItem(PURCHASE_TRACK_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is string => typeof id === "string" && id.length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function hasTrackedPurchase(orderId: string): boolean {
+  return readTrackedPurchaseIds().includes(orderId);
+}
+
+function markTrackedPurchase(orderId: string): void {
+  try {
+    const ids = readTrackedPurchaseIds().filter((id) => id !== orderId);
+    ids.push(orderId);
+    const trimmed = ids.length > PURCHASE_TRACK_MAX ? ids.slice(-PURCHASE_TRACK_MAX) : ids;
+    window.localStorage.setItem(PURCHASE_TRACK_STORAGE_KEY, JSON.stringify(trimmed));
+  } catch {
+    // private mode / quota — ignora
+  }
+}
+
 export function trackStorefrontAddToCart({
   value,
   currency = "BRL",
@@ -92,12 +123,18 @@ export function trackStorefrontInitiateCheckout({
   }
 }
 
+/** Dispara Purchase uma vez por pedido (localStorage). Retorna false se já tinha sido enviado. */
 export function trackStorefrontPurchase({
   orderId,
   value,
   currency = "BRL",
-}: PurchaseEventPayload): void {
-  if (typeof window === "undefined") return;
+}: PurchaseEventPayload): boolean {
+  if (typeof window === "undefined") return false;
+  if (!orderId?.trim()) return false;
+  if (hasTrackedPurchase(orderId)) return false;
+
+  // Marca antes de enviar para reduzir duplicata em Strict Mode / efeitos concorrentes
+  markTrackedPurchase(orderId);
 
   const ads = window.__spacepointGoogleAds;
   if (typeof window.gtag === "function" && ads?.sendTo) {
@@ -110,10 +147,26 @@ export function trackStorefrontPurchase({
   }
 
   if (typeof window.fbq === "function") {
-    window.fbq("track", "Purchase", { value, currency });
+    window.fbq(
+      "track",
+      "Purchase",
+      {
+        value,
+        currency,
+        content_type: "product",
+        order_id: orderId,
+      },
+      { eventID: orderId }
+    );
   }
 
   if (window.ttq?.track) {
-    window.ttq.track("CompletePayment", { value, currency });
+    window.ttq.track("CompletePayment", {
+      value,
+      currency,
+      content_id: orderId,
+    });
   }
+
+  return true;
 }

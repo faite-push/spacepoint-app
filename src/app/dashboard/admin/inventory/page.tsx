@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { toast } from "sonner";
 
-import { Search, Package, AlertTriangle, CheckCircle2, XCircle, ArrowLeft, Loader2, Save, Upload, Eye, Edit2, Layers, Check, } from "lucide-react";
+import { Search, Package, AlertTriangle, CheckCircle2, XCircle, ArrowLeft, Loader2, Save, Upload, Eye, Edit2, Layers, Check, ChevronRight, } from "lucide-react";
 import { RiAlarmWarningFill } from "react-icons/ri";
 import { TbListDetails, TbListCheck } from "react-icons/tb";
 
@@ -71,6 +71,7 @@ export default function InventoryPage() {
 
   const [uploadVariant, setUploadVariant] = useState<InventoryVariantItem | null>(null);
   const [codesVariant, setCodesVariant] = useState<InventoryVariantItem | null>(null);
+  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "inventory", search, statusFilter, deliveryFilter, page],
@@ -119,6 +120,10 @@ export default function InventoryPage() {
     queryClient.invalidateQueries({ queryKey: ["admin", "inventory"] });
     queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
     queryClient.invalidateQueries({ queryKey: ["admin", "variants"] });
+  }
+
+  function toggleProductExpanded(productId: string) {
+    setExpandedProducts((prev) => ({ ...prev, [productId]: !prev[productId] }));
   }
 
   return (
@@ -282,18 +287,39 @@ export default function InventoryPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              grouped.map((group) => (
+              grouped.map((group) => {
+                const isExpanded = Boolean(expandedProducts[group.productId]);
+
+                return (
                 <Fragment key={group.productId}>
-                  <TableRow className="border-white/5 bg-white/[0.02]">
-                    <TableCell colSpan={7} className="py-3 pl-6">
+                  <TableRow className="border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                    <TableCell colSpan={7} className="py-3 pl-4 pr-4">
                       <div className="flex items-center justify-between gap-3">
-                        <Link href={`/dashboard/admin/products/${group.productId}/edit`} className="text-sm font-bold text-white">
-                          {group.productName}
-                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => toggleProductExpanded(group.productId)}
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                        >
+                          <ChevronRight
+                            className={cn(
+                              "h-4 w-4 shrink-0 text-white/40 transition-transform duration-200",
+                              isExpanded && "rotate-90 text-white/70"
+                            )}
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-white">
+                              {group.productName}
+                            </p>
+                            <p className="mt-0.5 text-xs text-white/40">
+                              {group.items.length} variante{group.items.length === 1 ? "" : "s"}
+                            </p>
+                          </div>
+                        </button>
 
                         <Link
                           href={`/dashboard/admin/products/${group.productId}/variants`}
-                          className="bg-primary p-2 py-1.5 rounded-sm text-xs font-medium text-black"
+                          className="shrink-0 bg-primary p-2 py-1.5 rounded-sm text-xs font-medium text-black"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           Gerenciar variantes
                         </Link>
@@ -301,9 +327,8 @@ export default function InventoryPage() {
                     </TableCell>
                   </TableRow>
 
-                  {group.items.map((variant) => {
+                  {isExpanded && group.items.map((variant) => {
                     const status = getStockStatusMeta(variant.stockStatus);
-                    const StatusIcon = status.icon;
                     const isEditing = editingId === variant.id;
                     const isAutomatic = supportsBulkUpload(variant.deliveryType);
 
@@ -312,7 +337,7 @@ export default function InventoryPage() {
                         key={variant.id}
                         className="border-white/5 hover:bg-white/[0.01] transition-colors group"
                       >
-                        <TableCell className="pl-10 py-4">
+                        <TableCell className="pl-12 py-4">
                           <div className="flex flex-col">
                             <span className="text-sm font-medium text-white">{variant.name}</span>
                             <span className="bg-white/5 max-w-fit rounded py-1 px-2 mt-0.5 text-xs text-muted-foreground">
@@ -440,7 +465,8 @@ export default function InventoryPage() {
                     );
                   })}
                 </Fragment>
-              ))
+              );
+              })
             )}
           </TableBody>
         </Table>

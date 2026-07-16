@@ -1177,6 +1177,15 @@ export type PluginField = {
   key: string;
   label: string;
   placeholder?: string;
+  /** Campo sensível: mascarado no admin e não exibido na vitrine. */
+  secret?: boolean;
+  /** Texto de ajuda abaixo do input. */
+  hint?: string;
+  /** Se false, o campo pode ficar vazio. Default: true (exceto secret). */
+  required?: boolean;
+  /** Regex (string) para validar o valor. */
+  pattern?: string;
+  patternMessage?: string;
 };
 
 export type PluginDefinition = {
@@ -1186,6 +1195,9 @@ export type PluginDefinition = {
   category: 'marketing' | 'atendimento' | 'metricas';
   fields: PluginField[];
   logoUrl?: string;
+  /** Path público exibido após instalar (ex.: feed do Merchant). */
+  publicResourcePath?: string;
+  publicResourceLabel?: string;
 };
 
 export type PluginInstallState = {

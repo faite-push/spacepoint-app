@@ -38,43 +38,57 @@ interface Role {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+const FULL_ACCESS_KEY = "system:admin";
+
 const CATEGORY_LABELS: Record<string, string> = {
+  system: "System",
+  analytics: "Dashboard",
   products: "Produtos",
   codes: "Códigos",
-  orders: "Pedidos",
-  coupons: "Cupons",
-  chats: "Space Chat",
+  orders: "Vendas",
+  coupons: "Cupom",
+  media: "Galeria",
   clients: "Clientes",
   reviews: "Avaliações",
-  media: "Galeria",
-  users: "Usuários",
-  roles: "Cargos",
-  pages: "Páginas do site",
-  gateways: "Gateways",
+  audit: "Registros de Auditoria",
+  chats: "Space Chat",
   plugins: "Plugins",
+  users: "Equipe",
+  roles: "Cargos",
+  gateways: "Gateways",
+  pages: "Páginas do site",
   settings: "Configurações",
-  analytics: "Analytics",
 };
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  system: "Configurações do sistema",
+  analytics: "Dashboard e relatórios",
   products: "Gerenciamento de produtos, variantes e estoque",
   codes: "Códigos digitais e inventário",
   orders: "Pedidos, vendas e reembolsos",
   coupons: "Cupons de desconto",
-  chats: "Atendimento via Space Chat",
+  media: "Galeria de mídia",
   clients: "Lista de clientes da loja",
   reviews: "Moderação de avaliações",
-  media: "Galeria de mídia",
+  audit: "Histórico de ações administrativas",
+  chats: "Atendimento via Space Chat",
+  plugins: "Integrações e plugins",
   users: "Equipe e membros",
   roles: "Cargos e permissões",
-  pages: "Páginas e aparência do site",
   gateways: "Gateways de pagamento",
-  plugins: "Integrações e plugins",
+  pages: "Páginas e aparência do site",
   settings: "Configurações gerais",
-  analytics: "Dashboard e relatórios",
 };
 
 const CATEGORY_MASTER: Record<string, { title: string; description: string }> = {
+  system: {
+    title: "Administrator",
+    description: "Acesso total ao sistema com todas as permissões",
+  },
+  analytics: {
+    title: "Manage Dashboard",
+    description: "Gerenciar dashboard com acesso total às funcionalidades",
+  },
   products: {
     title: "Manage Products",
     description: "Gerenciar produtos com acesso total às funcionalidades",
@@ -91,9 +105,9 @@ const CATEGORY_MASTER: Record<string, { title: string; description: string }> = 
     title: "Manage Coupons",
     description: "Gerenciar cupons com acesso total às funcionalidades",
   },
-  chats: {
-    title: "Manage Space Chat",
-    description: "Gerenciar atendimento com acesso total às funcionalidades",
+  media: {
+    title: "Manage Gallery",
+    description: "Gerenciar galeria com acesso total às funcionalidades",
   },
   clients: {
     title: "View Clients",
@@ -103,9 +117,17 @@ const CATEGORY_MASTER: Record<string, { title: string; description: string }> = 
     title: "Manage Reviews",
     description: "Moderar avaliações com acesso total às funcionalidades",
   },
-  media: {
-    title: "Manage Gallery",
-    description: "Gerenciar galeria com acesso total às funcionalidades",
+  audit: {
+    title: "View Audit Logs",
+    description: "Visualizar registros de auditoria do sistema",
+  },
+  chats: {
+    title: "Manage Space Chat",
+    description: "Gerenciar atendimento com acesso total às funcionalidades",
+  },
+  plugins: {
+    title: "Manage Plugins",
+    description: "Gerenciar plugins e integrações",
   },
   users: {
     title: "Manage Team",
@@ -115,29 +137,23 @@ const CATEGORY_MASTER: Record<string, { title: string; description: string }> = 
     title: "Manage Roles",
     description: "Gerenciar cargos e permissões com acesso total",
   },
-  pages: {
-    title: "Manage Pages",
-    description: "Gerenciar páginas e aparência do site",
-  },
   gateways: {
     title: "Manage Gateways",
     description: "Gerenciar gateways de pagamento",
   },
-  plugins: {
-    title: "Manage Plugins",
-    description: "Gerenciar plugins e integrações",
+  pages: {
+    title: "Manage Pages",
+    description: "Gerenciar páginas e aparência do site",
   },
   settings: {
     title: "Manage Settings",
     description: "Gerenciar configurações gerais da loja",
   },
-  analytics: {
-    title: "View Analytics",
-    description: "Visualizar dashboard e relatórios",
-  },
 };
 
 const PERMISSION_DESCRIPTIONS: Record<string, string> = {
+  "system:admin": "Acesso total ao sistema com todas as permissões",
+  "analytics:view": "Acessar métricas e relatórios",
   "products:view": "Visualizar lista de produtos e detalhes",
   "products:create": "Criar produtos, categorias e variantes",
   "products:edit": "Editar produtos, categorias e variantes",
@@ -150,22 +166,23 @@ const PERMISSION_DESCRIPTIONS: Record<string, string> = {
   "orders:refund": "Processar reembolsos",
   "coupons:view": "Visualizar cupons",
   "coupons:manage": "Criar, editar e excluir cupons",
-  "chats:view": "Visualizar conversas do Space Chat",
-  "chats:manage": "Responder e gerenciar chats",
+  "media:view": "Visualizar galeria de mídia",
+  "media:manage": "Enviar e gerenciar arquivos",
   "clients:view": "Visualizar lista de clientes",
   "reviews:view": "Visualizar avaliações",
   "reviews:manage": "Moderar e publicar avaliações",
-  "media:view": "Visualizar galeria de mídia",
-  "media:manage": "Enviar e gerenciar arquivos",
+  "audit:view": "Visualizar registros de auditoria",
+  "chats:view": "Visualizar conversas do Space Chat",
+  "chats:manage": "Responder e gerenciar chats",
+  "plugins:manage": "Instalar e configurar plugins",
   "users:view": "Visualizar membros da equipe",
   "users:edit": "Editar usuários da equipe",
   "users:ban": "Banir ou desbanir usuários",
   "roles:view": "Visualizar cargos",
   "roles:manage": "Criar, editar e atribuir cargos",
-  "pages:manage": "Editar páginas, aparência e configurações do site",
   "gateways:manage": "Configurar gateways de pagamento",
-  "plugins:manage": "Instalar e configurar plugins",
-  "analytics:view": "Acessar métricas e relatórios",
+  "pages:manage": "Editar páginas, aparência e configurações do site",
+  "settings:manage": "Gerenciar configurações gerais da loja",
 };
 
 async function fetchRoles(): Promise<Role[]> {
@@ -572,9 +589,11 @@ function RolesPageContent() {
 
   const isEditing = !!selectedRoleId;
   const isProtected = selectedRole?.isProtected;
+  const hasFullAccess = selectedKeys.includes(FULL_ACCESS_KEY);
 
   const togglePermission = (key: string, enabled: boolean) => {
     if (isProtected) return;
+    if (hasFullAccess && key !== FULL_ACCESS_KEY) return;
     setSelectedKeys((prev) =>
       enabled ? [...new Set([...prev, key])] : prev.filter((k) => k !== key)
     );
@@ -583,6 +602,8 @@ function RolesPageContent() {
   const toggleMasterCategory = (perms: Permission[]) => {
     if (isProtected) return;
     const keys = perms.map((p) => p.key);
+    const isSystemCategory = keys.includes(FULL_ACCESS_KEY);
+    if (hasFullAccess && !isSystemCategory) return;
     const allEnabled = isCategoryFullyEnabled(keys, selectedKeys);
     setSelectedKeys((prev) => toggleCategoryKeys(keys, prev, !allEnabled));
   };
@@ -819,7 +840,10 @@ function RolesPageContent() {
                     title: perms[0]?.name ?? category,
                     description: CATEGORY_DESCRIPTIONS[category] ?? "",
                   };
-                  const masterChecked = isCategoryFullyEnabled(categoryKeys, selectedKeys);
+                  const isSystemCategory = category === "system";
+                  const lockedByAdmin = hasFullAccess && !isSystemCategory;
+                  const masterChecked =
+                    lockedByAdmin || isCategoryFullyEnabled(categoryKeys, selectedKeys);
                   const hasAdvanced = perms.length > 1;
 
                   return (
@@ -840,7 +864,7 @@ function RolesPageContent() {
                           title={master.title}
                           description={master.description}
                           checked={masterChecked}
-                          disabled={isProtected}
+                          disabled={isProtected || lockedByAdmin}
                           onToggle={() => toggleMasterCategory(perms)}
                         />
 
@@ -866,8 +890,8 @@ function RolesPageContent() {
                                     key={perm.key}
                                     title={perm.name}
                                     description={PERMISSION_DESCRIPTIONS[perm.key]}
-                                    checked={selectedKeys.includes(perm.key)}
-                                    disabled={isProtected}
+                                    checked={lockedByAdmin || selectedKeys.includes(perm.key)}
+                                    disabled={isProtected || lockedByAdmin}
                                     onToggle={(enabled) => togglePermission(perm.key, enabled)}
                                   />
                                 ))}

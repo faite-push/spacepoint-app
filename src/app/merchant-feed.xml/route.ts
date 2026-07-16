@@ -1,15 +1,30 @@
 import { fetchSiteConfig } from "@/lib/site-api";
-import { buildGoogleMerchantFeedXml, fetchAllProductsForFeed, } from "@/lib/merchant-feed";
+import { buildGoogleMerchantFeedXml, fetchAllProductsForFeed } from "@/lib/merchant-feed";
 import { getSiteUrl } from "@/lib/site-url";
 
 export const revalidate = 3600;
 
+function isGoogleMerchantEnabled(
+  pluginsConfig?: Record<string, { enabled?: boolean }> | null
+) {
+  return pluginsConfig?.["google-merchant"]?.enabled === true;
+}
+
 export async function GET() {
   try {
-    const [products, config] = await Promise.all([
-      fetchAllProductsForFeed(),
-      fetchSiteConfig().catch(() => null),
-    ]);
+    const config = await fetchSiteConfig().catch(() => null);
+
+    if (!isGoogleMerchantEnabled(config?.pluginsConfig)) {
+      return new Response("Google Merchant não está ativo", {
+        status: 404,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      });
+    }
+
+    const products = await fetchAllProductsForFeed();
 
     const xml = buildGoogleMerchantFeedXml({
       products,

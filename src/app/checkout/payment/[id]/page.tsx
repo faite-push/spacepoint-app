@@ -46,18 +46,20 @@ export default function PaymentPage({ params }: PageProps) {
     const isPaid = order?.status === "PAID" || order?.status === "DELIVERED";
     if (!isPaid || !order) return;
 
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ["#A855F7", "#D8B4FE", "#FFFFFF"],
+    if (purchaseTrackedRef.current) return;
+    purchaseTrackedRef.current = true;
+
+    const tracked = trackStorefrontPurchase({
+      orderId: order.id,
+      value: order.total / 100,
     });
 
-    if (!purchaseTrackedRef.current) {
-      purchaseTrackedRef.current = true;
-      trackStorefrontPurchase({
-        orderId: order.id,
-        value: order.total,
+    if (tracked) {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#A855F7", "#D8B4FE", "#FFFFFF"],
       });
     }
   }, [data?.order]);

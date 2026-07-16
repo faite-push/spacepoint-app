@@ -1,9 +1,17 @@
 import type { MetadataRoute } from "next";
 
+import { fetchSiteConfig } from "@/lib/site-api";
 import { getSiteUrl } from "@/lib/site-url";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
   const baseUrl = getSiteUrl();
+  const config = await fetchSiteConfig().catch(() => null);
+  const merchantEnabled = config?.pluginsConfig?.["google-merchant"]?.enabled === true;
+
+  const sitemap = [`${baseUrl}/sitemap.xml`];
+  if (merchantEnabled) {
+    sitemap.push(`${baseUrl}/merchant-feed.xml`);
+  }
 
   return {
     rules: [
@@ -19,7 +27,7 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: [`${baseUrl}/sitemap.xml`, `${baseUrl}/merchant-feed.xml`],
+    sitemap,
     host: baseUrl,
   };
 }
