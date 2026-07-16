@@ -92,7 +92,7 @@ export default async function CategoryPage({
       {category.bannerUrl ? (
         <div className="space-y-4">
           <CategoryHeader category={category} />
-          <div className="w-full overflow-hidden rounded-xl sm:rounded-2xl border border-white/5">
+          <div className="w-full overflow-hidden rounded-md sm:rounded-2xl">
             <Image
               src={category.bannerUrl}
               alt={category.name}

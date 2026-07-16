@@ -7,7 +7,7 @@ type SubcategoryGridProps = {
 };
 
 function subcategoryVisual(sub: PublicSubcategory): string | null {
-  return sub.imageUrl || sub.bannerUrl;
+  return sub.imageUrl;
 }
 
 export function SubcategoryCarousel({ subcategories }: SubcategoryGridProps) {

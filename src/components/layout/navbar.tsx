@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, } from "@/components/ui/dropdown-menu";
-import { X, User, LayoutDashboard, Package, Heart, LogOut, ChevronDown, } from "lucide-react";
+import { useState } from "react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, } from "@/components/ui/dropdown-menu";
+import { User, LogOut, ChevronDown, } from "lucide-react";
 import { NavbarCategoriesDesktop, NavbarCategoriesMobile } from "./navbar-categories";
 import type { PublicSiteConfig } from "@/lib/site-api";
 import { FaBasketShopping } from "react-icons/fa6";
@@ -12,12 +12,19 @@ import { useCartStore, useCartHydrated } from "@/store/cart-store";
 import { TbLayoutDashboardFilled } from "react-icons/tb";
 import { BiSolidUser } from "react-icons/bi";
 import { BsBookmarkHeartFill } from "react-icons/bs";
-import { IoHeartCircle } from "react-icons/io5";
 import { useAuth } from "@/context/auth-context";
 import { CartSheet } from "../shop/cart-sheet";
 import { SearchInput } from "./search-input";
 import { HiMenuAlt2 } from "react-icons/hi";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function Navbar({ siteConfig }: { siteConfig?: PublicSiteConfig | null }) {
   const cartHydrated = useCartHydrated();
@@ -32,10 +39,12 @@ export function Navbar({ siteConfig }: { siteConfig?: PublicSiteConfig | null })
     <header className="sticky top-0 z-50 w-full shadow-lg" style={{ backgroundColor: primaryColor }}>
       <div className="mx-auto flex h-16 md:h-20 max-w-7xl items-center justify-between px-4">
         <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="flex h-10 w-10 top-12 items-center justify-center rounded-lg text-white hover:bg-white/10 md:hidden"
+          type="button"
+          onClick={() => setMobileMenuOpen(true)}
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 md:hidden"
+          aria-label="Abrir menu"
         >
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <HiMenuAlt2 className="h-8 w-8 text-white/80" />}
+          <HiMenuAlt2 className="h-8 w-8 text-white/80" />
         </button>
 
         <Link href="/" className="absolute left-1/2 top-1 -translate-x-1/2 md:static md:left-auto md:translate-x-0">
@@ -141,13 +150,30 @@ export function Navbar({ siteConfig }: { siteConfig?: PublicSiteConfig | null })
 
       <NavbarCategoriesDesktop />
 
-      {mobileMenuOpen && (
-        <div className="bg-primary md:hidden">
-          <div className="mx-auto max-w-7xl px-4 py-3">
-            <NavbarCategoriesMobile />
-          </div>
-        </div>
-      )}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent
+          side="left"
+          className="flex w-[88%] max-w-[340px] flex-col gap-0 overflow-hidden border-r border-white/10 bg-black/80 backdrop-blur-lg p-0 text-white"
+          overlayClassName="bg-black/70 backdrop-blur-[2px] md:hidden"
+        >
+          <SheetHeader className="shrink-0 space-y-3 border-b border-white/5 bg-gradient-to-b from-white/[0.04] to-transparent px-5 pb-4 pt-5 pr-14 text-left">
+            <div>
+              <SheetTitle className="text-base font-semibold tracking-tight text-white">
+                Menu
+              </SheetTitle>
+              <SheetDescription className="mt-0.5 text-xs text-white/45">
+                Explore as categorias da loja
+              </SheetDescription>
+            </div>
+          </SheetHeader>
+
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="px-3 py-4">
+              <NavbarCategoriesMobile onNavigate={() => setMobileMenuOpen(false)} />
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
     </header>
   );
 }

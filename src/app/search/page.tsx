@@ -8,23 +8,25 @@ import { ProductListing } from "@/components/shop/product-listing";
 function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
+
   if (!query.trim()) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-12">
-        <div className="rounded-md border border-dashed border-white/10 bg-white/[0.02] py-24 text-center">
-          <Search className="mx-auto mb-4 h-12 w-12 text-white/20" />
-          <h1 className="text-2xl font-bold text-white">Buscar produtos</h1>
-          <p className="mt-2 text-white/50">Digite um termo na barra de pesquisa para começar.</p>
-        </div>
+      <div className="rounded-md border border-dashed border-white/10 bg-white/[0.02] px-4 py-16 text-center sm:py-24">
+        <Search className="mx-auto mb-4 h-10 w-10 text-white/20 sm:h-12 sm:w-12" />
+        <h1 className="text-xl font-bold text-white sm:text-2xl">Buscar produtos</h1>
+        <p className="mx-auto mt-2 max-w-md text-sm text-white/50 sm:text-base">
+          Digite um termo na barra de pesquisa para começar.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="left-1/2 -translate-x-1/2 min-w-[1540px] space-y-6 py-6 md:py-12 relative">
-      <div className="mb-8 flex flex-col gap-2">
-        <h1 className="flex items-center text-4xl font-bold text-muted-foreground gap-2">
-          Resultado da busca para <span className="text-white">{query}</span>
+    <div className="relative w-full min-w-0 space-y-2 sm:space-y-6 -mt-16 sm:-mt-8 md:-mt-0">
+      <div className="mb-4 flex min-w-0 flex-col gap-1 sm:mb-8 sm:gap-2">
+        <h1 className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 text-2xl font-bold text-muted-foreground sm:text-2xl md:text-4xl">
+          <span className="shrink-0">Resultado da busca para</span>
+          <span className="break-words text-white"> {query}</span>
         </h1>
       </div>
 
@@ -35,23 +37,23 @@ function SearchResults() {
       />
     </div>
   );
-};
+}
 
 export default function SearchPage() {
   return (
-    <main className="left-1/2 -translate-x-1/2 min-w-[1540px] space-y-6 py-6 md:py-12 -mt-42 relative bg-transparent">
-      <div className="absolute top-0 right-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
-      <div className="absolute bottom-0 left-[-10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+    <div className="relative w-full min-w-0 space-y-6 bg-transparent py-6 md:py-12 -mt-16 sm:-mt-24 md:-mt-32">
+      <div className="pointer-events-none absolute top-0 right-[-10%] -z-10 h-[220px] w-[220px] rounded-full bg-primary/20 blur-[100px] sm:h-[400px] sm:w-[400px] sm:blur-[120px]" />
+      <div className="pointer-events-none absolute bottom-0 left-[-10%] -z-10 h-[180px] w-[180px] rounded-full bg-primary/20 blur-[100px] sm:h-[350px] sm:w-[350px] sm:blur-[120px]" />
 
       <Suspense
         fallback={
-          <div className="flex items-center justify-center min-h-screen">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <div className="relative flex min-h-[40vh] items-center justify-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary sm:h-12 sm:w-12" />
           </div>
         }
       >
         <SearchResults />
       </Suspense>
-    </main>
+    </div>
   );
-};
+}

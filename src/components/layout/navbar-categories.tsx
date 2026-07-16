@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface NavCategory {
   id: string;
@@ -60,7 +61,7 @@ export function NavbarCategoriesDesktop() {
     <motion.nav
       className="hidden bg-primary md:block"
     >
-      <div className="mx-auto flex h-11 max-w-7xl items-center justify-center gap-6 px-4 font-medium text-sm">
+      <div className="mx-auto flex h-10 max-w-7xl items-center justify-center gap-6 px-4 font-medium text-sm">
         {data.map((cat, idx) => {
           const subs = (cat.subcategories ?? []).filter((s) => s.isActive && s.showInNavbar);
           const hasSubs = subs.length > 0;
@@ -69,7 +70,7 @@ export function NavbarCategoriesDesktop() {
           return (
             <motion.div
               key={cat.id}
-              className="group relative h-full flex items-center"
+              className="group relative h-full flex items-center rounded-md"
             >
               <Link
                 href={href}
@@ -110,10 +111,9 @@ export function NavbarCategoriesDesktop() {
   );
 }
 
-// ─── Mobile ──────────────────────────────────────────────────────────────────
-
-export function NavbarCategoriesMobile() {
+export function NavbarCategoriesMobile({ onNavigate }: { onNavigate?: () => void }) {
   const [mounted, setMounted] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["public", "navbar-categories"],
     queryFn: fetchNavbarCategories,
@@ -127,60 +127,104 @@ export function NavbarCategoriesMobile() {
 
   if (!mounted || isLoading) {
     return (
-      <div className="space-y-2 py-1">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-10 w-full bg-white/10" />
+      <div className="space-y-2">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-xl bg-white/10" />
         ))}
       </div>
     );
   }
 
-  if (!data?.length) return null;
+  if (!data?.length) {
+    return (
+      <p className="px-3 py-10 text-center text-sm text-white/40">
+        Nenhuma categoria disponível
+      </p>
+    );
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      className="space-y-1 overflow-hidden"
-    >
+    <nav className="space-y-1.5">
       {data.map((cat) => {
         const subs = (cat.subcategories ?? []).filter((s) => s.isActive && s.showInNavbar);
-        return (
-          <details
-            key={cat.id}
-            className="group rounded-lg open:bg-white/5"
-          >
-            <summary className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-3 text-white/90 hover:bg-white/10 hover:text-white">
-              <Link
-                href={`/category/${cat.slug}`}
-                className="flex-1"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {cat.name}
-              </Link>
-              {subs.length > 0 && (
-                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-              )}
-            </summary>
+        const hasSubs = subs.length > 0;
+        const isOpen = expandedId === cat.id;
 
-            {subs.length > 0 && (
-              <ul className="pl-4 pb-1">
-                {subs.map((sub) => (
-                  <li key={sub.id}>
+        if (!hasSubs) {
+          return (
+            <Link
+              key={cat.id}
+              href={`/category/${cat.slug}`}
+              onClick={() => onNavigate?.()}
+              className="flex items-center rounded-xl px-3.5 py-3.5 text-[15px] font-medium text-white/90 transition-colors hover:bg-white/8 active:bg-white/12"
+            >
+              {cat.name}
+            </Link>
+          );
+        }
+
+        return (
+          <div
+            key={cat.id}
+            className={cn(
+              "overflow-hidden rounded-xl transition-colors",
+              isOpen ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
+            )}
+          >
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setExpandedId(isOpen ? null : cat.id)}
+                className="flex min-w-0 flex-1 items-center justify-between gap-3 px-3.5 py-3.5 text-left"
+                aria-expanded={isOpen}
+              >
+                <span className="truncate text-[15px] font-medium text-white/90">
+                  {cat.name}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 shrink-0 text-white/45 transition-transform duration-200",
+                    isOpen && "rotate-180 text-white/70"
+                  )}
+                />
+              </button>
+            </div>
+
+            <div
+              className={cn(
+                "grid transition-[grid-template-rows] duration-200 ease-out",
+                isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              )}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <ul className="space-y-0.5 border-t border-white/5 px-2 pb-2 pt-1">
+                  <li>
                     <Link
-                      href={`/category/${sub.slug}`}
-                      className="block rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white"
+                      href={`/category/${cat.slug}`}
+                      onClick={() => onNavigate?.()}
+                      className="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/8 hover:text-white"
                     >
-                      {sub.name}
+                      Ver todos
                     </Link>
                   </li>
-                ))}
-              </ul>
-            )}
-          </details>
+                  {subs.map((sub) => (
+                    <li key={sub.id}>
+                      <Link
+                        href={`/category/${sub.slug}`}
+                        onClick={() => onNavigate?.()}
+                        className="block rounded-lg px-3 py-2.5 text-sm text-white/55 transition-colors hover:bg-white/8 hover:text-white"
+                      >
+                        {sub.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
         );
       })}
-    </motion.div>
+    </nav>
   );
 }
 

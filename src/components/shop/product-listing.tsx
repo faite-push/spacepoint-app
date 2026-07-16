@@ -113,7 +113,7 @@ export function ProductListing({ categorySlug, searchQueryKey = "search", showIn
       )}
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex flex-row gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <Select
             value={params.platform || "all"}
             onValueChange={(value) =>
