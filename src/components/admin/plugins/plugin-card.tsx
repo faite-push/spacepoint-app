@@ -9,10 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import {
-  pluginHasRequiredFields,
-  validatePluginConfig,
-} from '@/lib/plugins-data';
+import { pluginHasRequiredFields, validatePluginConfig, } from '@/lib/plugins-data';
 
 import type { PluginDefinition, PluginInstallState } from '@/lib/admin-api';
 
@@ -24,13 +21,7 @@ interface PluginCardProps {
   onRequestUninstall: () => void;
 }
 
-export function PluginCard({
-  plugin,
-  installState,
-  isSaving,
-  onInstall,
-  onRequestUninstall,
-}: PluginCardProps) {
+export function PluginCard({ plugin, installState, isSaving, onInstall, onRequestUninstall, }: PluginCardProps) {
   const isInstalled = Boolean(installState?.enabled);
   const [expanded, setExpanded] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});

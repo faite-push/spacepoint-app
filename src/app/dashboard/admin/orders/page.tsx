@@ -1,39 +1,36 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Search, CheckCircle, XCircle, Truck, Clock, ChevronLeft, ChevronRight, Eye, MoreVertical, Check, Filter, Loader2, ShoppingCart, DollarSign, Package, ExternalLink, Save, Zap, ChevronDown, MessageSquare, Undo2 } from "lucide-react";
+
+import { Search, CheckCircle, XCircle, Truck, Clock, ChevronLeft, ChevronRight, MoreVertical, Check, Filter, Loader2, ShoppingCart, DollarSign, Package, MessageSquare, Undo2, Send, Inbox, CreditCard, QrCode, ChevronDown, Zap } from "lucide-react";
+import { TbCactusFilled } from "react-icons/tb";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRangeForPreset } from "@/lib/date-range-presets";
-import { format } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
-import { ordersApi, chatApi, AdminOrder } from "@/lib/admin-api";
-import { OrderDeliveryCart } from "@/components/admin/orders/order-delivery-cart";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
-import { TbCactusFilled } from "react-icons/tb";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import { formatCheckoutFieldLabel, getDeliveryOptionLabel, isExpressDelivery, stripExpressAdminNote, } from "@/lib/order-delivery";
+import { OrderDeliveryCart } from "@/components/admin/orders/order-delivery-cart";
 import { DateRangeFilter } from "@/components/admin/dashboard/DateRangeFilter";
+import { ordersApi, chatApi, AdminOrder } from "@/lib/admin-api";
 import { usePermission } from "@/providers/PermissionProvider";
 import { cn } from "@/lib/utils";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  formatCheckoutFieldLabel,
-  getDeliveryOptionLabel,
-  isExpressDelivery,
-  stripExpressAdminNote,
-} from "@/lib/order-delivery";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { LuCheck, LuClock4 } from "react-icons/lu";
 
 const STATUS_OPTIONS = [
   { value: "ALL", label: "Todos os Status" },
@@ -43,6 +40,60 @@ const STATUS_OPTIONS = [
   { value: "REFUNDED", label: "Reembolsado" },
   { value: "CANCELLED", label: "Cancelado" },
 ];
+
+function formatPaymentMethodLabel(method?: string) {
+  const key = String(method || "PIX").toUpperCase();
+  if (key === "PIX") return "Pix";
+  if (key === "CARD" || key === "CREDIT_CARD") return "Cartão";
+  return method || "Online";
+}
+
+function getPaymentMethodIcon(method?: string) {
+  const key = String(method || "PIX").toUpperCase();
+  if (key === "PIX") return QrCode;
+  if (key === "CARD" || key === "CREDIT_CARD") return CreditCard;
+  return DollarSign;
+}
+
+function getFulfillmentInfo(status: string) {
+  switch (status.toUpperCase()) {
+    case "DELIVERED":
+      return { label: "Enviado", color: "text-amber-400", bg: "bg-amber-500/10", icon: Send };
+    case "PAID":
+      return { label: "Caixa de entrada", color: "text-sky-400", bg: "bg-sky-500/10", icon: Inbox };
+    case "PENDING":
+      return { label: "Aguardando", color: "text-yellow-400", bg: "bg-yellow-500/10", icon: Clock };
+    case "REFUNDED":
+      return { label: "Reembolsado", color: "text-orange-400", bg: "bg-orange-500/10", icon: Undo2 };
+    case "CANCELLED":
+      return { label: "Cancelado", color: "text-red-400", bg: "bg-red-500/10", icon: XCircle };
+    default:
+      return { label: status, color: "text-zinc-400", bg: "bg-zinc-500/10", icon: Clock };
+  }
+}
+
+function formatGroupDateLabel(date: Date) {
+  if (isToday(date)) return "Hoje";
+  if (isYesterday(date)) return "Ontem";
+  return format(date, "d, MMM yyyy", { locale: ptBR });
+}
+
+function groupOrdersByDate(orders: AdminOrder[]) {
+  const groups = new Map<string, { label: string; orders: AdminOrder[] }>();
+
+  for (const order of orders) {
+    const date = new Date(order.createdAt);
+    const key = format(date, "yyyy-MM-dd");
+    const label = formatGroupDateLabel(date);
+
+    if (!groups.has(key)) {
+      groups.set(key, { label, orders: [] });
+    }
+    groups.get(key)!.orders.push(order);
+  }
+
+  return Array.from(groups.values());
+}
 
 export default function OrdersPage() {
   const queryClient = useQueryClient();
@@ -92,19 +143,22 @@ export default function OrdersPage() {
   const getStatusInfo = (status: string) => {
     switch (status.toUpperCase()) {
       case "PAID":
-        return { label: "Pago", color: "bg-green-500/10 text-green-500", icon: CheckCircle };
+        return { label: "Aprovado", color: "bg-blue-500/15 text-blue-400 border-blue-500/20", icon: CheckCircle };
       case "PENDING":
-        return { label: "Pendente", color: "bg-yellow-500/10 text-yellow-500", icon: Clock };
-      case "DELIVERED":
-        return { label: "Entregue", color: "bg-purple-500/10 text-purple-500", icon: Truck };
+        return { label: "Pendente", color: "bg-amber-500/15 text-amber-400 border-amber-500/20", icon: Clock };
       case "REFUNDED":
-        return { label: "Reembolsado", color: "bg-orange-500/10 text-orange-500", icon: Undo2 };
+        return { label: "Reembolsado", color: "bg-orange-500/15 text-orange-400 border-orange-500/20", icon: Undo2 };
       case "CANCELLED":
-        return { label: "Cancelado", color: "bg-red-500/10 text-red-500", icon: XCircle };
+        return { label: "Cancelado", color: "bg-red-500/15 text-red-400 border-red-500/20", icon: XCircle };
       default:
-        return { label: status, color: "bg-zinc-500/10 text-zinc-500", icon: Clock };
+        return { label: status, color: "hidden", icon: Clock };
     }
   };
+
+  const groupedOrders = useMemo(
+    () => groupOrdersByDate(data?.orders ?? []),
+    [data?.orders]
+  );
 
   const StatsCard = ({ title, value, icon: Icon, trend, loading }: any) => (
     <div className="relative group select-none overflow-hidden rounded-md border border-white/3 bg-background/50 px-4 py-4 md:px-6 md:py-5 transition-all duration-300">
@@ -244,138 +298,148 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        <div className="max-h-[580px] rounded-lg border border-white/5 overflow-y-auto select-none bg-background/30">
-          <Table className="w-full text-left border-collapse">
-            <TableHeader className="bg-card/2 sticky top-0 z-20">
-              <TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="p-4 pl-6 text-sm font-medium text-white/50">Pedido</TableHead>
-                <TableHead className="p-4 text-sm font-medium text-white/50">Cliente</TableHead>
-                <TableHead className="p-4 text-sm font-medium text-white/50">Total</TableHead>
-                <TableHead className="p-4 text-sm font-medium text-white/50">Método</TableHead>
-                <TableHead className="p-4 text-sm font-medium text-white/50">Status</TableHead>
-                <TableHead className="p-4 text-sm font-medium text-white/50">Data</TableHead>
-                <TableHead className="p-4 text-sm font-medium text-white/50 text-right pr-6">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={i} className="border-white/5">
-                    <TableCell className="pl-6"><Skeleton className="h-6 w-24 bg-white/5" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16 bg-white/5" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-32 bg-white/5" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-32 bg-white/5" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-20 bg-white/5" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16 bg-white/5" /></TableCell>
-                    <TableCell className="pr-6"><div className="flex justify-end"><Skeleton className="h-8 w-8 bg-white/5" /></div></TableCell>
-                  </TableRow>
-                ))
-              ) : data?.orders.length === 0 ? (
-                <TableRow className="bg-background/30 hover:bg-background/30 cursor-pointer transition-colors group select-none">
-                  <TableCell colSpan={7} className="h-[400px] text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                      <TbCactusFilled className="h-8 w-8" />
-                      <p>Nenhum pedido encontrado</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data?.orders.map((order: AdminOrder) => {
-                  const statusInfo = getStatusInfo(order.status);
-                  const StatusIcon = statusInfo.icon;
-                  return (
-                    <TableRow key={order.id} className="border-white/5 bg-background hover:bg-white/[0.02] cursor-pointer transition-colors group select-none" onClick={() => setSelectedOrderId(order.id)}>
-                      <TableCell className="p-4 pl-6">
-                        <span className="bg-blue-500/10 py-1 px-2 rounded text-blue-500 text-xs font-medium">{order.id}</span>
-                      </TableCell>
-                      <TableCell className="p-4">
-                        <div>
-                          <p className="text-sm font-medium text-white/80">{order.customerName}</p>
-                          <p className="text-xs text-white/40">{order.customerEmail}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="p-4">
-                        <div className="flex flex-row gap-0.5">
-                          <span className="text-sm font-medium text-white/90">{formatBRL(order.total)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="p-4">
-                        <div className="flex flex-row gap-0.5">
-                          <span className="bg-emerald-500/10 py-1 px-2 rounded text-emerald-500 text-xs lowercase font-medium">{order.paymentMethod}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="p-4">
-                        <Badge
-                          variant="outline"
-                          className={cn("gap-1.5 px-2 py-1 rounded text-xs lowercase font-medium border-none", statusInfo.color)}
+        <div className="rounded-lg border border-white/5 overflow-hidden bg-background/30">
+          {isLoading ? (
+            <div className="divide-y divide-white/5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-4">
+                  <Skeleton className="h-20 w-full bg-white/5" />
+                </div>
+              ))}
+            </div>
+          ) : data?.orders.length === 0 ? (
+            <div className="flex h-[400px] flex-col items-center justify-center gap-2 text-muted-foreground">
+              <TbCactusFilled className="h-8 w-8" />
+              <p>Nenhum pedido encontrado</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5 select-none">
+              {groupedOrders.map((group) => (
+                <section key={group.label}>
+                  <div className="sticky top-0 rounded-md z-10 m-1 bg-black/20 px-4 py-2.5 backdrop-blur-sm">
+                    <p className="text-sm text-muted-foreground">{group.label}</p>
+                  </div>
+
+                  <div className="divide-y divide-white/[0.04]">
+                    {group.orders.map((order) => {
+                      const statusInfo = getStatusInfo(order.status);
+                      const fulfillment = getFulfillmentInfo(order.status);
+                      const FulfillmentIcon = fulfillment.icon;
+                      const PaymentIcon = getPaymentMethodIcon(order.paymentMethod);
+
+                      return (
+                        <div
+                          key={order.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedOrderId(order.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") setSelectedOrderId(order.id);
+                          }}
+                          className="group relative grid cursor-pointer border-t border-white/5 grid-cols-1 gap-4 px-4 py-4 transition-colors hover:bg-white/[0.02] lg:grid-cols-12 lg:items-center"
                         >
-                          <StatusIcon className="h-3 w-3" />
-                          {statusInfo.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="p-4">
-                        <div className="flex flex-row">
-                          <span className="text-sm text-zinc-300">{format(new Date(order.createdAt), "dd/MM/yyyy", { locale: ptBR })}</span>
-                          <span className="text-sm text-zinc-300"> - {format(new Date(order.createdAt), "HH:mm")}</span>
+                          <div className="space-y-2 lg:col-span-3">
+                            <div className="flex items-center gap-2 text-sm text-white/80">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "w-fit gap-1.5 rounded border-none px-2.5 py-1 text-xs font-medium lowercase",
+                                  statusInfo.color
+                                )}
+                              >
+                                {statusInfo.label}
+                              </Badge>
+
+                              {(() => {
+                                const statusBadgeMap: Partial<Record<AdminOrder["status"], { label: string; color: string; icon: React.ReactNode }>> = {
+                                  DELIVERED: { label: "Produto entregue", color: "bg-blue-500", icon: <LuCheck className="h-3 w-3 text-[#1a1a1a]" /> },
+                                  PENDING: { label: "Pedido pendente", color: "bg-[#fcb64c]", icon: <LuClock4 className="h-3 w-3 text-[#1a1a1a]" /> },
+                                  PAID: { label: "Entrega pendente", color: "bg-[#fcb64c]", icon: <LuClock4 className="h-3 w-3 text-[#1a1a1a]" /> },
+                                  PROCESSING: { label: "Pedido em processamento", color: "bg-yellow-500", icon: <Clock className="h-3 w-3 text-[#1a1a1a]" /> },
+                                };
+                                const badge = statusBadgeMap[order.status];
+                                if (!badge) return null;
+                                return (
+                                  <Tooltip>
+                                    <TooltipTrigger
+                                      render={<div className={cn("rounded-full border-2 border-black p-1 text-white font-bold", badge.color)}>{badge.icon}</div>}
+                                    />
+                                    <TooltipContent>
+                                      <p>{badge.label}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                );
+                              })()}
+
+                              <span>{formatPaymentMethodLabel(order.paymentMethod)}</span>
+                            </div>
+
+                            <p className="text-xs text-white/35">
+                              ID: {order.id}
+                            </p>
+                          </div>
+
+                          <div className="min-w-0 space-y-1 lg:col-span-4">
+                            <p className="truncate text-sm font-medium text-white">
+                              {order.customerEmail}
+                            </p>
+                            <p className="line-clamp-2 text-xs text-white/45">
+                              {order.itemsPreview || `${order.itemsCount} item(ns)`}
+                            </p>
+                          </div>
+
+                          <div className="lg:col-span-2">
+                            <p className="mb-1 text-xs text-white/40">Entrega</p>
+                            <div
+                              className={cn(
+                                "inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium",
+                                fulfillment.bg,
+                                fulfillment.color
+                              )}
+                            >
+                              <FulfillmentIcon className="h-3.5 w-3.5" />
+                              {fulfillment.label}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between lg:col-span-3 lg:flex-col lg:items-end">
+                            <p className="text-lg font-medium text-white">
+                              {formatBRL(order.total)}
+                            </p>
+
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(order.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="p-4 text-right pr-6" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white/10 text-zinc-500 hover:text-white">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-[#0D0D0D] border-white/10 text-white min-w-[200px]">
-                            <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-white/5" onClick={() => setSelectedOrderId(order.id)}>
-                              <Eye className="h-4 w-4" /> Ver Detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-white/5" />
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer text-green-400 focus:bg-green-400/10 focus:text-green-400"
-                              onClick={() => updateStatusMutation.mutate({ id: order.id, status: "PAID" })}
-                            >
-                              <CheckCircle className="h-4 w-4" /> Marcar como Pago
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer text-purple-400 focus:bg-purple-400/10 focus:text-purple-400"
-                              onClick={() => updateStatusMutation.mutate({ id: order.id, status: "DELIVERED" })}
-                            >
-                              <Truck className="h-4 w-4" /> Marcar como Entregue
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer text-red-500 focus:bg-red-500/10 focus:text-red-500"
-                              onClick={() => updateStatusMutation.mutate({ id: order.id, status: "CANCELLED" })}
-                            >
-                              <XCircle className="h-4 w-4" /> Cancelar Pedido
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
         </div>
 
         {data?.pagination && data.pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-white/60">
-              Mostrando <span className="text-white/80">{data.orders.length}</span> de <span className="text-white/80">{data.pagination.total}</span> pedidos
-            </p>
+          <div className="flex items-center justify-center gap-4 md:gap-36">
+            <Button
+              variant="outline"
+              size="lg"
+              className="flex-1 disabled:opacity-30"
+              onClick={() => setPage((p: number) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </Button>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="disabled:opacity-30"
-                onClick={() => setPage((p: number) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+            <div className="flex flex-col items-center justify-center gap-1">
+              <p className="text-sm text-white/60">
+                Mostrando <span className="text-white/80">{data.orders.length}</span> de <span className="text-white/80">{data.pagination.total}</span> pedidos
+              </p>
+
               <div className="flex items-center gap-1">
                 {Array.from({ length: data.pagination.totalPages }).map((_, i) => (
                   <div
@@ -387,21 +451,22 @@ export default function OrdersPage() {
                   />
                 ))}
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                className="disabled:opacity-30"
-                onClick={() => setPage((p: number) => Math.min(data.pagination.totalPages, p + 1))}
-                disabled={page === data.pagination.totalPages}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
             </div>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="flex-1 disabled:opacity-30"
+              onClick={() => setPage((p: number) => Math.min(data.pagination.totalPages, p + 1))}
+              disabled={page === data.pagination.totalPages}
+            >
+              Próximo
+            </Button>
           </div>
         )}
       </div>
 
-      <OrderDrawer
+      <OrderDetailDialog
         id={selectedOrderId}
         onClose={() => setSelectedOrderId(null)}
         formatBRL={formatBRL}
@@ -412,7 +477,7 @@ export default function OrdersPage() {
   );
 }
 
-function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any) {
+function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }: any) {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermission();
   const canRefund = hasPermission("orders:refund");
@@ -473,43 +538,48 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
   })() : null;
 
   return (
-    <Sheet open={!!id} onOpenChange={(open: boolean) => !open && onClose()}>
-      <SheetContent className="w-full sm:min-w-[600px]">
+    <Dialog open={!!id} onOpenChange={(open: boolean) => !open && onClose()}>
+      <DialogContent
+        className={cn(
+          "flex h-[100dvh] w-full max-w-none flex-col",
+          "h-[80dvh] md:max-w-2xl",
+          "md:h-[80dvh] h-[100dvh] [&>button]:right-5 [&>button]:top-5 [&>button]:z-20 md:[&>button]:right-4 md:[&>button]:top-4"
+        )}
+      >
         {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-1 items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : order && (
           <>
-            <SheetHeader>
-              <div className="flex items-center justify-between gap-3 mt-2">
-                <div className="flex items-center justify-start gap-2 min-w-0">
-                  <SheetTitle className="text-2xl font-bold text-white flex items-center gap-2">
+            <DialogHeader className="shrink-0 space-y-1">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <DialogTitle className="text-xl font-bold text-white sm:text-2xl">
                     Pedido #{order.id.slice(-6).toUpperCase()}
-                  </SheetTitle>
-                  <Badge className={cn("px-2 py-1 gap-1 rounded text-xs lowercase font-bold shrink-0", statusInfo?.bg, statusInfo?.color)}>
+                  </DialogTitle>
+                  <Badge className={cn("gap-1 rounded px-2 py-1 text-xs font-bold", statusInfo?.bg, statusInfo?.color)}>
                     {statusInfo?.icon}
                     {statusInfo?.label}
                   </Badge>
                 </div>
 
                 {chat && (
-                  <Button asChild variant="outline" size="sm" className="shrink-0 gap-2 border-white/10">
+                  <Button asChild variant="outline" size="lg" className="md:-translate-x-1/2 translate-x-0 shrink-0 gap-2 border-white/10">
                     <Link href={`/dashboard/admin/chats/chat/${chat.id}`}>
-                      <MessageSquare className="h-4 w-4" />
                       Abrir chat
                     </Link>
                   </Button>
                 )}
               </div>
 
-              <SheetDescription className="">
+              <DialogDescription>
                 Criado em {format(new Date(order.createdAt), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-              </SheetDescription>
-            </SheetHeader>
+              </DialogDescription>
+            </DialogHeader>
 
             {express && (
-              <div className="mx-6 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-amber-200">
+              <div className="mx-5 mt-4 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-amber-200">
                 <Zap className="h-4 w-4 shrink-0 text-amber-400" />
                 <p className="text-sm">
                   <span className="font-semibold text-amber-300">Entrega expressa</span>
@@ -518,7 +588,7 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
               </div>
             )}
 
-            <ScrollArea className="flex-1 px-6">
+            <ScrollArea className="min-h-0 flex-1">
               <div className="space-y-4">
                 <section>
                   <h4 className="text-sm font-medium text-white mb-1">Informações do Cliente</h4>
@@ -727,7 +797,7 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
               </div>
             </ScrollArea>
 
-            <div className="flex gap-3 py-4 px-6">
+            <div className="flex shrink-0 gap-3 py-2">
               {order.status !== "PAID" && order.status !== "DELIVERED" && order.status !== "REFUNDED" && (
                 <Button
                   className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
@@ -823,7 +893,7 @@ function OrderDrawer({ id, onClose, formatBRL, updateStatus, updateNotes }: any)
             </Dialog>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };

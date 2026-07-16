@@ -62,44 +62,44 @@ export const PLUGIN_DEFINITIONS: PluginDefinition[] = [
       },
     ],
   },
-  {
-    id: 'tiktok-pixel',
-    name: 'TikTok Pixel',
-    category: 'marketing',
-    description: 'Monitore o comportamento dos usuários e extraia insights valiosos para escalar suas campanhas de alta performance no TikTok Ads.',
-    logoUrl: '/tiktok_pixel.png',
-    fields: [
-      {
-        key: 'pixelId',
-        label: 'Pixel ID',
-        placeholder: 'CXXXXXXXXXXXXXXX',
-        pattern: '^[A-Z0-9]+$',
-        patternMessage: 'Use letras maiúsculas e números',
-      },
-      {
-        key: 'accessToken',
-        label: 'Access Token (Events API)',
-        placeholder: 'seu-token',
-        secret: true,
-        required: false,
-        hint: 'Opcional. Envia CompletePayment no servidor, com o mesmo event_id do pixel.',
-      },
-      {
-        key: 'testEventCode',
-        label: 'Test Event Code',
-        placeholder: 'TEST12345',
-        secret: true,
-        required: false,
-        hint: 'Opcional. Use para validar eventos de teste no TikTok.',
-      },
-    ],
-  },
+  // {
+  //   id: 'tiktok-pixel',
+  //   name: 'TikTok Pixel',
+  //   category: 'marketing',
+  //   description: 'Monitore o comportamento dos usuários e extraia insights valiosos para escalar suas campanhas de alta performance no TikTok Ads.',
+  //   logoUrl: '/tiktok_pixel.png',
+  //   fields: [
+  //     {
+  //       key: 'pixelId',
+  //       label: 'Pixel ID',
+  //       placeholder: 'CXXXXXXXXXXXXXXX',
+  //       pattern: '^[A-Z0-9]+$',
+  //       patternMessage: 'Use letras maiúsculas e números',
+  //     },
+  //     {
+  //       key: 'accessToken',
+  //       label: 'Access Token (Events API)',
+  //       placeholder: 'seu-token',
+  //       secret: true,
+  //       required: false,
+  //       hint: 'Opcional. Envia CompletePayment no servidor, com o mesmo event_id do pixel.',
+  //     },
+  //     {
+  //       key: 'testEventCode',
+  //       label: 'Test Event Code',
+  //       placeholder: 'TEST12345',
+  //       secret: true,
+  //       required: false,
+  //       hint: 'Opcional. Use para validar eventos de teste no TikTok.',
+  //     },
+  //   ],
+  // },
   {
     id: 'discord-orders',
     name: 'Discord Pedidos',
-    category: 'atendimento',
-    description:
-      'Receba um alerta no Discord sempre que um pedido for pago (webhook). A URL fica só no painel e não é enviada à vitrine.',
+    category: 'marketing',
+    description: 'Receba um alerta no Discord sempre que um pedido for pago (webhook). A URL fica só no painel e não é enviada à vitrine.',
+    logoUrl: '/discord.png',
     fields: [
       {
         key: 'webhookUrl',
@@ -132,24 +132,24 @@ export const PLUGIN_DEFINITIONS: PluginDefinition[] = [
       },
     ],
   },
-  {
-    id: 'utmify',
-    name: 'Utmify',
-    category: 'marketing',
-    description:
-      'Propaga UTMs em links e formulários da loja para atribuição precisa de tráfego. A API Key é opcional e fica só no painel (não vai para a vitrine).',
-    logoUrl: '/utmify.png',
-    fields: [
-      {
-        key: 'apiKey',
-        label: 'API Key (opcional)',
-        placeholder: 'sua-chave-api',
-        secret: true,
-        required: false,
-        hint: 'Usada apenas no painel. O script de UTMs na loja funciona sem expor esta chave.',
-      },
-    ],
-  },
+  // {
+  //   id: 'utmify',
+  //   name: 'Utmify',
+  //   category: 'marketing',
+  //   description:
+  //     'Propaga UTMs em links e formulários da loja para atribuição precisa de tráfego. A API Key é opcional e fica só no painel (não vai para a vitrine).',
+  //   logoUrl: '/utmify.png',
+  //   fields: [
+  //     {
+  //       key: 'apiKey',
+  //       label: 'API Key (opcional)',
+  //       placeholder: 'sua-chave-api',
+  //       secret: true,
+  //       required: false,
+  //       hint: 'Usada apenas no painel. O script de UTMs na loja funciona sem expor esta chave.',
+  //     },
+  //   ],
+  // },
   {
     id: 'crisp',
     name: 'Crisp',

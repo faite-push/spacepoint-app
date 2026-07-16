@@ -930,6 +930,8 @@ export interface AdminOrder {
   customerEmail: string;
   customerImage?: string;
   paymentMethod: string;
+  paymentProvider?: string | null;
+  itemsPreview?: string;
   couponCode?: string;
   checkoutData?: Record<string, any>;
   createdAt: string;
@@ -1163,6 +1165,7 @@ export interface AdminClient {
   email: string | null;
   image: string | null;
   createdAt: string;
+  lastAccessAt?: string | null;
   isAdmin?: boolean;
   roleId?: string | null;
   role?: { id: string; name: string } | null;

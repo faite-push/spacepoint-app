@@ -7,14 +7,7 @@ import { toast } from 'sonner';
 
 import { PluginCard } from '@/components/admin/plugins/plugin-card';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PLUGIN_CATEGORIES, PLUGIN_DEFINITIONS } from '@/lib/plugins-data';
 import { siteSettingsApi, type PluginDefinition, type PluginsConfig } from '@/lib/admin-api';
@@ -119,14 +112,6 @@ export default function AdminPluginsPage() {
     <div className="relative space-y-8 pb-20 animate-in fade-in duration-500">
       <div className="absolute top-0 right-[-5%] z-0 h-[300px] w-[300px] rounded-full bg-white/3 blur-[120px] pointer-events-none sm:h-[600px] sm:w-[600px]" />
       <div className="absolute top-0 left-[-5%] z-0 h-[300px] w-[300px] rounded-full bg-white/3 blur-[120px] pointer-events-none sm:h-[600px] sm:w-[600px]" />
-
-      <div className="relative space-y-1">
-        <h1 className="text-2xl font-bold text-white">Plugins</h1>
-        <p className="text-muted-foreground">
-          Integre pixels, chats e ferramentas de métricas na vitrine da loja.
-        </p>
-      </div>
-
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (

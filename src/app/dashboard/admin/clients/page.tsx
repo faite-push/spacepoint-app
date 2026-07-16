@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { Search, ScanFace, MoreVertical, Shield, Copy, ShoppingBag, MessageSquare, UserMinus } from 'lucide-react';
+import { Search, ScanFace, MoreVertical, Shield, Copy, ShoppingBag, MessageSquare, UserMinus, Clock } from 'lucide-react';
 
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
@@ -62,6 +62,20 @@ function getClientTypeLabel(client: AdminClient) {
 function getClientTypeClass(client: AdminClient) {
   if (client.role?.name || client.isAdmin) return 'bg-violet-500/10 text-violet-400';
   return 'bg-orange-500/10 text-orange-500';
+}
+
+function formatLastAccess(lastAccessAt?: string | null) {
+  if (!lastAccessAt) return 'Nunca acessou';
+  const date = new Date(lastAccessAt);
+  if (Number.isNaN(date.getTime())) return 'Nunca acessou';
+  return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
+}
+
+function formatLastAccessFull(lastAccessAt?: string | null) {
+  if (!lastAccessAt) return 'Nunca acessou o site';
+  const date = new Date(lastAccessAt);
+  if (Number.isNaN(date.getTime())) return 'Nunca acessou o site';
+  return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 }
 
 export default function AdminClientsPage() {
@@ -140,6 +154,10 @@ export default function AdminClientsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white truncate">{client.name || client.email || 'Sem nome'}</p>
                       <p className="text-xs text-muted-foreground truncate">{client.email || 'Sem email'}</p>
+                      <p className="mt-1 flex items-center gap-1 text-[11px] text-white/40 lg:hidden" title={formatLastAccessFull(client.lastAccessAt)}>
+                        <Clock className="h-3 w-3 shrink-0" />
+                        {formatLastAccess(client.lastAccessAt)}
+                      </p>
                     </div>
                   </div>
 
@@ -167,6 +185,21 @@ export default function AdminClientsPage() {
                     <div className="flex flex-col items-center">
                       <p className="text-sm font-medium text-white">Gastos</p>
                       <p className="bg-[#c94444]/10 text-[#c94444] text-xs px-2 py-1 rounded">{formatPrice(client.totalSpent)}</p>
+                    </div>
+
+                    <div className="flex flex-col items-center min-w-[120px]">
+                      <p className="text-sm font-medium text-white">Último acesso</p>
+                      <p
+                        className={cn(
+                          'text-xs px-2 py-1 rounded text-center',
+                          client.lastAccessAt
+                            ? 'bg-sky-500/10 text-sky-400'
+                            : 'bg-white/5 text-white/40'
+                        )}
+                        title={formatLastAccessFull(client.lastAccessAt)}
+                      >
+                        {formatLastAccess(client.lastAccessAt)}
+                      </p>
                     </div>
                   </div>
 
