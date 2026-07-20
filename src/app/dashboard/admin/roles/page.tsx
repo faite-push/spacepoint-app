@@ -43,6 +43,7 @@ const FULL_ACCESS_KEY = "system:admin";
 const CATEGORY_LABELS: Record<string, string> = {
   system: "System",
   analytics: "Dashboard",
+  marketing: "Marketing",
   products: "Produtos",
   codes: "Códigos",
   orders: "Vendas",
@@ -63,6 +64,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   system: "Configurações do sistema",
   analytics: "Dashboard e relatórios",
+  marketing: "Automações de recuperação e editor de e-mails",
   products: "Gerenciamento de produtos, variantes e estoque",
   codes: "Códigos digitais e inventário",
   orders: "Pedidos, vendas e reembolsos",
@@ -88,6 +90,10 @@ const CATEGORY_MASTER: Record<string, { title: string; description: string }> = 
   analytics: {
     title: "Manage Dashboard",
     description: "Gerenciar dashboard com acesso total às funcionalidades",
+  },
+  marketing: {
+    title: "Manage Marketing",
+    description: "Gerenciar automações, templates e campanhas de e-mail",
   },
   products: {
     title: "Manage Products",
@@ -154,6 +160,8 @@ const CATEGORY_MASTER: Record<string, { title: string; description: string }> = 
 const PERMISSION_DESCRIPTIONS: Record<string, string> = {
   "system:admin": "Acesso total ao sistema com todas as permissões",
   "analytics:view": "Acessar métricas e relatórios",
+  "marketing:view": "Ver automações, métricas de recuperação e editor de e-mails",
+  "marketing:manage": "Editar templates, configurações e enviar e-mails de teste",
   "products:view": "Visualizar lista de produtos e detalhes",
   "products:create": "Criar produtos, categorias e variantes",
   "products:edit": "Editar produtos, categorias e variantes",

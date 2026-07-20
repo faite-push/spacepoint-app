@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { adminMainNavItems, adminSitePagesGroup, adminConfigNavItems, adminServiceNavItem, isAdminNavActive, isAdminGroupActive, type AdminNavItem, } from "./admin-nav-config";
+import { adminMainNavItems, adminSitePagesGroup, adminMarketingGroup, adminConfigNavItems, adminServiceNavItem, isAdminNavActive, isAdminGroupActive, type AdminNavItem, type AdminNavGroup, } from "./admin-nav-config";
 import { ChevronDown, ChevronRight, Store } from "lucide-react";
 import { IoArrowRedoOutline } from "react-icons/io5";
 import { usePermission } from "@/providers/PermissionProvider";
@@ -35,15 +35,15 @@ function NavLink({ item, pathname, nested = false, onNavigate, }: { item: AdminN
   );
 };
 
-function NavGroupMenu({ pathname, onNavigate, }: { pathname: string; onNavigate?: () => void; }) {
+function NavGroupMenu({ group, pathname, onNavigate, }: { group: AdminNavGroup; pathname: string; onNavigate?: () => void; }) {
   const { hasPermission } = usePermission();
-  const group = adminSitePagesGroup;
 
   const visibleChildren = group.children.filter(
     (child) => !child.permission || hasPermission(child.permission)
   );
 
   if (visibleChildren.length === 0) return null;
+  if (group.permission && !hasPermission(group.permission)) return null;
 
   const groupActive = isAdminGroupActive(pathname, group);
   const [open, setOpen] = useState(groupActive);
@@ -59,7 +59,7 @@ function NavGroupMenu({ pathname, onNavigate, }: { pathname: string; onNavigate?
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-colors",
+          "flex w-full cursor-pointer items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-colors",
           groupActive ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
         )}
       >
@@ -73,7 +73,7 @@ function NavGroupMenu({ pathname, onNavigate, }: { pathname: string; onNavigate?
       </button>
 
       {open && (
-        <div className="space-y-0.5">
+        <div className="space-y-0.5 mt-0.5">
           {visibleChildren.map((child) => (
             <NavLink
               key={child.href}
@@ -138,6 +138,7 @@ export function AdminNavLinks({ collapsed = false, onNavigate, className, }: { c
   const filteredMainItems = adminMainNavItems.filter((item) => !item.permission || hasPermission(item.permission));
   const filteredConfigItems = adminConfigNavItems.filter((item) => !item.permission || hasPermission(item.permission));
   const showSitePages = !adminSitePagesGroup.permission || hasPermission(adminSitePagesGroup.permission);
+  const showMarketing = !adminMarketingGroup.permission || hasPermission(adminMarketingGroup.permission);
 
   if (collapsed) {
     return (
@@ -163,15 +164,21 @@ export function AdminNavLinks({ collapsed = false, onNavigate, className, }: { c
             <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
           ))}
 
+          {showMarketing && (
+            <>
+              <NavGroupMenu group={adminMarketingGroup} pathname={pathname} onNavigate={onNavigate} />
+            </>
+          )}
+
           {showSitePages && (
-            <NavGroupMenu pathname={pathname} onNavigate={onNavigate} />
+            <NavGroupMenu group={adminSitePagesGroup} pathname={pathname} onNavigate={onNavigate} />
           )}
         </>
       )}
 
       <div className="absolute inset-x-0 px-2 bottom-2 border-t border-white/5 pt-3 space-y-1">
         <ServiceLink pathname={pathname} onNavigate={onNavigate} />
-        
+
         <Link
           href="/"
           onClick={onNavigate}

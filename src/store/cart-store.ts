@@ -23,6 +23,7 @@ type CartState = {
   appliedCoupon: Coupon | null;
   setIsOpen: (isOpen: boolean) => void;
   addProduct: (product: Product, variant?: ProductVariant | null) => void;
+  replaceItems: (items: CartItem[]) => void;
   removeItem: (cartKey: string) => void;
   setQuantity: (cartKey: string, quantity: number) => void;
   clear: () => void;
@@ -92,6 +93,7 @@ export const useCartStore = create<CartState>()(
           numItems: 1,
         });
       },
+      replaceItems: (items) => set({ items, appliedCoupon: null }),
       removeItem: (cartKey) =>
         set((state) => ({
           items: state.items.filter((item) => item.cartKey !== cartKey),

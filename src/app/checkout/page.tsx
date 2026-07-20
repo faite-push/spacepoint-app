@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,6 +10,7 @@ import Link from "next/link";
 import { ChevronRight, Minus, Plus, Trash2, Ticket, PlusCircle, User, Mail, Zap, ArrowRight, Loader2, ShoppingCart, AlertCircle, Check, Lock, X, CreditCard, Phone, Truck, FingerprintPattern } from "lucide-react";
 import { BsCreditCard2FrontFill } from "react-icons/bs";
 import { FaPix } from "react-icons/fa6";
+import { toast } from "sonner";
 
 import { Tooltip, TooltipContent, TooltipTrigger, } from "@/components/ui/tooltip"
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,7 +24,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { createOrder, fetchCheckoutPaymentOptions, formatPrice, fetchProducts } from "@/lib/shop-api";
 import { fetchSiteConfig } from "@/lib/site-api";
 import { API_URL, getApiHeaders } from "@/lib/api";
-import { captureCartEmail, clearAbandonedCart } from "@/lib/cart-api";
+import { captureCartEmail, clearAbandonedCart, recoverAbandonedCart } from "@/lib/cart-api";
+import { clearCartRecoverySession, getCartRecoverySession, saveCartRecoverySession } from "@/lib/cart-recovery";
 import { getVisitorId } from "@/lib/visitor-id";
 import { trackStorefrontInitiateCheckout } from "@/lib/storefront-plugin-events";
 import { DEFAULT_CHECKOUT_SETTINGS, resolveEffectiveCheckoutFields, formatCpfInput, formatPhoneInput } from "@/lib/checkout-defaults";
@@ -36,13 +39,15 @@ import type { CheckoutFieldConfig } from "@/lib/admin-api";
 import { useAuth } from "@/context/auth-context";
 import { useCartStore, useCartHydrated } from "@/store/cart-store";
 import type { Product } from "@/types/shop";
+import { cartItemKey } from "@/types/shop";
 import { CheckoutAuthModal } from "@/components/checkout/checkout-auth-modal";
 import { Toggle } from "@/components/ui/toggle";
 import { Label } from "@/components/ui/label";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, total, subtotal, discount, setQuantity, removeItem, clear, applyCoupon, appliedCoupon, removeCoupon } = useCartStore();
+  const searchParams = useSearchParams();
+  const { items, total, subtotal, discount, setQuantity, removeItem, clear, applyCoupon, appliedCoupon, removeCoupon, replaceItems } = useCartStore();
   const { user, loading: authLoading, refreshUser } = useAuth();
 
   const [status, setStatus] = useState<string>("");
@@ -96,6 +101,54 @@ export default function CheckoutPage() {
       router.replace(`/login?from=${encodeURIComponent("/checkout")}`);
     }
   }, [authLoading, user, authMode, router]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const token = searchParams.get("recover");
+    if (!token) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const recovered = await recoverAbandonedCart(token);
+        if (cancelled) return;
+        saveCartRecoverySession({
+          token,
+          source: searchParams.get("src"),
+          cartId: recovered.cartId,
+        });
+        replaceItems(
+          recovered.items.map((item) => ({
+            cartKey: cartItemKey(item.productId, item.variantId),
+            productId: item.productId,
+            variantId: item.variantId,
+            variantName: null,
+            slug: item.slug || item.productId,
+            name: item.name,
+            price: item.price,
+            image: item.image || undefined,
+            platform: "",
+            quantity: item.quantity,
+          }))
+        );
+        if (recovered.couponCode) {
+          try {
+            await applyCoupon(recovered.couponCode);
+          } catch {
+            /* cupom pode estar inválido */
+          }
+        }
+        toast.success("Carrinho recuperado com sucesso");
+        router.replace("/checkout");
+      } catch {
+        if (!cancelled) toast.error("Não foi possível recuperar este carrinho");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, searchParams, replaceItems, applyCoupon, router]);
 
   useEffect(() => {
     if (!checkoutSettings) return;
@@ -173,12 +226,18 @@ export default function CheckoutPage() {
 
     const nameField = enabledFields.find((field) => field.key === "name" || field.prefillFromUser === "name");
     const customerName = nameField ? String(fieldValues[nameField.key] || "").trim() : "";
+    const phoneField = enabledFields.find((field) => field.key === "phone" || field.type === "phone");
+    const phone = phoneField ? String(fieldValues[phoneField.key] || "").trim() : "";
+    const cpfField = enabledFields.find((field) => field.key === "cpf" || field.type === "cpf");
+    const document = cpfField ? String(fieldValues[cpfField.key] || "").trim() : "";
 
     const timer = setTimeout(() => {
       captureCartEmail({
         visitorId,
         email,
         customerName: customerName || undefined,
+        phone: phone || undefined,
+        document: document || undefined,
       }).catch(() => { });
     }, 1500);
 
@@ -273,6 +332,7 @@ export default function CheckoutPage() {
     try {
       await persistCheckoutDataPreference(checkoutData);
 
+      const recovery = getCartRecoverySession();
       const order = await createOrder(
         items.map((item) => ({
           productId: item.productId,
@@ -284,8 +344,11 @@ export default function CheckoutPage() {
           paymentMethod,
           checkoutData,
           deliveryOption,
+          recoveryToken: recovery?.token ?? null,
+          recoverySource: recovery?.source ?? null,
         }
       );
+      clearCartRecoverySession();
       clear();
       const visitorId = getVisitorId();
       if (visitorId) {

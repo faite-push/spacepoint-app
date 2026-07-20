@@ -62,6 +62,8 @@ export async function createOrder(
     paymentMethod?: string;
     checkoutData?: any;
     deliveryOption?: "standard" | "express";
+    recoveryToken?: string | null;
+    recoverySource?: string | null;
   }
 ): Promise<Order> {
   const data = await apiFetch<{ order: Order }>("/v2/api/orders", {
@@ -73,6 +75,8 @@ export async function createOrder(
       paymentMethod: opts?.paymentMethod ?? "PIX",
       checkoutData: opts?.checkoutData ?? null,
       deliveryOption: opts?.deliveryOption ?? "standard",
+      recoveryToken: opts?.recoveryToken ?? null,
+      recoverySource: opts?.recoverySource ?? null,
     }),
   });
   return data.order;

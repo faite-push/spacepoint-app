@@ -1159,6 +1159,23 @@ export interface ChatMacro {
   updatedAt: string;
 }
 
+export type ClientListSort =
+  | 'spent_desc'
+  | 'spent_asc'
+  | 'orders_desc'
+  | 'created_desc'
+  | 'last_access_desc'
+  | 'name_asc';
+
+export type ClientListFilters = {
+  search?: string;
+  page?: number;
+  sort?: ClientListSort;
+  purchases?: 'all' | 'with' | 'without';
+  access?: 'all' | 'recent' | 'never';
+  roleType?: 'all' | 'customer' | 'team';
+};
+
 export interface AdminClient {
   id: string;
   name: string | null;
@@ -1166,6 +1183,9 @@ export interface AdminClient {
   image: string | null;
   createdAt: string;
   lastAccessAt?: string | null;
+  phone?: string | null;
+  document?: string | null;
+  provider?: string | null;
   isAdmin?: boolean;
   roleId?: string | null;
   role?: { id: string; name: string } | null;
@@ -1175,6 +1195,48 @@ export interface AdminClient {
   totalDiscounts: number;
   recentOrders?: Array<{ id: string; total: number; status: string; createdAt: string }>;
 }
+
+export type ClientImportResult = {
+  dryRun: boolean;
+  totalRows: number;
+  validRows: number;
+  uniqueEmails: number;
+  duplicateEmailsInFile: number;
+  invalidRows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors?: Array<{ row?: number; email?: string; error: string }>;
+  sample: Array<{
+    email: string;
+    name: string | null;
+    document: string | null;
+    phone: string | null;
+    externalId: string | null;
+    createdAt: string | null;
+    exists: boolean;
+  }>;
+};
+
+export const clientsApi = {
+  previewImport: (file: File) =>
+    uploadMerchantXml<ClientImportResult>(
+      "/v2/api/admin/clients/import/preview",
+      file
+    ),
+  importSpreadsheet: (
+    file: File,
+    options?: { skipExisting?: boolean; updateExisting?: boolean }
+  ) =>
+    uploadMerchantXml<ClientImportResult>(
+      "/v2/api/admin/clients/import",
+      file,
+      {
+        skipExisting: options?.skipExisting !== false,
+        updateExisting: options?.updateExisting === true,
+      }
+    ),
+};
 
 export type PluginField = {
   key: string;
@@ -1301,11 +1363,15 @@ export const chatApi = {
     }),
   reopenChat: (chatId: string) =>
     request<Chat>(`/v2/api/chats/${chatId}/reopen`, { method: "POST" }),
-  listClients: (params?: { search?: string; page?: number }) => {
+  listClients: (params?: ClientListFilters) => {
     const qs = new URLSearchParams();
-    if (params?.search) qs.set("search", params.search);
-    if (params?.page) qs.set("page", String(params.page));
-    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    if (params?.search) qs.set('search', params.search);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.sort) qs.set('sort', params.sort);
+    if (params?.purchases && params.purchases !== 'all') qs.set('purchases', params.purchases);
+    if (params?.access && params.access !== 'all') qs.set('access', params.access);
+    if (params?.roleType && params.roleType !== 'all') qs.set('roleType', params.roleType);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
     return request<{ clients: AdminClient[]; total: number; page: number; totalPages: number }>(`/v2/api/admin/clients${suffix}`);
   },
   listReviews: (params?: { page?: number; minRating?: number; status?: string; search?: string }) => {
@@ -1425,4 +1491,259 @@ export const auditLogsApi = {
       pagination: { page: number; limit: number; total: number; pages: number };
     }>(`/v2/api/admin/audit-logs${suffix}`);
   },
+};
+
+export type MarketingMetricType = "carts" | "abandoned_products" | "cancelled_orders";
+
+export type MarketingAutomationSettings = {
+  enabled: boolean;
+  inactivityMinutes: number;
+  delayHours: number;
+  minSubtotalCents: number;
+  sendRecoveryEmail: boolean;
+  notificationWindowStart: string;
+  notificationWindowEnd: string;
+  cartSendMode: "automated" | "manual";
+  whatsappCartMessage: string;
+  whatsappOrderMessage: string;
+  cartEmailDelays: number[];
+  abandonedProductEnabled: boolean;
+  abandonedProductDelays: number[];
+  cancelledOrderEnabled: boolean;
+  cancelledOrderDelays: number[];
+};
+
+export type MarketingAutomationSettingsResponse = {
+  settings: MarketingAutomationSettings;
+  defaults: {
+    whatsappCartMessage: string;
+    whatsappOrderMessage: string;
+    cartEmailDelays: number[];
+    abandonedProductDelays: number[];
+    cancelledOrderDelays: number[];
+    notificationWindowStart: string;
+    notificationWindowEnd: string;
+  };
+  options: {
+    cartEmailDelays: number[];
+    abandonedProductDelays: number[];
+    cancelledOrderDelays: number[];
+  };
+};
+
+export type MarketingAutomationMetrics = {
+  metricType: MarketingMetricType | "combined" | null;
+  metricTypes?: MarketingMetricType[];
+  from: string;
+  to: string;
+  recoveredOrders: number;
+  recoveredRevenueCents: number;
+  unfinishedOrders: number;
+  lostRevenueCents: number;
+  emailsSent: number;
+  openRate: number;
+  clickRate: number;
+  conversionRate: number;
+  averageTicketCents: number;
+};
+
+export type MarketingCartItem = {
+  id: string;
+  productId: string;
+  variantId: string | null;
+  quantity: number;
+  unitPrice: number;
+  name: string;
+  imageUrl: string | null;
+};
+
+export type MarketingAbandonedCart = {
+  id: string;
+  email: string | null;
+  phone: string | null;
+  document: string | null;
+  customerName: string | null;
+  isVisitor: boolean;
+  subtotalCents: number;
+  couponCode: string | null;
+  lastActivityAt: string;
+  recoveryEmailSentAt: string | null;
+  emailOpenedAt: string | null;
+  emailClickedAt: string | null;
+  convertedAt: string | null;
+  recoveredAt: string | null;
+  recoveryUrl: string | null;
+  whatsappUrl: string | null;
+  itemsCount: number;
+  items: MarketingCartItem[];
+  userId: string | null;
+};
+
+export type MarketingUnpaidOrder = {
+  id: string;
+  customerName: string;
+  email: string | null;
+  phone: string | null;
+  document: string | null;
+  total: number;
+  paymentMethod: string | null;
+  paymentExpiresAt: string | null;
+  status?: string;
+  createdAt: string;
+  recoveryUrl: string;
+  whatsappUrl: string | null;
+  items: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    imageUrl: string | null;
+  }>;
+};
+
+function marketingQs(params?: Record<string, string | number | undefined | null>) {
+  const qs = new URLSearchParams();
+  if (!params) return "";
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    qs.set(key, String(value));
+  }
+  const suffix = qs.toString();
+  return suffix ? `?${suffix}` : "";
+}
+
+export const marketingAutomationsApi = {
+  metrics: (params: {
+    from: string;
+    to: string;
+    metricTypes?: MarketingMetricType[];
+    metricType?: MarketingMetricType;
+  }) => {
+    const qs: Record<string, string | number | undefined | null> = {
+      from: params.from,
+      to: params.to,
+    };
+    if (params.metricTypes) {
+      qs.metricTypes = params.metricTypes.join(",");
+    } else if (params.metricType) {
+      qs.metricType = params.metricType;
+    }
+    return request<MarketingAutomationMetrics>(
+      `/v2/api/admin/marketing/automations/metrics${marketingQs(qs)}`
+    );
+  },
+  listCarts: (params?: { from?: string; to?: string; search?: string; page?: number; pageSize?: number }) =>
+    request<{ carts: MarketingAbandonedCart[]; total: number; page: number; totalPages: number }>(
+      `/v2/api/admin/marketing/automations/carts${marketingQs(params)}`
+    ),
+  getCart: (id: string) =>
+    request<MarketingAbandonedCart>(`/v2/api/admin/marketing/automations/carts/${id}`),
+  archiveCart: (id: string) =>
+    request<{ success: boolean }>(`/v2/api/admin/marketing/automations/carts/${id}`, {
+      method: "DELETE",
+    }),
+  createOrderFromCart: (id: string) =>
+    request<MarketingUnpaidOrder>(`/v2/api/admin/marketing/automations/carts/${id}/create-order`, {
+      method: "POST",
+    }),
+  listOrders: (params?: { from?: string; to?: string; search?: string; page?: number; pageSize?: number }) =>
+    request<{ orders: MarketingUnpaidOrder[]; total: number; page: number; totalPages: number }>(
+      `/v2/api/admin/marketing/automations/orders${marketingQs(params)}`
+    ),
+  getOrder: (id: string) =>
+    request<MarketingUnpaidOrder>(`/v2/api/admin/marketing/automations/orders/${id}`),
+  archiveOrder: (id: string) =>
+    request<{ success: boolean }>(`/v2/api/admin/marketing/automations/orders/${id}`, {
+      method: "DELETE",
+    }),
+  getSettings: () =>
+    request<MarketingAutomationSettingsResponse>(
+      "/v2/api/admin/marketing/automations/settings"
+    ),
+  updateSettings: (payload: Partial<MarketingAutomationSettings>) =>
+    request<MarketingAutomationSettingsResponse>(
+      "/v2/api/admin/marketing/automations/settings",
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }
+    ),
+};
+
+export type EmailTemplateBlock = {
+  id: string;
+  key: string;
+  title: string;
+  description: string;
+  kind: "component" | "body";
+  defaultTitle?: string;
+  defaultSubtitle?: string;
+};
+
+export type EmailTemplatesState = {
+  headerHtml: string;
+  footerHtml: string;
+  subjects: Record<string, string>;
+  bodies: Record<string, string>;
+};
+
+export type EmailTemplatesResponse = {
+  templates: EmailTemplatesState;
+  branding: {
+    storeName: string;
+    logoUrl: string;
+    logoWhiteUrl?: string;
+    storeUrl?: string;
+    contactEmail: string;
+    contactPhone: string;
+    year: string;
+  };
+  catalog: {
+    components: EmailTemplateBlock[];
+    transactional: EmailTemplateBlock[];
+    abandonedCart: EmailTemplateBlock[];
+    abandonedProduct: EmailTemplateBlock[];
+  };
+  defaults: {
+    headerHtml: string;
+    footerHtml: string;
+    sampleBodyHtml: string;
+    bodies: Record<string, string>;
+  };
+};
+
+export const emailTemplatesApi = {
+  get: () => request<EmailTemplatesResponse>("/v2/api/admin/marketing/email-templates"),
+  update: (payload: Partial<EmailTemplatesState>) =>
+    request<EmailTemplatesResponse>("/v2/api/admin/marketing/email-templates", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  preview: (payload: {
+    headerHtml?: string;
+    footerHtml?: string;
+    bodyHtml?: string;
+    title?: string;
+    subtitle?: string;
+  }) =>
+    request<{ html: string }>("/v2/api/admin/marketing/email-templates/preview", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  sendTest: (payload: {
+    to: string;
+    blockId?: string;
+    headerHtml?: string;
+    footerHtml?: string;
+    bodyHtml?: string;
+    title?: string;
+    subtitle?: string;
+  }) =>
+    request<{ success: boolean; to: string; subject: string }>(
+      "/v2/api/admin/marketing/email-templates/send-test",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
 };
