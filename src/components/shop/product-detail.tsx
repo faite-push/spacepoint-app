@@ -22,6 +22,8 @@ import { ProductRatingBadge, ProductReviewsSection } from "./product-reviews-sec
 import type { ProductReviewsResponse } from "@/lib/store-reviews-api";
 import { cn } from "@/lib/utils";
 
+import { ProductViewTracker } from "@/components/shared/product-view-tracker";
+
 export function ProductDetail({ product, relatedProducts = [], reviewsData, }: { product: Product; relatedProducts?: Product[]; reviewsData?: ProductReviewsResponse; }) {
   const router = useRouter();
   const addProduct = useCartStore((s) => s.addProduct);
@@ -86,6 +88,7 @@ export function ProductDetail({ product, relatedProducts = [], reviewsData, }: {
 
   return (
     <div className="pb-24 lg:pb-12 -mt-22 py-6 md:py-12 space-y-6 relative select-none">
+      <ProductViewTracker productId={product.id} variantId={selectedVariantId || null} />
       <div className="absolute top-0 right-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
       <div className="absolute bottom-[50%] left-[-10%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
 

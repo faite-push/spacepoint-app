@@ -14,31 +14,36 @@ import { emailTemplatesApi, type EmailTemplateBlock } from "@/lib/admin-api";
 import { emailTemplateHref } from "@/lib/marketing-email-routes";
 import { cn } from "@/lib/utils";
 
-type TabKey = "components" | "transactional" | "abandonedCart" | "abandonedProduct";
+type TabKey = "components" | "transactional" | "abandonedCart" | "abandonedProduct" | "cancelledOrder";
 
-const VALID_TABS: TabKey[] = ["components", "transactional", "abandonedCart", "abandonedProduct"];
+const VALID_TABS: TabKey[] = [
+  "components",
+  "transactional",
+  "abandonedCart",
+  "abandonedProduct",
+  "cancelledOrder",
+];
 
 function BlockCard({ block }: { block: EmailTemplateBlock }) {
   return (
     <Link
       href={emailTemplateHref(block.id)}
-      className="group flex w-full cursor-pointer items-center gap-2 rounded-md border border-white/5 bg-background/30 px-4 py-4 text-left transition-colors hover:border-white/15 hover:bg-white/[0.03]"
+      className="group flex w-full cursor-pointer select-none items-center gap-2 rounded-md border border-white/5 bg-background/30 px-4 py-4 text-left hover:border-white/15 hover:bg-white/[0.03] active:scale-99 transition-all duration-300"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white/5 text-white/70 group-hover:text-white">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-white/5 text-white/70 group-hover:text-white">
         <Mail className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-white">{block.title}</p>
         <p className="mt-1 text-xs leading-relaxed text-white/45">{block.description}</p>
       </div>
-      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-white/25 group-hover:text-white/50" />
     </Link>
   );
 }
 
 function BlocksGrid({ blocks }: { blocks: EmailTemplateBlock[] }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid gap-3 sm:grid-cols-4">
       {blocks.map((block) => (
         <BlockCard key={block.id} block={block} />
       ))}
@@ -116,6 +121,12 @@ function MarketingEmailsPageContent() {
           >
             Abandono de produto
           </TabsTrigger>
+          <TabsTrigger
+            value="cancelledOrder"
+            className="flex cursor-pointer items-center gap-2 rounded-md px-4 py-3 text-sm font-medium transition-all duration-200"
+          >
+            Pedido cancelado
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="components" className="space-y-3">
@@ -134,16 +145,23 @@ function MarketingEmailsPageContent() {
 
         <TabsContent value="abandonedCart" className="space-y-3">
           <p className="text-sm text-white/40">
-            Conteúdo da régua automática de recuperação de carrinho.
+            Régua de recuperação de carrinho — edite assunto e corpo de cada etapa (1, 2 e 3).
           </p>
           <BlocksGrid blocks={data.catalog.abandonedCart} />
         </TabsContent>
 
         <TabsContent value="abandonedProduct" className="space-y-3">
           <p className="text-sm text-white/40">
-            E-mails focados em produtos específicos abandonados no carrinho.
+            Régua de produto abandonado — um template por etapa da sequência.
           </p>
           <BlocksGrid blocks={data.catalog.abandonedProduct} />
+        </TabsContent>
+
+        <TabsContent value="cancelledOrder" className="space-y-3">
+          <p className="text-sm text-white/40">
+            Régua após cancelamento — edite cada etapa da sequência.
+          </p>
+          <BlocksGrid blocks={data.catalog.cancelledOrder || []} />
         </TabsContent>
       </Tabs>
     </div>

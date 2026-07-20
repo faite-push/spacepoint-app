@@ -4,8 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { adminMainNavItems, adminSitePagesGroup, adminMarketingGroup, adminConfigNavItems, adminServiceNavItem, isAdminNavActive, isAdminGroupActive, type AdminNavItem, type AdminNavGroup, } from "./admin-nav-config";
-import { ChevronDown, ChevronRight, Store } from "lucide-react";
+import {
+  adminMainNavItems,
+  adminSitePagesGroup,
+  adminMarketingGroup,
+  adminConfigNavItems,
+  adminServiceNavItem,
+  isAdminNavActive,
+  isAdminGroupActive,
+  type AdminNavItem,
+  type AdminNavGroup,
+} from "./admin-nav-config";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { IoArrowRedoOutline } from "react-icons/io5";
 import { usePermission } from "@/providers/PermissionProvider";
 import { cn } from "@/lib/utils";
@@ -13,7 +23,17 @@ import { useQuery } from "@tanstack/react-query";
 import { chatApi } from "@/lib/admin-api";
 import { useSocket } from "@/context/socket-context";
 
-function NavLink({ item, pathname, nested = false, onNavigate, }: { item: AdminNavItem; pathname: string; nested?: boolean; onNavigate?: () => void; }) {
+function NavLink({
+  item,
+  pathname,
+  nested = false,
+  onNavigate,
+}: {
+  item: AdminNavItem;
+  pathname: string;
+  nested?: boolean;
+  onNavigate?: () => void;
+}) {
   const Icon = item.icon;
   const isActive = isAdminNavActive(pathname, item.href);
 
@@ -33,9 +53,17 @@ function NavLink({ item, pathname, nested = false, onNavigate, }: { item: AdminN
       <span className="truncate">{item.label}</span>
     </Link>
   );
-};
+}
 
-function NavGroupMenu({ group, pathname, onNavigate, }: { group: AdminNavGroup; pathname: string; onNavigate?: () => void; }) {
+function NavGroupMenu({
+  group,
+  pathname,
+  onNavigate,
+}: {
+  group: AdminNavGroup;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
   const { hasPermission } = usePermission();
 
   const visibleChildren = group.children.filter(
@@ -73,7 +101,7 @@ function NavGroupMenu({ group, pathname, onNavigate, }: { group: AdminNavGroup; 
       </button>
 
       {open && (
-        <div className="space-y-0.5 mt-0.5">
+        <div className="mt-0.5 space-y-0.5">
           {visibleChildren.map((child) => (
             <NavLink
               key={child.href}
@@ -100,8 +128,7 @@ function ServiceLink({ pathname, onNavigate }: { pathname: string; onNavigate?: 
     queryKey: ["admin", "unread-chats-count"],
     queryFn: async () => {
       const res = await chatApi.list({ status: "OPEN" });
-      const unreadCount = res.chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-      return unreadCount;
+      return res.chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
     },
     refetchInterval: isConnected ? false : 10000,
     enabled: hasPermission(item.permission || ""),
@@ -114,7 +141,7 @@ function ServiceLink({ pathname, onNavigate }: { pathname: string; onNavigate?: 
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        "flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-colors relative",
+        "relative flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-colors",
         isActive
           ? "bg-white/10 text-white"
           : "text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -123,7 +150,7 @@ function ServiceLink({ pathname, onNavigate }: { pathname: string; onNavigate?: 
       <Icon className="h-5 w-5 shrink-0" />
       <span className="flex-1 font-medium">{item.label}</span>
       {data !== undefined && data > 0 && (
-        <span className="flex h-5 min-w-5 px-1 items-center justify-center rounded-full bg-[#ff493f] text-xs font-medium text-white">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff493f] px-1 text-xs font-medium text-white">
           {data > 99 ? "99+" : data}
         </span>
       )}
@@ -131,12 +158,42 @@ function ServiceLink({ pathname, onNavigate }: { pathname: string; onNavigate?: 
   );
 }
 
-export function AdminNavLinks({ collapsed = false, onNavigate, className, }: { collapsed?: boolean; onNavigate?: () => void; className?: string; }) {
+export function AdminNavFooter({ onNavigate, className }: { onNavigate?: () => void; className?: string }) {
+  const pathname = usePathname();
+
+  return (
+    <div className={cn("space-y-1 border-t border-white/5 px-2 pt-3 pb-2", className)}>
+      <ServiceLink pathname={pathname} onNavigate={onNavigate} />
+      <Link
+        href="/"
+        onClick={onNavigate}
+        className="flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
+      >
+        <IoArrowRedoOutline className="h-5 w-5 shrink-0" />
+        <span>Ver Loja</span>
+      </Link>
+    </div>
+  );
+}
+
+export function AdminNavLinks({
+  collapsed = false,
+  onNavigate,
+  className,
+}: {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+  className?: string;
+}) {
   const pathname = usePathname();
   const { hasPermission } = usePermission();
 
-  const filteredMainItems = adminMainNavItems.filter((item) => !item.permission || hasPermission(item.permission));
-  const filteredConfigItems = adminConfigNavItems.filter((item) => !item.permission || hasPermission(item.permission));
+  const filteredMainItems = adminMainNavItems.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  );
+  const filteredConfigItems = adminConfigNavItems.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  );
   const showSitePages = !adminSitePagesGroup.permission || hasPermission(adminSitePagesGroup.permission);
   const showMarketing = !adminMarketingGroup.permission || hasPermission(adminMarketingGroup.permission);
 
@@ -148,7 +205,7 @@ export function AdminNavLinks({ collapsed = false, onNavigate, className, }: { c
         ))}
       </nav>
     );
-  };
+  }
 
   return (
     <nav className={cn("space-y-1", className)}>
@@ -156,7 +213,7 @@ export function AdminNavLinks({ collapsed = false, onNavigate, className, }: { c
         <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
       ))}
 
-      {(filteredConfigItems.length > 0 || showSitePages) && (
+      {(filteredConfigItems.length > 0 || showSitePages || showMarketing) && (
         <>
           <p className="mb-1 mt-3 px-3 text-sm font-semibold text-white/80">Configurações</p>
 
@@ -165,9 +222,7 @@ export function AdminNavLinks({ collapsed = false, onNavigate, className, }: { c
           ))}
 
           {showMarketing && (
-            <>
-              <NavGroupMenu group={adminMarketingGroup} pathname={pathname} onNavigate={onNavigate} />
-            </>
+            <NavGroupMenu group={adminMarketingGroup} pathname={pathname} onNavigate={onNavigate} />
           )}
 
           {showSitePages && (
@@ -175,19 +230,6 @@ export function AdminNavLinks({ collapsed = false, onNavigate, className, }: { c
           )}
         </>
       )}
-
-      <div className="absolute inset-x-0 px-2 bottom-2 border-t border-white/5 pt-3 space-y-1">
-        <ServiceLink pathname={pathname} onNavigate={onNavigate} />
-
-        <Link
-          href="/"
-          onClick={onNavigate}
-          className="flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
-        >
-          <IoArrowRedoOutline className="h-5 w-5 shrink-0" />
-          <span>Ver Loja</span>
-        </Link>
-      </div>
     </nav>
   );
 }

@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { createOrder, fetchCheckoutPaymentOptions, formatPrice, fetchProducts } from "@/lib/shop-api";
 import { fetchSiteConfig } from "@/lib/site-api";
 import { API_URL, getApiHeaders } from "@/lib/api";
-import { captureCartEmail, clearAbandonedCart, recoverAbandonedCart } from "@/lib/cart-api";
+import { captureCartEmail, clearAbandonedCart, recoverAbandonedCart, reorderCancelledOrder } from "@/lib/cart-api";
 import { clearCartRecoverySession, getCartRecoverySession, saveCartRecoverySession } from "@/lib/cart-recovery";
 import { getVisitorId } from "@/lib/visitor-id";
 import { trackStorefrontInitiateCheckout } from "@/lib/storefront-plugin-events";
@@ -118,44 +118,88 @@ function CheckoutPageContent() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const token = searchParams.get("recover");
-    if (!token) return;
+    const recoverToken = searchParams.get("recover");
+    const reorderToken = searchParams.get("reorder");
+    if (!recoverToken && !reorderToken) return;
 
     let cancelled = false;
     (async () => {
       try {
-        const recovered = await recoverAbandonedCart(token);
-        if (cancelled) return;
-        saveCartRecoverySession({
-          token,
-          source: searchParams.get("src"),
-          cartId: recovered.cartId,
-        });
-        replaceItems(
-          recovered.items.map((item) => ({
-            cartKey: cartItemKey(item.productId, item.variantId),
-            productId: item.productId,
-            variantId: item.variantId,
-            variantName: null,
-            slug: item.slug || item.productId,
-            name: item.name,
-            price: item.price,
-            image: item.image || undefined,
-            platform: "",
-            quantity: item.quantity,
-          }))
-        );
-        if (recovered.couponCode) {
-          try {
-            await applyCoupon(recovered.couponCode);
-          } catch {
-            /* cupom pode estar inválido */
+        if (recoverToken) {
+          const recovered = await recoverAbandonedCart(recoverToken);
+          if (cancelled) return;
+          saveCartRecoverySession({
+            token: recoverToken,
+            source: searchParams.get("src"),
+            cartId: recovered.cartId,
+          });
+          replaceItems(
+            recovered.items.map((item) => ({
+              cartKey: cartItemKey(item.productId, item.variantId),
+              productId: item.productId,
+              variantId: item.variantId,
+              variantName: null,
+              slug: item.slug || item.productId,
+              name: item.name,
+              price: item.price,
+              image: item.image || undefined,
+              platform: "",
+              quantity: item.quantity,
+            }))
+          );
+          if (recovered.couponCode) {
+            try {
+              await applyCoupon(recovered.couponCode);
+            } catch {
+              /* cupom pode estar inválido */
+            }
           }
+          toast.success("Carrinho recuperado com sucesso");
+          router.replace("/checkout");
+          return;
         }
-        toast.success("Carrinho recuperado com sucesso");
-        router.replace("/checkout");
+
+        if (reorderToken) {
+          const reordered = await reorderCancelledOrder(reorderToken);
+          if (cancelled) return;
+          replaceItems(
+            reordered.items.map((item) => ({
+              cartKey: cartItemKey(item.productId, item.variantId),
+              productId: item.productId,
+              variantId: item.variantId,
+              variantName: null,
+              slug: item.slug || item.productId,
+              name: item.name,
+              price: item.price,
+              image: item.image || undefined,
+              platform: "",
+              quantity: item.quantity,
+            }))
+          );
+          if (reordered.couponCode) {
+            try {
+              await applyCoupon(reordered.couponCode);
+            } catch {
+              /* cupom pode estar inválido */
+            }
+          }
+          if (reordered.skipped > 0) {
+            toast.success(
+              `Pedido remontado. ${reordered.skipped} item(ns) indisponível(is) foram removidos.`
+            );
+          } else {
+            toast.success("Pedido remontado — finalize o pagamento");
+          }
+          router.replace("/checkout");
+        }
       } catch {
-        if (!cancelled) toast.error("Não foi possível recuperar este carrinho");
+        if (!cancelled) {
+          toast.error(
+            reorderToken
+              ? "Não foi possível remontar este pedido"
+              : "Não foi possível recuperar este carrinho"
+          );
+        }
       }
     })();
 

@@ -55,3 +55,12 @@ export async function recoverAbandonedCart(token: string): Promise<{
 }> {
   return apiFetch(`/v2/api/cart/recover/${encodeURIComponent(token)}`);
 }
+
+export async function reorderCancelledOrder(token: string): Promise<{
+  orderId: string;
+  couponCode: string | null;
+  items: RecoveredCartItem[];
+  skipped: number;
+}> {
+  return apiFetch(`/v2/api/order/reorder/${encodeURIComponent(token)}`);
+}

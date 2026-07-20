@@ -7,11 +7,7 @@ import { notFound } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmailBlockEditor } from "@/components/admin/marketing/email-block-editor";
 import { emailTemplatesApi } from "@/lib/admin-api";
-import {
-  EMAILS_BASE,
-  catalogTabForBlock,
-  findEmailBlockBySlug,
-} from "@/lib/marketing-email-routes";
+import { EMAILS_BASE, catalogTabForBlock, findEmailBlockBySlug, } from "@/lib/marketing-email-routes";
 
 type Props = {
   params: Promise<{ slug: string }>;

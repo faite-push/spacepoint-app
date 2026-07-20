@@ -14,11 +14,11 @@ export default function AutomationSettingsPage() {
       <div className="pointer-events-none absolute top-0 left-[-5%] z-0 h-[300px] w-[300px] rounded-full bg-white/3 blur-[120px] sm:h-[600px] sm:w-[600px]" />
 
       <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
+        <div className="flex items-center gap-3">
           <Button
             type="button"
             variant="ghost"
-            size="icon"
+            size="icon-lg"
             className="mt-0.5 text-white/60 hover:text-white"
             asChild
           >

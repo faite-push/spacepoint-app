@@ -1684,6 +1684,7 @@ export type EmailTemplatesState = {
   headerHtml: string;
   footerHtml: string;
   subjects: Record<string, string>;
+  preheaders: Record<string, string>;
   bodies: Record<string, string>;
 };
 
@@ -1703,12 +1704,15 @@ export type EmailTemplatesResponse = {
     transactional: EmailTemplateBlock[];
     abandonedCart: EmailTemplateBlock[];
     abandonedProduct: EmailTemplateBlock[];
+    cancelledOrder?: EmailTemplateBlock[];
   };
   defaults: {
     headerHtml: string;
     footerHtml: string;
     sampleBodyHtml: string;
     bodies: Record<string, string>;
+    subjects: Record<string, string>;
+    preheaders: Record<string, string>;
   };
 };
 
@@ -1725,6 +1729,8 @@ export const emailTemplatesApi = {
     bodyHtml?: string;
     title?: string;
     subtitle?: string;
+    templateKey?: string;
+    preheader?: string;
   }) =>
     request<{ html: string }>("/v2/api/admin/marketing/email-templates/preview", {
       method: "POST",
@@ -1733,11 +1739,14 @@ export const emailTemplatesApi = {
   sendTest: (payload: {
     to: string;
     blockId?: string;
+    templateKey?: string;
     headerHtml?: string;
     footerHtml?: string;
     bodyHtml?: string;
     title?: string;
     subtitle?: string;
+    subject?: string;
+    preheader?: string;
   }) =>
     request<{ success: boolean; to: string; subject: string }>(
       "/v2/api/admin/marketing/email-templates/send-test",

@@ -243,9 +243,9 @@ export default function MarketingAutomationsPage() {
             <TabsTrigger value="carts" className="flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-md cursor-pointer transition-all duration-200">Listagem de Carrinhos</TabsTrigger>
             <TabsTrigger value="orders" className="flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-md cursor-pointer transition-all duration-200">Listagem de Pedidos</TabsTrigger>
           </TabsList>
-          <Button type="button" variant="outline" className="border-white/10" asChild>
+          <Button type="button" variant="outline" className="px-5 py-5" asChild>
             <Link href={AUTOMATIONS_SETTINGS}>
-              <Settings className="mr-2 h-4 w-4" />
+              <Settings className="h-4 w-4" />
               Configurações
             </Link>
           </Button>

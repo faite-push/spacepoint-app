@@ -19,6 +19,7 @@ export function findEmailBlockBySlug(
     ...catalog.transactional,
     ...catalog.abandonedCart,
     ...catalog.abandonedProduct,
+    ...(catalog.cancelledOrder || []),
   ];
   return all.find((b) => b.id === slug) || null;
 }
@@ -27,5 +28,6 @@ export function catalogTabForBlock(block: EmailTemplateBlock): string {
   if (block.key === "headerHtml" || block.key === "footerHtml") return "components";
   if (block.id.startsWith("abandonedCart")) return "abandonedCart";
   if (block.id.startsWith("abandonedProduct")) return "abandonedProduct";
+  if (block.id.startsWith("cancelledOrder")) return "cancelledOrder";
   return "transactional";
 }

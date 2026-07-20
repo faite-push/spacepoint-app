@@ -35,13 +35,14 @@ function DelayToggles({
   selected,
   onChange,
   recommendedHours = 1,
-  editHref,
+  templateBaseId,
 }: {
   options: number[];
   selected: number[];
   onChange: (next: number[]) => void;
   recommendedHours?: number;
-  editHref: string;
+  /** Ex.: abandonedCartRecovery — etapa 1/2/3 conforme a ordem dos delays ativos */
+  templateBaseId: string;
 }) {
   const toggle = (hours: number, checked: boolean) => {
     if (checked) {
@@ -52,10 +53,18 @@ function DelayToggles({
     onChange(next.length ? next : selected);
   };
 
+  const sortedSelected = [...selected].sort((a, b) => a - b);
+
   return (
     <div className="space-y-2">
       {options.map((hours) => {
         const active = selected.includes(hours);
+        const stepIndex = sortedSelected.indexOf(hours) + 1;
+        const stepSlug =
+          stepIndex <= 1
+            ? templateBaseId
+            : `${templateBaseId}_step${Math.min(stepIndex, 3)}`;
+
         return (
           <div
             key={hours}
@@ -67,6 +76,11 @@ function DelayToggles({
             <div className="flex items-center gap-3">
               <Switch checked={active} onCheckedChange={(v) => toggle(hours, v)} />
               <span className="text-sm text-white">{formatDelayLabel(hours)}</span>
+              {active && stepIndex > 0 ? (
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/60">
+                  Etapa {Math.min(stepIndex, 3)}
+                </span>
+              ) : null}
               {hours === recommendedHours ? (
                 <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
                   Recomendado
@@ -81,7 +95,7 @@ function DelayToggles({
                 className="text-white/55 hover:text-white"
                 asChild
               >
-                <Link href={editHref}>
+                <Link href={emailTemplateHref(stepSlug)}>
                   <Pencil className="mr-2 h-3.5 w-3.5" />
                   Editar e-mail
                 </Link>
@@ -184,7 +198,15 @@ export function AutomationSettingsPanel() {
     key: K,
     value: MarketingAutomationSettings[K]
   ) => {
-    setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+    setForm((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, [key]: value };
+      // Manter sendRecoveryEmail alinhado ao modo (evita o backend forçar manual)
+      if (key === "cartSendMode") {
+        next.sendRecoveryEmail = value === "automated";
+      }
+      return next;
+    });
   };
 
   if (query.isLoading || !form || !query.data) {
@@ -202,35 +224,61 @@ export function AutomationSettingsPanel() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <Tabs value={subTab} onValueChange={setSubTab}>
-        <TabsList className="h-auto w-full flex-wrap bg-transparent p-0 sm:w-auto">
-          <TabsTrigger
-            value="general"
-            className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
-          >
-            Configurações gerais
-          </TabsTrigger>
-          <TabsTrigger
-            value="cart"
-            className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
-          >
-            Carrinho Abandonado
-          </TabsTrigger>
-          <TabsTrigger
-            value="product"
-            className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
-          >
-            Abandono de Produto
-          </TabsTrigger>
-          <TabsTrigger
-            value="cancelled"
-            className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
-          >
-            Pedido Cancelado
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-              Novo
-            </span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-row gap-4">
+          <TabsList className="h-auto w-full flex-wrap bg-transparent p-0 sm:w-auto">
+            <TabsTrigger
+              value="general"
+              className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
+            >
+              Configurações gerais
+            </TabsTrigger>
+            <TabsTrigger
+              value="cart"
+              className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
+            >
+              Carrinho Abandonado
+            </TabsTrigger>
+            <TabsTrigger
+              value="product"
+              className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
+            >
+              Abandono de Produto
+            </TabsTrigger>
+            <TabsTrigger
+              value="cancelled"
+              className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
+            >
+              Pedido Cancelado
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex flex-row items-center gap-2 ml-auto">
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              disabled={!dirty || saveMutation.isPending}
+              onClick={() => baseline && setForm(baseline)}
+            >
+              Cancelar
+            </Button>
+            <Can I="marketing:manage">
+              <Button
+                type="button"
+                size="lg"
+                disabled={!dirty || saveMutation.isPending}
+                onClick={() => saveMutation.mutate()}
+              >
+                {saveMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 hidden" />
+                )}
+                Salvar alterações
+              </Button>
+            </Can>
+          </div>
+        </div>
 
         <TabsContent value="general" className="mt-4 space-y-4">
           <SettingsSection
@@ -301,9 +349,8 @@ export function AutomationSettingsPanel() {
             />
             <Button
               type="button"
-              variant="outline"
+              variant="link"
               size="sm"
-              className="border-white/10"
               onClick={() => patch("whatsappCartMessage", defaults.whatsappCartMessage)}
             >
               <RotateCcw className="mr-2 h-3.5 w-3.5" />
@@ -323,13 +370,13 @@ export function AutomationSettingsPanel() {
 
           <SettingsSection
             title="Quando enviar o e-mail"
-            description="Ative os intervalos em que o lembrete automático deve ser disparado após o abandono."
+            description="Ative os intervalos da régua. Cada horário marcado dispara um e-mail em sequência (ex.: 1h → 12h → 24h). Use “Editar e-mail” na etapa correspondente."
           >
             <DelayToggles
               options={options.cartEmailDelays}
               selected={form.cartEmailDelays}
               onChange={(next) => patch("cartEmailDelays", next)}
-              editHref={emailTemplateHref("abandonedCartRecovery")}
+              templateBaseId="abandonedCartRecovery"
             />
           </SettingsSection>
         </TabsContent>
@@ -360,7 +407,7 @@ export function AutomationSettingsPanel() {
               options={options.abandonedProductDelays}
               selected={form.abandonedProductDelays}
               onChange={(next) => patch("abandonedProductDelays", next)}
-              editHref={emailTemplateHref("abandonedProductRecovery")}
+              templateBaseId="abandonedProductRecovery"
             />
           </SettingsSection>
         </TabsContent>
@@ -392,9 +439,8 @@ export function AutomationSettingsPanel() {
             />
             <Button
               type="button"
-              variant="outline"
+              variant="link"
               size="sm"
-              className="border-white/10"
               onClick={() => patch("whatsappOrderMessage", defaults.whatsappOrderMessage)}
             >
               <RotateCcw className="mr-2 h-3.5 w-3.5" />
@@ -417,37 +463,11 @@ export function AutomationSettingsPanel() {
               options={options.cancelledOrderDelays}
               selected={form.cancelledOrderDelays}
               onChange={(next) => patch("cancelledOrderDelays", next)}
-              editHref={emailTemplateHref("orderCancelled")}
+              templateBaseId="cancelledOrderRecovery"
             />
           </SettingsSection>
         </TabsContent>
       </Tabs>
-
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-white/5 pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          className="border-white/10"
-          disabled={!dirty || saveMutation.isPending}
-          onClick={() => baseline && setForm(baseline)}
-        >
-          Cancelar
-        </Button>
-        <Can I="marketing:manage">
-          <Button
-            type="button"
-            disabled={!dirty || saveMutation.isPending}
-            onClick={() => saveMutation.mutate()}
-          >
-            {saveMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            Salvar alterações
-          </Button>
-        </Can>
-      </div>
     </div>
   );
 }
