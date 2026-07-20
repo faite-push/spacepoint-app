@@ -187,7 +187,7 @@ export function ClientImportDialog({ open, onOpenChange, onSuccess }: Props) {
                 </div>
               )}
 
-              {preview.errors?.length > 0 && (
+              {(preview.errors?.length ?? 0) > 0 && (
                 <p className="text-xs text-red-400">
                   {preview.invalidRows} linha(s) inválida(s) serão ignoradas
                 </p>

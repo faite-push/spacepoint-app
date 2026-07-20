@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, use } from "react";
+import { useEffect, useRef, useState, use, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -26,6 +26,20 @@ interface PageProps {
 };
 
 export default function PaymentPage({ params }: PageProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <PaymentPageContent params={params} />
+    </Suspense>
+  );
+}
+
+function PaymentPageContent({ params }: PageProps) {
   const { id } = use(params);
   const searchParams = useSearchParams();
   const paymentMethod = (searchParams.get("paymentMethod") || "PIX").toUpperCase();

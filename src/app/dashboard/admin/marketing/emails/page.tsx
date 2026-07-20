@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 
-import { ChevronRight, Mail } from "lucide-react";
+import { ChevronRight, Loader2, Mail } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,7 +46,7 @@ function BlocksGrid({ blocks }: { blocks: EmailTemplateBlock[] }) {
   );
 }
 
-export default function MarketingEmailsPage() {
+function MarketingEmailsPageContent() {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>(() => {
     const raw = searchParams.get("tab");
@@ -147,5 +147,19 @@ export default function MarketingEmailsPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function MarketingEmailsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <MarketingEmailsPageContent />
+    </Suspense>
   );
 }

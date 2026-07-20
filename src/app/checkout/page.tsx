@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ComponentType } from "react";
+import { useState, useEffect, Suspense, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -45,6 +45,20 @@ import { Toggle } from "@/components/ui/toggle";
 import { Label } from "@/components/ui/label";
 
 export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <CheckoutPageContent />
+    </Suspense>
+  );
+}
+
+function CheckoutPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { items, total, subtotal, discount, setQuantity, removeItem, clear, applyCoupon, appliedCoupon, removeCoupon, replaceItems } = useCartStore();
@@ -226,7 +240,7 @@ export default function CheckoutPage() {
 
     const nameField = enabledFields.find((field) => field.key === "name" || field.prefillFromUser === "name");
     const customerName = nameField ? String(fieldValues[nameField.key] || "").trim() : "";
-    const phoneField = enabledFields.find((field) => field.key === "phone" || field.type === "phone");
+    const phoneField = enabledFields.find((field) => field.key === "phone" || field.type === "tel");
     const phone = phoneField ? String(fieldValues[phoneField.key] || "").trim() : "";
     const cpfField = enabledFields.find((field) => field.key === "cpf" || field.type === "cpf");
     const document = cpfField ? String(fieldValues[cpfField.key] || "").trim() : "";
