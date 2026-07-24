@@ -76,18 +76,23 @@ export function SiteShell({
       </main>
 
       {showStoreReviews && (
-        <StoreReviewsCarousel
-          reviews={storeReviews}
-          summary={storeReviewsSummary}
-          title={reviewsSettings.homeTitle}
-          subtitle={reviewsSettings.homeSubtitle}
-        />
+        <div id="reviews" className="scroll-mt-32">
+          <StoreReviewsCarousel
+            reviews={storeReviews}
+            summary={storeReviewsSummary}
+            title={reviewsSettings.homeTitle}
+            subtitle={reviewsSettings.homeSubtitle}
+          />
+        </div>
       )}
 
       {pathname === "/" && <HomeNewsletter config={siteConfig} />}
 
       {showGoogleReviews && (
-        <div className="relative z-10 -mb-60">
+        <div
+          id={showStoreReviews ? undefined : "reviews"}
+          className={`relative z-10 -mb-60 ${showStoreReviews ? "" : "scroll-mt-32"}`}
+        >
           <div className="absolute bottom-0 left-0 right-0 top-0 bg-[radial-gradient(65%_50%_at_50%_50%,rgba(168,85,247,0.3)_0%,rgba(6,78,59,0)_100%)]" />
 
           <div className="mx-auto max-w-[1580px] px-4 md:px-8">

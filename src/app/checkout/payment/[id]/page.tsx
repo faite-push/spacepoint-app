@@ -248,7 +248,7 @@ function PaymentPageContent({ params }: PageProps) {
                   size="lg"
                   className="border-none rounded-md px-10 h-12"
                 >
-                  <Link href="/account/orders">
+                  <Link href={`/account/orders/${order.id}`}>
                     Acessar Meus Produtos <ArrowRight className="h-5 w-5 ml-2" />
                   </Link>
                 </Button>

@@ -35,11 +35,19 @@ async function fetchStats(from: Date, to: Date) {
         approvedCount: 0,
         pendingCount: 0,
         approvedPct: 0,
+        visitConversionPct: null,
+        gaugePct: 0,
       },
       methods: data.sidebar?.methods ?? [],
       gateways: data.sidebar?.gateways ?? [],
       latestSales: data.sidebar?.latestSales ?? [],
       productStats: data.sidebar?.productStats ?? { lowStock: [], topSellers: [] },
+    },
+    charts: {
+      ...data.charts,
+      customers: data.charts?.customers ?? [],
+      visitors: data.charts?.visitors ?? [],
+      performance: data.charts?.performance ?? [],
     },
   };
 };

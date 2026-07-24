@@ -282,9 +282,14 @@ function LoginContent() {
 
         <p className="mt-6 text-center text-sm font-light text-white/60">
           Ao fazer login, você concorda com nossos{" "}
-          <Link href="" className="text-primary hover:text-primary/80 transition-all duration-300">
+          <Link href="/terms" className="text-primary hover:text-primary/80 transition-all duration-300">
             Termos de Serviço
           </Link>
+          {" "}e{" "}
+          <Link href="/privacy" className="text-primary hover:text-primary/80 transition-all duration-300">
+            Política de Privacidade
+          </Link>
+          .
         </p>
       </div>
     </div>

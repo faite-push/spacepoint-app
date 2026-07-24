@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Heading from "@tiptap/extension-heading";
 import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
 import { TextStyle } from "@tiptap/extension-text-style";
@@ -14,16 +15,35 @@ interface RichContentProps {
   className?: string;
 }
 
+const HeadingWithId = Heading.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      id: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("id"),
+        renderHTML: (attributes) => {
+          if (!attributes.id) return {};
+          return { id: attributes.id };
+        },
+      },
+    };
+  },
+});
+
 export function RichContent({ content, className }: RichContentProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
+        heading: false,
         link: {
           openOnClick: true,
-          HTMLAttributes: { class: "text-primary underline hover:text-primary/80 transition-colors" },
-        }
+          HTMLAttributes: {
+            class: "text-primary underline hover:text-primary/80 transition-colors",
+          },
+        },
       }),
+      HeadingWithId.configure({ levels: [1, 2, 3] }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Image.configure({ HTMLAttributes: { class: "rounded-lg my-4 max-w-full" } }),
       TextStyle,
@@ -36,7 +56,7 @@ export function RichContent({ content, className }: RichContentProps) {
       attributes: {
         class: cn(
           "prose prose-invert max-w-none",
-          "prose-headings:font-bold prose-headings:text-white prose-headings:tracking-tight",
+          "prose-headings:font-bold prose-headings:text-white prose-headings:tracking-tight prose-headings:scroll-mt-32",
           "prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg",
           "prose-p:text-white/70 prose-p:leading-relaxed",
           "prose-strong:text-white prose-strong:font-semibold",
@@ -53,8 +73,7 @@ export function RichContent({ content, className }: RichContentProps) {
       },
     },
   });
-  
-  // Update content when it changes
+
   useEffect(() => {
     if (editor && content) {
       editor.commands.setContent(content);

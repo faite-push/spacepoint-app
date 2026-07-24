@@ -1,15 +1,25 @@
 import type { Metadata } from "next";
-import { InstitutionalPageView } from "@/components/institutional-page-view";
+import { notFound } from "next/navigation";
+import { DocumentPageLayout } from "@/components/institutional/document-page-layout";
 import { fetchInstitutionalPage } from "@/lib/site-api";
 import { institutionalMetadata } from "@/lib/seo-utils";
+import { ENTERPRISE_FALLBACK_META } from "@/lib/institutional-routes";
+import { isDocumentLayoutData } from "@/lib/institutional-layout";
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await fetchInstitutionalPage("refunds");
-  return institutionalMetadata(page, {
-    title: "Política de Trocas e Devoluções | Space Point",
-  });
+  return institutionalMetadata(page, ENTERPRISE_FALLBACK_META.refunds);
 }
 
-export default function RefundsPage() {
-  return <InstitutionalPageView slug="refunds" />;
+export default async function RefundsPage() {
+  const page = await fetchInstitutionalPage("refunds");
+  if (!page || !isDocumentLayoutData(page.layoutData)) notFound();
+
+  return (
+    <DocumentPageLayout
+      title={page.title}
+      layout={page.layoutData}
+      content={page.content}
+    />
+  );
 }

@@ -11,14 +11,61 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { RichEditor } from "@/components/admin/shared/rich-editor";
+import { HelpLayoutEditor } from "@/components/admin/pages/help-layout-editor";
+import { DocumentLayoutEditor } from "@/components/admin/pages/document-layout-editor";
 import { institutionalPagesApi, type InstitutionalPageRecord } from "@/lib/admin-api";
+import { INSTITUTIONAL_PUBLIC_PATH } from "@/lib/institutional-routes";
+import {
+  isDocumentLayoutData,
+  isHelpLayoutData,
+  type DocumentLayoutData,
+  type HelpLayoutData,
+} from "@/lib/institutional-layout";
 import { cn } from "@/lib/utils";
 
-const SLUG_PATH: Record<string, string> = {
-  about: "/about",
-  privacy: "/privacy",
-  refunds: "/refunds",
+const HELP_SLUGS = new Set([
+  "support",
+  "fale-conosco",
+  "como-comprar",
+  "como-funciona",
+  "envio-expresso",
+]);
+
+const FALLBACK_HELP: HelpLayoutData = {
+  heroTitle: "Como podemos te ajudar?",
+  heroSubtitle: "Nossa equipe está pronta para resolver seu problema.",
+  channels: [],
+  faq: [],
+  hours: {
+    title: "Horário de Atendimento",
+    weekdays: "Segunda a Sexta: 09:00 - 18:00",
+    weekend: "Finais de Semana: Suporte limitado",
+    timezone: "Horário de Brasília (UTC-3)",
+  },
 };
+
+const FALLBACK_DOCUMENT: DocumentLayoutData = {
+  eyebrow: "",
+  intro: "",
+  showToc: true,
+  updatedLabel: "",
+};
+
+function normalizeDraft(page: InstitutionalPageRecord): InstitutionalPageRecord {
+  const layoutType =
+    page.layoutType ||
+    (HELP_SLUGS.has(page.slug) ? "help" : "document");
+
+  let layoutData = page.layoutData;
+  if (layoutType === "help" && !isHelpLayoutData(layoutData)) {
+    layoutData = FALLBACK_HELP;
+  }
+  if (layoutType === "document" && !isDocumentLayoutData(layoutData)) {
+    layoutData = FALLBACK_DOCUMENT;
+  }
+
+  return { ...page, layoutType, layoutData };
+}
 
 export function InstitutionalSettings() {
   const queryClient = useQueryClient();
@@ -37,7 +84,7 @@ export function InstitutionalSettings() {
     if (!pages.length || initialized.current) return;
     const page = pages.find((p) => p.slug === activeSlug) ?? pages[0];
     setActiveSlug(page.slug);
-    setDraft({ ...page });
+    setDraft(normalizeDraft(page));
     initialized.current = true;
   }, [pages, activeSlug]);
 
@@ -47,6 +94,8 @@ export function InstitutionalSettings() {
       return institutionalPagesApi.update(draft.slug, {
         title: draft.title,
         content: draft.content,
+        layoutType: draft.layoutType,
+        layoutData: draft.layoutData,
         isPublished: draft.isPublished,
         metaTitle: draft.metaTitle,
         metaDescription: draft.metaDescription,
@@ -66,9 +115,13 @@ export function InstitutionalSettings() {
         <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
       </div>
     );
-  };
+  }
 
-  const publicPath = SLUG_PATH[draft.slug] ?? `/${draft.slug}`;
+  const publicPath = INSTITUTIONAL_PUBLIC_PATH[draft.slug] ?? `/${draft.slug}`;
+  const helpLayout = isHelpLayoutData(draft.layoutData) ? draft.layoutData : FALLBACK_HELP;
+  const documentLayout = isDocumentLayoutData(draft.layoutData)
+    ? draft.layoutData
+    : FALLBACK_DOCUMENT;
 
   return (
     <div className="relative space-y-6">
@@ -80,10 +133,10 @@ export function InstitutionalSettings() {
         <div>
           <h1 className="text-xl font-bold text-white lg:text-2xl">Páginas institucionais</h1>
           <p className="text-muted-foreground">
-            Edite o conteúdo de Quem somos, Privacidade e políticas da loja.
+            Layout de ajuda (canais + FAQ) nas páginas de Confiança e layout documental nas de Empresa.
           </p>
         </div>
-        
+
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button variant="outline" size="lg" asChild className="gap-2">
             <Link href={publicPath} target="_blank">
@@ -96,11 +149,7 @@ export function InstitutionalSettings() {
             disabled={saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
-            {saveMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 hidden" />
-            )}
+            {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Salvar página
           </Button>
         </div>
@@ -114,7 +163,7 @@ export function InstitutionalSettings() {
               type="button"
               onClick={() => {
                 setActiveSlug(page.slug);
-                setDraft({ ...page });
+                setDraft(normalizeDraft(page));
               }}
               className={cn(
                 "w-full shrink-0 cursor-pointer rounded-md px-4 py-2.5 text-left text-sm font-medium transition-colors lg:py-3",
@@ -124,11 +173,14 @@ export function InstitutionalSettings() {
               )}
             >
               {page.title}
+              <span className="mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-zinc-600">
+                {HELP_SLUGS.has(page.slug) ? "Ajuda" : "Documento"}
+              </span>
             </button>
           ))}
         </aside>
 
-        <div className="flex-1 rounded-xl border border-white/10 bg-[#0A0A0A] p-6 space-y-6">
+        <div className="flex-1 space-y-6 rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
           <div className="space-y-2">
             <Label className="text-zinc-300">Título da página</Label>
             <Input
@@ -138,6 +190,8 @@ export function InstitutionalSettings() {
             />
             <p className="text-xs text-zinc-500">
               URL pública: <span className="font-mono text-zinc-400">{publicPath}</span>
+              {" · "}
+              Layout: <span className="text-zinc-400">{draft.layoutType}</span>
             </p>
           </div>
 
@@ -172,8 +226,33 @@ export function InstitutionalSettings() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-zinc-300">Conteúdo</Label>
+          {draft.layoutType === "help" ? (
+            <HelpLayoutEditor
+              value={helpLayout}
+              onChange={(layoutData) =>
+                setDraft({ ...draft, layoutType: "help", layoutData })
+              }
+            />
+          ) : (
+            <DocumentLayoutEditor
+              value={documentLayout}
+              onChange={(layoutData) =>
+                setDraft({ ...draft, layoutType: "document", layoutData })
+              }
+            />
+          )}
+
+          <div className="space-y-2 border-t border-white/10 pt-6">
+            <Label className="text-zinc-300">
+              {draft.layoutType === "help"
+                ? "Mais informações (opcional)"
+                : "Conteúdo da página"}
+            </Label>
+            <p className="text-xs text-zinc-500">
+              {draft.layoutType === "help"
+                ? "Bloco TipTap exibido abaixo dos canais e do FAQ."
+                : "Use headings H2/H3 para gerar o sumário automático."}
+            </p>
             <RichEditor
               value={draft.content}
               onChange={(content) => setDraft({ ...draft, content })}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 
-import { Search, CheckCircle, XCircle, Truck, Clock, ChevronLeft, ChevronRight, MoreVertical, Check, Filter, Loader2, ShoppingCart, DollarSign, Package, MessageSquare, Undo2, Send, Inbox, CreditCard, QrCode, ChevronDown, Zap } from "lucide-react";
+import { Search, CheckCircle, XCircle, Truck, Clock, ChevronLeft, ChevronRight, MoreVertical, Check, Filter, Loader2, ShoppingCart, DollarSign, Package, MessageSquare, Undo2, Send, Inbox, CreditCard, QrCode, ChevronDown, Zap, X } from "lucide-react";
 import { TbCactusFilled } from "react-icons/tb";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,15 +31,27 @@ import { usePermission } from "@/providers/PermissionProvider";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LuCheck, LuClock4 } from "react-icons/lu";
+import { Toggle } from "@/components/ui/toggle";
 
-const STATUS_OPTIONS = [
-  { value: "ALL", label: "Todos os Status" },
+const STATUS_FILTER_OPTIONS = [
   { value: "PENDING", label: "Pendente" },
   { value: "PAID", label: "Pago" },
   { value: "DELIVERED", label: "Entregue" },
   { value: "REFUNDED", label: "Reembolsado" },
   { value: "CANCELLED", label: "Cancelado" },
-];
+] as const;
+
+const DEFAULT_STATUS_FILTERS = ["PAID", "DELIVERED"] as const;
+
+function formatStatusFilterLabel(selected: string[]) {
+  if (selected.length === 0) return "Todos os Status";
+  if (selected.length === STATUS_FILTER_OPTIONS.length) return "Todos os Status";
+  const labels = STATUS_FILTER_OPTIONS
+    .filter((o) => selected.includes(o.value))
+    .map((o) => o.label);
+  if (labels.length <= 2) return labels.join(", ");
+  return `${labels.length} status`;
+}
 
 function formatPaymentMethodLabel(method?: string) {
   const key = String(method || "PIX").toUpperCase();
@@ -98,22 +110,39 @@ function groupOrdersByDate(orders: AdminOrder[]) {
 export default function OrdersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("ALL");
+  const [statuses, setStatuses] = useState<string[]>([...DEFAULT_STATUS_FILTERS]);
   const [dateRange, setDateRange] = useState(getRangeForPreset("30d"));
   const [page, setPage] = useState(1);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
+  const statusKey = statuses.slice().sort().join(",");
+  const isAllStatuses =
+    statuses.length === 0 || statuses.length === STATUS_FILTER_OPTIONS.length;
+
   const { data, isLoading } = useQuery({
-    queryKey: ["admin", "orders", search, status, dateRange.from.toISOString(), dateRange.to.toISOString(), page],
+    queryKey: ["admin", "orders", search, statusKey, dateRange.from.toISOString(), dateRange.to.toISOString(), page],
     queryFn: () => ordersApi.list({
       search,
-      status: status === "ALL" ? undefined : status,
+      status: isAllStatuses ? undefined : statuses,
       from: dateRange.from.toISOString(),
       to: dateRange.to.toISOString(),
       page,
     }),
   });
+
+  const toggleStatus = (value: string) => {
+    setStatuses((prev) => {
+      if (prev.includes(value)) return prev.filter((s) => s !== value);
+      return [...prev, value];
+    });
+    setPage(1);
+  };
+
+  const selectAllStatuses = () => {
+    setStatuses([]);
+    setPage(1);
+  };
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => ordersApi.updateStatus(id, status),
@@ -247,12 +276,12 @@ export default function OrdersPage() {
                 onClick={() => setIsStatusOpen(!isStatusOpen)}
                 className={cn(
                   "h-10 px-4 rounded-md w-full md:w-auto gap-2 border-white/10 bg-transparent transition-all",
-                  status !== "ALL" && "border-primary/50 bg-primary/5"
+                  !isAllStatuses && "border-primary/50 bg-primary/5"
                 )}
               >
-                <Filter className={cn("h-4 w-4", status !== "ALL" ? "text-primary" : "text-zinc-500")} />
-                <span className="font-medium whitespace-nowrap">
-                  {STATUS_OPTIONS.find(o => o.value === status)?.label || "Status"}
+                <Filter className={cn("h-4 w-4", !isAllStatuses ? "text-primary" : "text-zinc-500")} />
+                <span className="font-medium whitespace-nowrap max-w-[160px] truncate">
+                  {formatStatusFilterLabel(statuses)}
                 </span>
                 <ChevronDown className={cn("h-3 w-3 ml-auto transition-transform duration-200 opacity-50", isStatusOpen && "rotate-180")} />
               </Button>
@@ -264,10 +293,23 @@ export default function OrdersPage() {
                     onClick={() => setIsStatusOpen(false)}
                   />
                   <div className="absolute right-0 top-full mt-2 w-[220px] space-y-1 bg-card border border-white/5 rounded-md p-1.5 z-[101] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                    {STATUS_OPTIONS.map((opt) => {
-                      const info = opt.value !== "ALL" ? getStatusInfo(opt.value) : null;
-                      const Icon = info?.icon || Filter;
-                      const isActive = status === opt.value;
+                    <div
+                      className={cn(
+                        "flex items-center gap-3 cursor-pointer py-1.5 px-2.5 rounded-sm transition-all duration-200",
+                        isAllStatuses ? "bg-primary/20 text-primary" : "text-zinc-500 hover:text-zinc-200 hover:bg-white/5"
+                      )}
+                      onClick={selectAllStatuses}
+                    >
+                      <span className="flex-1 text-sm font-medium">Todos os Status</span>
+                      {isAllStatuses && (
+                        <div className="flex h-5 w-5 items-center justify-center rounded bg-primary/20">
+                          <Check className="h-4 w-4 text-primary" />
+                        </div>
+                      )}
+                    </div>
+
+                    {STATUS_FILTER_OPTIONS.map((opt) => {
+                      const isActive = !isAllStatuses && statuses.includes(opt.value);
 
                       return (
                         <div
@@ -276,11 +318,7 @@ export default function OrdersPage() {
                             "flex items-center gap-3 cursor-pointer py-1.5 px-2.5 rounded-sm transition-all duration-200 group relative",
                             isActive ? "bg-primary/20 text-primary" : "text-zinc-500 hover:text-zinc-200 hover:bg-white/5"
                           )}
-                          onClick={() => {
-                            setStatus(opt.value);
-                            setIsStatusOpen(false);
-                            setPage(1);
-                          }}
+                          onClick={() => toggleStatus(opt.value)}
                         >
                           <span className="flex-1 text-sm font-medium">{opt.label}</span>
                           {isActive && (
@@ -528,12 +566,12 @@ function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }
 
   const statusInfo = order ? (() => {
     switch (order.status.toUpperCase()) {
-      case "PAID": return { label: "Aprovado", color: "text-green-400", bg: "bg-green-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-green-400 animate-ping")}></div> };
-      case "PENDING": return { label: "Pendente", color: "text-yellow-400", bg: "bg-yellow-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-yellow-400 animate-ping")}></div> };
-      case "DELIVERED": return { label: "Entregue", color: "text-purple-400", bg: "bg-purple-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-purple-400 animate-ping")}></div> };
-      case "REFUNDED": return { label: "Reembolsado", color: "text-orange-400", bg: "bg-orange-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-orange-400 animate-ping")}></div> };
-      case "CANCELLED": return { label: "Cancelado", color: "text-red-400", bg: "bg-red-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-red-400 animate-ping")}></div> };
-      default: return { label: order.status, color: "text-zinc-400", bg: "bg-zinc-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-zinc-400 animate-ping")}></div> };
+      case "PAID": return { label: "Aprovado", color: "text-green-400", bg: "bg-green-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-green-400 animate-pulse")}></div> };
+      case "PENDING": return { label: "Pendente", color: "text-yellow-400", bg: "bg-yellow-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-yellow-400 animate-pulse")}></div> };
+      case "DELIVERED": return { label: "Entregue", color: "text-purple-400", bg: "bg-purple-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-purple-400 animate-pulse")}></div> };
+      case "REFUNDED": return { label: "Reembolsado", color: "text-orange-400", bg: "bg-orange-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-orange-400 animate-pulse")}></div> };
+      case "CANCELLED": return { label: "Cancelado", color: "text-red-400", bg: "bg-red-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-red-400 animate-pulse")}></div> };
+      default: return { label: order.status, color: "text-zinc-400", bg: "bg-zinc-400/10", icon: <div className={cn("w-1.5 h-1.5 rounded-full", "bg-zinc-400 animate-pulse")}></div> };
     }
   })() : null;
 
@@ -552,25 +590,17 @@ function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }
           </div>
         ) : order && (
           <>
-            <DialogHeader className="shrink-0 space-y-1">
+            <DialogHeader className="space-y-1">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <DialogTitle className="text-xl font-bold text-white sm:text-2xl">
                     Pedido #{order.id.slice(-6).toUpperCase()}
                   </DialogTitle>
-                  <Badge className={cn("gap-1 rounded px-2 py-1 text-xs font-bold", statusInfo?.bg, statusInfo?.color)}>
+                  <Badge className={cn("flex items-center gap-1 rounded px-2 py-1 text-xs lowercase font-medium", statusInfo?.bg, statusInfo?.color)}>
                     {statusInfo?.icon}
                     {statusInfo?.label}
                   </Badge>
                 </div>
-
-                {chat && (
-                  <Button asChild variant="outline" size="lg" className="md:-translate-x-1/2 translate-x-0 shrink-0 gap-2 border-white/10">
-                    <Link href={`/dashboard/admin/chats/chat/${chat.id}`}>
-                      Abrir chat
-                    </Link>
-                  </Button>
-                )}
               </div>
 
               <DialogDescription>
@@ -578,17 +608,25 @@ function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }
               </DialogDescription>
             </DialogHeader>
 
+            {chat && (
+              <Button asChild variant="outline" size="lg" className="px-6 gap-2 border-white/10">
+                <Link href={`/dashboard/admin/chats/chat/${chat.id}`}>
+                  Abrir chat
+                </Link>
+              </Button>
+            )}
+
             {express && (
-              <div className="mx-5 mt-4 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-amber-200">
+              <div className="flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-2.5 text-amber-200">
                 <Zap className="h-4 w-4 shrink-0 text-amber-400" />
                 <p className="text-sm">
-                  <span className="font-semibold text-amber-300">Entrega expressa</span>
+                  <span className="font-semibold text-amber-500">Entrega expressa</span>
                   {' — '}priorize o atendimento e a entrega deste pedido.
                 </p>
               </div>
             )}
 
-            <ScrollArea className="min-h-0 flex-1">
+            <ScrollArea className="scrollbar-thin pr-3">
               <div className="space-y-4">
                 <section>
                   <h4 className="text-sm font-medium text-white mb-1">Informações do Cliente</h4>
@@ -647,12 +685,12 @@ function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }
                     ))}
                   </div>
                   <div className="space-y-1">
-                    <div className="flex justify-between">
+                    <div className="flex justify-between text-sm">
                       <span className="text-white/80">Subtotal</span>
                       <span className="text-white font-medium">{formatBRL(order.subtotal ?? order.total)}</span>
                     </div>
                     {order.discount > 0 && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm">
                         <span className="text-white/80">Desconto</span>
                         <span className="text-white font-medium">
                           {formatBRL(order.discount ?? 0)}
@@ -660,7 +698,7 @@ function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }
                       </div>
                     )}
                     {(order.deliveryFee ?? 0) > 0 && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm">
                         <span className="text-white/80">Método de Entrega</span>
                         <span className={cn(
                           "font-medium",
@@ -671,31 +709,31 @@ function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }
                       </div>
                     )}
                     {(order.discount ?? 0) > 0 && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm">
                         <span className="text-white/80">Cupom</span>
                         <span className="text-white font-medium">{order.couponCode ? <span className="font-bold uppercase">{order.couponCode}</span> : "Nenhum cupom aplicado"}</span>
                       </div>
                     )}
                     {(order.deliveryFee ?? 0) > 0 && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm">
                         <span className="text-white/80">Taxa de entrega</span>
                         <span className="text-amber-400 font-medium">{formatBRL(order.deliveryFee)}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-white/80 text-lg">Valor Total</span>
-                      <span className="text-white font-medium text-lg">{formatBRL(order.total)}</span>
+                      <span className="text-white/80">Valor Total</span>
+                      <span className="text-white font-medium">{formatBRL(order.total)}</span>
                     </div>
                     {order.payments && order.payments.length > 0 && (
-                      <div className="rounded-md border border-white/5 bg-white/[0.02] p-3 space-y-2">
-                        <p className="text-xs font-medium text-white/50">Pagamentos</p>
+                      <div className="rounded-md border border-white/5 p-3 mt-3 space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">Pagamentos</p>
                         {order.payments.map((payment) => (
                           <div key={payment.id} className="flex items-center justify-between text-sm">
                             <span className="text-white/70">
                               {payment.provider}
                               {payment.externalId ? ` · ${payment.externalId.slice(0, 12)}…` : ""}
                             </span>
-                            <Badge variant="outline" className="text-xs border-white/10">
+                            <Badge className="text-xs">
                               {payment.status}
                             </Badge>
                           </div>
@@ -767,7 +805,7 @@ function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }
                   </div>
                 </section>
 
-                <section>
+                <section className="mb-2">
                   <h4 className="text-sm font-medium text-white mb-1">Notas Administrativas</h4>
                   <div className="space-y-3">
                     <Textarea
@@ -797,7 +835,7 @@ function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }
               </div>
             </ScrollArea>
 
-            <div className="flex shrink-0 gap-3 py-2">
+            <DialogFooter className="flex flex-row">
               {order.status !== "PAID" && order.status !== "DELIVERED" && order.status !== "REFUNDED" && (
                 <Button
                   className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
@@ -828,25 +866,23 @@ function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }
                   Cancelar Pedido
                 </Button>
               )}
-            </div>
+            </DialogFooter>
 
             <Dialog open={refundOpen} onOpenChange={setRefundOpen}>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Reembolsar pedido</DialogTitle>
-                  <DialogDescription>
-                    O estorno será solicitado no gateway (quando suportado), o estoque será revertido e o cliente será notificado por e-mail.
-                  </DialogDescription>
+                  <DialogDescription>O estorno será solicitado no gateway (quando suportado), o estoque será revertido e o cliente será notificado por e-mail.</DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 py-2">
-                  <div className="rounded-md border border-white/10 bg-white/[0.02] p-3 text-sm">
-                    <p className="text-white/60">Valor do pedido</p>
-                    <p className="text-lg font-bold text-white">{formatBRL(order.total)}</p>
+                <div className="space-y-2 py-2">
+                  <div className="flex justify-between items-center rounded-md border border-white/5 bg-transparent p-3">
+                    <p className="text-white text-sm font-medium">Valor do pedido</p>
+                    <p className="text-lg font-medium text-white">{formatBRL(order.total)}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-white/80">Motivo (opcional)</label>
+                    <label className="text-sm font-medium text-muted-foreground">Motivo (opcional)</label>
                     <Textarea
                       placeholder="Ex.: solicitação do cliente, produto indisponível..."
                       value={refundReason}
@@ -855,24 +891,28 @@ function OrderDetailDialog({ id, onClose, formatBRL, updateStatus, updateNotes }
                     />
                   </div>
 
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <Checkbox
-                      checked={skipGateway}
-                      onCheckedChange={(v) => setSkipGateway(v === true)}
-                      className="mt-0.5"
-                    />
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <Toggle
+                      pressed={skipGateway}
+                      onPressedChange={(v: boolean) => setSkipGateway(v === true)}
+                      size="sm"
+                      className="h-8 w-8 shrink-0 p-0 data-[state=on]:bg-primary data-[state=on]:text-black"
+                    >
+                      {skipGateway ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+                    </Toggle>
                     <span className="text-sm text-white/70 leading-snug">
                       Apenas registrar reembolso (sem estorno automático no gateway). Use se o estorno já foi feito manualmente.
                     </span>
                   </label>
                 </div>
 
-                <DialogFooter className="gap-2 sm:gap-0">
-                  <Button variant="outline" onClick={() => setRefundOpen(false)} disabled={refundMutation.isPending}>
+                <DialogFooter className="flex flex-row">
+                  <Button variant="ghost" size="lg" className="flex-1" onClick={() => setRefundOpen(false)} disabled={refundMutation.isPending}>
                     Voltar
                   </Button>
                   <Button
-                    className="bg-orange-600 hover:bg-orange-500"
+                  size="lg"
+                    className="flex-1 bg-orange-600 hover:bg-orange-500"
                     disabled={refundMutation.isPending}
                     onClick={() => refundMutation.mutate({
                       reason: refundReason.trim() || undefined,

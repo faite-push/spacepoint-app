@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
 import { auditLogsApi, type AdminAuditLog } from "@/lib/admin-api";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const FALLBACK_ACTION_LABELS: Record<string, string> = {
   ORDER_REFUND: "Reembolso de pedido",
@@ -523,76 +524,74 @@ export default function AdminAuditLogPage() {
 
   return (
     <Can I="audit:view" message="Você não tem permissão para ver a auditoria.">
-      <div className="relative mx-auto space-y-6">
+      <div className="relative space-y-6">
         <div className="absolute top-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
         <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
 
-        <div className="flex flex-col gap-4 border-b border-white/8 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col pb-5 sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-white">Registro de auditoria</h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground">
               Histórico das ações feitas na dashboard.
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="space-y-1.5">
-              <p className="text-sm font-medium text-white/40">
-                Filtrar por usuário
-              </p>
-              <Select
-                value={actorUserId}
-                onValueChange={(value) => {
-                  setActorUserId(value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue placeholder="Todos os usuários" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os usuários</SelectItem>
-                  {actors.map((actor) => (
-                    <SelectItem key={actor.id} value={actor.id}>
-                      {actor.name || actor.email || actor.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            <div className="flex flex-row items-center gap-2 flex-1">
+              <div className="w-full space-y-1.5">
+                <Select
+                  value={actorUserId}
+                  onValueChange={(value) => {
+                    setActorUserId(value);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Todos os usuários" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os usuários</SelectItem>
+                    {actors.map((actor) => (
+                      <SelectItem key={actor.id} value={actor.id}>
+                        {actor.name || actor.email || actor.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-full space-y-1.5">
+                <Select
+                  value={action}
+                  onValueChange={(value) => {
+                    setAction(value);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-[220px]">
+                    <SelectValue placeholder="Todas as ações" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as ações</SelectItem>
+                    {actionOptions.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {actionLabels[item] || FALLBACK_ACTION_LABELS[item] || item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <p className="text-sm font-medium text-white/40">
-                Filtrar por ação
-              </p>
-              <Select
-                value={action}
-                onValueChange={(value) => {
-                  setAction(value);
+            <div className="w-auto">
+              <DateRangeFilter
+                defaultPreset="30d"
+                onRangeChange={(range) => {
+                  setDateRange(range);
                   setPage(1);
                 }}
-              >
-                <SelectTrigger className="w-full sm:w-[220px]">
-                  <SelectValue placeholder="Todas as ações" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as ações</SelectItem>
-                  {actionOptions.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {actionLabels[item] || FALLBACK_ACTION_LABELS[item] || item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
-
-            <DateRangeFilter
-              defaultPreset="30d"
-              onRangeChange={(range) => {
-                setDateRange(range);
-                setPage(1);
-              }}
-            />
           </div>
         </div>
 
@@ -607,7 +606,13 @@ export default function AdminAuditLogPage() {
               <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
             </div>
           ) : (
-            logs.map((log) => <AuditLogCard key={log.id} log={log} />)
+            <div>
+              <ScrollArea className="h-screen">
+                <div className="flex flex-col gap-2">
+                  {logs.map((log) => <AuditLogCard key={log.id} log={log} />)}
+                </div>
+              </ScrollArea>
+            </div>
           )}
         </div>
 

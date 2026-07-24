@@ -79,7 +79,7 @@ export function OrderChat({ orderId }: OrderChatProps) {
   const expandedScrollRef = useRef<HTMLDivElement>(null);
   const lastSentAtRef = useRef(0);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { socket, isConnected } = useSocket();
+  const { socket, isConnected, connectionGeneration } = useSocket();
 
   const { data: chat, isLoading } = useQuery({
     queryKey: ['chat', orderId],
@@ -108,7 +108,7 @@ export function OrderChat({ orderId }: OrderChatProps) {
   }, []);
 
   useEffect(() => {
-    if (!socket || !chat?.id) return;
+    if (!socket || !chat?.id || !isConnected) return;
 
     socket.emit('join_chat', chat.id);
 
@@ -183,7 +183,7 @@ export function OrderChat({ orderId }: OrderChatProps) {
       socket.off('typing', handleTyping);
       socket.off('messages_read', handleRead);
     };
-  }, [socket, chat?.id, orderId, queryClient]);
+  }, [socket, chat?.id, orderId, queryClient, isConnected, connectionGeneration]);
 
   useEffect(() => {
     if (!chat || chat.rating) return;

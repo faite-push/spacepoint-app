@@ -55,7 +55,7 @@ function formatCurrencyFromCents(cents: number) {
   return formatCurrency(cents / 100);
 }
 
-function DetailStatCard({ label, value, icon: Icon, loading, }: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }>; loading?: boolean; }) {
+function DetailStatCard({ label, value, icon: Icon, loading, className }: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }>; loading?: boolean; className?: string }) {
   return (
     <div className="relative group select-none overflow-hidden rounded-md border border-white/3 bg-background/50 px-4 py-4 md:px-6 md:py-5 transition-all duration-300">
       <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-primary/5 blur-3xl transition-opacity group-hover:opacity-100 opacity-50" />
@@ -171,7 +171,7 @@ export default function CouponDetailPage() {
         </Button>
       </div>
     );
-  }
+  };
 
   return (
     <div className="relative flex flex-col gap-4 animate-in fade-in duration-500">
@@ -180,11 +180,11 @@ export default function CouponDetailPage() {
       <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
 
       <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex flex-row gap-2">
+        <div className="flex flex-row items-center gap-2">
           <Button
             variant="ghost"
             size="lg"
-            className="mt-3 -ml-2 gap-1.5 text-white/60 hover:text-white"
+            className="md:flex hidden mt-3 -ml-2 gap-1.5 text-white/60 hover:text-white"
             asChild
           >
             <Link href="/dashboard/admin/coupon">
@@ -200,6 +200,16 @@ export default function CouponDetailPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="lg"
+            className="flex md:hidden gap-1.5 text-white/60 hover:text-white"
+            asChild
+          >
+            <Link href="/dashboard/admin/coupon">
+              <ArrowLeft className="h-4 w-4" /> Voltar
+            </Link>
+          </Button>
           <DateRangeFilter
             defaultPreset="today"
             onRangeChange={(range) => {
@@ -220,7 +230,7 @@ export default function CouponDetailPage() {
         </div>
       </div>
 
-      <div className="relative z-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="relative z-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <DetailStatCard
           label="Cupom Usos"
           value={stats?.totalUses ?? 0}
@@ -234,6 +244,7 @@ export default function CouponDetailPage() {
           loading={isLoading}
         />
         <DetailStatCard
+          className="col-span-2 md:col-span-2"
           label="Valor Descontado"
           value={formatCurrency(stats?.totalDiscounted ?? 0)}
           icon={DollarSign}

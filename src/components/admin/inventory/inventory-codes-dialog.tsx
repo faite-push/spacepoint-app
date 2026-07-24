@@ -127,7 +127,7 @@ export function InventoryCodesDialog({ open, onOpenChange, variant }: Props) {
                     </Badge>
 
                     <code className="flex-1 text-sm font-mono text-white truncate">
-                      {isRevealed ? code.code : code.maskedCode}
+                      {isRevealed && code.code ? code.code : code.maskedCode}
                     </code>
 
                     <Button

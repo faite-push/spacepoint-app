@@ -573,6 +573,8 @@ export type SiteConfigRecord = {
   footerPaddingTopDefault: number | null;
   footerCategoryColumnTitle: string | null;
   footerSupportColumnTitle: string | null;
+  footerMarketplaceColumnTitle: string | null;
+  footerCompanyColumnTitle: string | null;
   socialFacebook: string | null;
   socialInstagram: string | null;
   socialTwitter: string | null;
@@ -581,6 +583,9 @@ export type SiteConfigRecord = {
   socialLinks: SocialLink[] | null;
   footerCategoryLinks: FooterLink[] | null;
   footerSupportLinks: FooterLink[] | null;
+  footerMarketplaceLinks: FooterLink[] | null;
+  footerCompanyLinks: FooterLink[] | null;
+  footerBottomLinks: FooterLink[] | null;
   footerLegalLinks: FooterLink[] | null;
   topBarEnabled: boolean | null;
   topBarText: string | null;
@@ -603,6 +608,9 @@ export type SiteConfigRecord = {
   homeReviewsTotalCount: number | null;
   homeReviewsGoogleMapsUrl: string | null;
   homeReviewsLinkLabel: string | null;
+  homeFamousEnabled: boolean | null;
+  homeFamousTitlePrimary: string | null;
+  homeFamousTitleSecondary: string | null;
   // Vitrine Dinâmica
   homeShowcaseEnabled: boolean | null;
   homeShowcaseTitle: string | null;
@@ -676,6 +684,16 @@ export type HomeReviewRecord = {
   isPublished: boolean;
 };
 
+export type FamousClientRecord = {
+  id: string;
+  name: string;
+  subtitle: string | null;
+  avatarUrl: string | null;
+  videoUrl: string | null;
+  sortOrder: number;
+  isActive: boolean;
+};
+
 export type PageSeoRecord = {
   pageKey: string;
   metaTitle: string | null;
@@ -688,6 +706,8 @@ export type InstitutionalPageRecord = {
   slug: string;
   title: string;
   content: any;
+  layoutType: import("@/lib/site-api").InstitutionalLayoutType | null;
+  layoutData: import("@/lib/site-api").InstitutionalLayoutData | null;
   metaTitle: string | null;
   metaDescription: string | null;
   isPublished: boolean;
@@ -718,7 +738,14 @@ export const institutionalPagesApi = {
     payload: Partial<
       Pick<
         InstitutionalPageRecord,
-        "title" | "content" | "isPublished" | "sortOrder" | "metaTitle" | "metaDescription"
+        | "title"
+        | "content"
+        | "layoutType"
+        | "layoutData"
+        | "isPublished"
+        | "sortOrder"
+        | "metaTitle"
+        | "metaDescription"
       >
     >
   ) =>
@@ -764,6 +791,45 @@ export const homeReviewsApi = {
     }),
   reorder: (items: { id: string }[]) =>
     request<{ success: boolean }>("/v2/api/admin/home-reviews/reorder", {
+      method: "PUT",
+      body: JSON.stringify({ items }),
+    }),
+};
+
+export const famousClientsApi = {
+  list: () => request<{ clients: FamousClientRecord[] }>("/v2/api/admin/famous-clients"),
+  create: (payload: {
+    name: string;
+    subtitle?: string | null;
+    avatarUrl?: string | null;
+    videoUrl?: string | null;
+    isActive?: boolean;
+  }) =>
+    request<FamousClientRecord>("/v2/api/admin/famous-clients", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  update: (
+    id: string,
+    payload: Partial<{
+      name: string;
+      subtitle: string | null;
+      avatarUrl: string | null;
+      videoUrl: string | null;
+      isActive: boolean;
+      sortOrder: number;
+    }>
+  ) =>
+    request<FamousClientRecord>(`/v2/api/admin/famous-clients/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  remove: (id: string) =>
+    request<{ success: boolean }>(`/v2/api/admin/famous-clients/${id}`, {
+      method: "DELETE",
+    }),
+  reorder: (items: { id: string }[]) =>
+    request<{ success: boolean }>("/v2/api/admin/famous-clients/reorder", {
       method: "PUT",
       body: JSON.stringify({ items }),
     }),
@@ -943,10 +1009,14 @@ export interface AdminOrder {
 }
 
 export const ordersApi = {
-  list: (params: { search?: string; status?: string; from?: string; to?: string; page?: number } = {}) => {
+  list: (params: { search?: string; status?: string | string[]; from?: string; to?: string; page?: number } = {}) => {
     const qs = new URLSearchParams();
     if (params.search) qs.set("search", params.search);
-    if (params.status) qs.set("status", params.status);
+    if (params.status) {
+      const statuses = Array.isArray(params.status) ? params.status : [params.status];
+      const joined = statuses.filter(Boolean).join(",");
+      if (joined) qs.set("status", joined);
+    }
     if (params.from) qs.set("from", params.from);
     if (params.to) qs.set("to", params.to);
     if (params.page) qs.set("page", String(params.page));
@@ -1523,11 +1593,15 @@ export type MarketingAutomationSettingsResponse = {
     cancelledOrderDelays: number[];
     notificationWindowStart: string;
     notificationWindowEnd: string;
+    inactivityMinutes?: number;
+    minSubtotalCents?: number;
+    enabled?: boolean;
   };
   options: {
     cartEmailDelays: number[];
     abandonedProductDelays: number[];
     cancelledOrderDelays: number[];
+    maxRecoverySteps?: number;
   };
 };
 
@@ -1644,6 +1718,16 @@ export const marketingAutomationsApi = {
     }),
   createOrderFromCart: (id: string) =>
     request<MarketingUnpaidOrder>(`/v2/api/admin/marketing/automations/carts/${id}/create-order`, {
+      method: "POST",
+    }),
+  sendCartRecoveryEmail: (id: string) =>
+    request<{
+      success: boolean;
+      email: string;
+      delayHours: number;
+      stepIndex: number;
+      stepTotal: number;
+    }>(`/v2/api/admin/marketing/automations/carts/${id}/send-email`, {
       method: "POST",
     }),
   listOrders: (params?: { from?: string; to?: string; search?: string; page?: number; pageSize?: number }) =>

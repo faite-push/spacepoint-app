@@ -46,6 +46,10 @@ function unique(values: string[]) {
 function buildContentSecurityPolicy(isDev: boolean) {
   const apiOrigin = getApiOrigin();
   const extraOrigins = getPluginCspExtraOrigins();
+  const isLocalApi =
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(apiOrigin) ||
+    apiOrigin.startsWith("http://localhost") ||
+    apiOrigin.startsWith("http://127.0.0.1");
 
   const scriptSrc = unique([
     "'self'",
@@ -78,7 +82,9 @@ function buildContentSecurityPolicy(isDev: boolean) {
 
   const connectSrc = unique([
     "'self'",
-    ...(apiOrigin ? [apiOrigin] : []),
+    ...(apiOrigin
+      ? [apiOrigin, apiOrigin.replace(/^http/i, "ws")]
+      : []),
     // Google
     "https://www.google-analytics.com",
     "https://*.google-analytics.com",
@@ -117,7 +123,8 @@ function buildContentSecurityPolicy(isDev: boolean) {
     ...extraOrigins,
     ...extraOrigins.map((o) => o.replace(/^http/i, "ws")),
     "wss:",
-    ...(isDev ? ["ws:", "http://localhost:*", "http://127.0.0.1:*"] : []),
+    "ws:",
+    ...(isDev || isLocalApi ? ["http://localhost:*", "http://127.0.0.1:*"] : []),
   ]);
 
   const frameSrc = unique([
@@ -157,7 +164,9 @@ function buildContentSecurityPolicy(isDev: boolean) {
     "data:",
     "blob:",
     "https:",
-    ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*"] : []),
+    // CDN/API em HTTP (ex.: localhost:5000 no `next start`)
+    ...(apiOrigin ? [apiOrigin] : []),
+    ...(isDev || isLocalApi ? ["http://localhost:*", "http://127.0.0.1:*", "http:"] : []),
   ]);
 
   const workerSrc = unique(["'self'", "blob:"]);

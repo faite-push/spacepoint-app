@@ -57,7 +57,6 @@ export function AdminChatNotifications() {
 
   const canView = hasPermission('chats:view');
 
-  // Fallback seed when WS is disconnected
   const { data } = useQuery({
     queryKey: ['admin', 'chat-notifications'],
     queryFn: () => chatApi.list({ status: 'OPEN', sortBy: 'activity' }),
@@ -77,6 +76,49 @@ export function AdminChatNotifications() {
     seeded.current = true;
   }, [data?.chats, canView]);
 
+  // Polling sem WS: detectar chats/mensagens novas para toast
+  useEffect(() => {
+    if (!data?.chats || !canView || !seeded.current || isConnected) return;
+
+    for (const chat of data.chats) {
+      const isNew = !knownChatIds.current.has(chat.id);
+      if (isNew) {
+        knownChatIds.current.add(chat.id);
+        const customer = chat.order?.user?.name || chat.order?.user?.email || 'Cliente';
+        playNotificationSound(volumeRef.current);
+        toast('Nova compra recebida', {
+          description: `${customer}${chat.orderId ? ` — Pedido #${String(chat.orderId).slice(-8)}` : ''}`,
+          icon: <ShoppingBag className="h-4 w-4 text-primary" />,
+          action: {
+            label: 'Ver atendimento',
+            onClick: () => router.push(`${CHATS_PATH}/chat/${chat.id}`),
+          },
+          duration: 8000,
+        });
+        continue;
+      }
+
+      const last = chat.messages?.[0];
+      if (!last || !isCustomerMessage(last)) continue;
+      const prevId = lastMessageIds.current.get(chat.id);
+      if (prevId === last.id) continue;
+      lastMessageIds.current.set(chat.id, last.id);
+      if (getActiveAdminChatId() === chat.id) continue;
+
+      const customer = chat.order?.user?.name || chat.order?.user?.email || 'Cliente';
+      playNotificationSound(volumeRef.current);
+      toast('Nova mensagem no atendimento', {
+        description: `${customer}: ${String(last.content || '').slice(0, 80)}`,
+        icon: <MessageSquare className="h-4 w-4 text-blue-400" />,
+        action: {
+          label: 'Abrir chat',
+          onClick: () => router.push(`${CHATS_PATH}/chat/${chat.id}`),
+        },
+        duration: 8000,
+      });
+    }
+  }, [data?.chats, canView, isConnected, router]);
+
   useEffect(() => {
     if (!socket || !canView) return;
 
@@ -87,7 +129,6 @@ export function AdminChatNotifications() {
       actionLabel = 'Abrir chat',
       targetChatId?: string
     ) => {
-      if (isOnChatsPageRef.current) return;
       playNotificationSound(volumeRef.current);
       toast(title, {
         description,
@@ -109,13 +150,12 @@ export function AdminChatNotifications() {
         queryClient.invalidateQueries({ queryKey: ['admin', 'chats'] });
       }
 
-      // handleAdminChatListUpdate já invalida unread-chats-count
-
-      if (isOnChatsPageRef.current) return;
-
       if (!claimRealtimeEvent({ chatId, lastMessage: message, type, orderId, customerName })) {
         return;
       }
+
+      // Já olhando este chat: só atualiza lista, sem toast
+      if (getActiveAdminChatId() === chatId) return;
 
       const customer = customerName || 'Cliente';
 

@@ -54,6 +54,8 @@ function formToPublicConfig(form: Partial<SiteConfigRecord>): PublicSiteConfig {
     footerPaddingTopDefault: form.footerPaddingTopDefault ?? FOOTER_DEFAULTS.paddingTopDefault,
     footerCategoryColumnTitle: form.footerCategoryColumnTitle ?? null,
     footerSupportColumnTitle: form.footerSupportColumnTitle ?? null,
+    footerMarketplaceColumnTitle: form.footerMarketplaceColumnTitle ?? null,
+    footerCompanyColumnTitle: form.footerCompanyColumnTitle ?? null,
     socialFacebook: form.socialFacebook ?? null,
     socialInstagram: form.socialInstagram ?? null,
     socialTwitter: form.socialTwitter ?? null,
@@ -62,6 +64,9 @@ function formToPublicConfig(form: Partial<SiteConfigRecord>): PublicSiteConfig {
     socialLinks: form.socialLinks ?? null,
     footerCategoryLinks: form.footerCategoryLinks ?? null,
     footerSupportLinks: form.footerSupportLinks ?? null,
+    footerMarketplaceLinks: form.footerMarketplaceLinks ?? null,
+    footerCompanyLinks: form.footerCompanyLinks ?? null,
+    footerBottomLinks: form.footerBottomLinks ?? null,
     footerLegalLinks: form.footerLegalLinks ?? null,
     topBarEnabled: null,
     topBarText: null,
@@ -84,6 +89,9 @@ function formToPublicConfig(form: Partial<SiteConfigRecord>): PublicSiteConfig {
     homeReviewsTotalCount: null,
     homeReviewsGoogleMapsUrl: null,
     homeReviewsLinkLabel: null,
+    homeFamousEnabled: null,
+    homeFamousTitlePrimary: null,
+    homeFamousTitleSecondary: null,
     homeShowcaseEnabled: null,
     homeShowcaseTitle: null,
     homeShowcaseSubtitle: null,
@@ -120,11 +128,24 @@ export function FooterSettings({ hideHeader = false }: { hideHeader?: boolean })
 
   useEffect(() => {
     if (!data?.config) return;
+    const cfg = data.config;
     setForm({
-      ...data.config,
+      ...cfg,
+      footerMarketplaceLinks:
+        Array.isArray(cfg.footerMarketplaceLinks) && cfg.footerMarketplaceLinks.length > 0
+          ? cfg.footerMarketplaceLinks
+          : FOOTER_DEFAULTS.marketplaceLinks.map((link) => ({ ...link })),
+      footerCompanyLinks:
+        Array.isArray(cfg.footerCompanyLinks) && cfg.footerCompanyLinks.length > 0
+          ? cfg.footerCompanyLinks
+          : FOOTER_DEFAULTS.companyLinks.map((link) => ({ ...link })),
+      footerBottomLinks:
+        Array.isArray(cfg.footerBottomLinks) && cfg.footerBottomLinks.length > 0
+          ? cfg.footerBottomLinks
+          : FOOTER_DEFAULTS.bottomLinks.map((link) => ({ ...link })),
       socialLinks:
-        Array.isArray(data.config.socialLinks) && data.config.socialLinks.length > 0
-          ? data.config.socialLinks
+        Array.isArray(cfg.socialLinks) && cfg.socialLinks.length > 0
+          ? cfg.socialLinks
           : FOOTER_DEFAULTS.socialLinks.map((link) => ({ ...link })),
     });
   }, [data?.config]);
@@ -153,6 +174,8 @@ export function FooterSettings({ hideHeader = false }: { hideHeader?: boolean })
         footerPaddingTopDefault: form.footerPaddingTopDefault ?? FOOTER_DEFAULTS.paddingTopDefault,
         footerCategoryColumnTitle: form.footerCategoryColumnTitle ?? null,
         footerSupportColumnTitle: form.footerSupportColumnTitle ?? null,
+        footerMarketplaceColumnTitle: form.footerMarketplaceColumnTitle ?? null,
+        footerCompanyColumnTitle: form.footerCompanyColumnTitle ?? null,
         socialFacebook: form.socialFacebook ?? null,
         socialInstagram: form.socialInstagram ?? null,
         socialTwitter: form.socialTwitter ?? null,
@@ -161,6 +184,9 @@ export function FooterSettings({ hideHeader = false }: { hideHeader?: boolean })
         socialLinks: form.socialLinks ?? null,
         footerCategoryLinks: parseLinks(form.footerCategoryLinks),
         footerSupportLinks: parseLinks(form.footerSupportLinks),
+        footerMarketplaceLinks: parseLinks(form.footerMarketplaceLinks),
+        footerCompanyLinks: parseLinks(form.footerCompanyLinks),
+        footerBottomLinks: parseLinks(form.footerBottomLinks),
         footerLegalLinks: parseLinks(form.footerLegalLinks),
       }),
     onSuccess: () => {
@@ -412,8 +438,18 @@ export function FooterSettings({ hideHeader = false }: { hideHeader?: boolean })
             <div className="space-y-4">
               <div>
                 <h2 className="text-sm font-semibold text-white">Colunas de Links</h2>
-                <p className="text-xs text-zinc-500 mt-0.5">Links exibidos nas colunas centrais do rodapé.</p>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Configure as quatro colunas ao lado do logo: Marketplace, Categorias, Confiança e Empresa.
+                </p>
               </div>
+              <FooterLinksEditor
+                label="Coluna Marketplace"
+                showColumnTitle
+                columnTitle={form.footerMarketplaceColumnTitle ?? ""}
+                onColumnTitleChange={(v) => set("footerMarketplaceColumnTitle", v)}
+                links={parseLinks(form.footerMarketplaceLinks)}
+                onChange={(links) => set("footerMarketplaceLinks", links)}
+              />
               <FooterLinksEditor
                 label="Coluna Categorias"
                 showColumnTitle
@@ -423,12 +459,20 @@ export function FooterSettings({ hideHeader = false }: { hideHeader?: boolean })
                 onChange={(links) => set("footerCategoryLinks", links)}
               />
               <FooterLinksEditor
-                label="Coluna Suporte"
+                label="Coluna Confiança"
                 showColumnTitle
                 columnTitle={form.footerSupportColumnTitle ?? ""}
                 onColumnTitleChange={(v) => set("footerSupportColumnTitle", v)}
                 links={parseLinks(form.footerSupportLinks)}
                 onChange={(links) => set("footerSupportLinks", links)}
+              />
+              <FooterLinksEditor
+                label="Coluna Empresa"
+                showColumnTitle
+                columnTitle={form.footerCompanyColumnTitle ?? ""}
+                onColumnTitleChange={(v) => set("footerCompanyColumnTitle", v)}
+                links={parseLinks(form.footerCompanyLinks)}
+                onChange={(links) => set("footerCompanyLinks", links)}
               />
             </div>
           )}
@@ -437,7 +481,9 @@ export function FooterSettings({ hideHeader = false }: { hideHeader?: boolean })
             <div className="space-y-4">
               <div>
                 <h2 className="text-sm font-semibold text-white">Barra Inferior</h2>
-                <p className="text-xs text-zinc-500 mt-0.5">Copyright e links legais exibidos na barra inferior do rodapé.</p>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Copyright (esquerda), links centrais e ícones sociais (direita).
+                </p>
               </div>
               <div className="space-y-2 max-w-2xl">
                 <Label className="text-zinc-300">Texto de copyright / CNPJ</Label>
@@ -452,9 +498,9 @@ export function FooterSettings({ hideHeader = false }: { hideHeader?: boolean })
                 </p>
               </div>
               <FooterLinksEditor
-                label="Links legais (barra inferior)"
-                links={parseLinks(form.footerLegalLinks)}
-                onChange={(links) => set("footerLegalLinks", links)}
+                label="Links centrais (Quem somos, Envio Expresso, etc.)"
+                links={parseLinks(form.footerBottomLinks)}
+                onChange={(links) => set("footerBottomLinks", links)}
               />
             </div>
           )}

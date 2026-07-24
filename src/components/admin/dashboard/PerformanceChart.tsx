@@ -36,7 +36,11 @@ export function PerformanceChart({ data, valuesHidden = false }: PerformanceChar
       <div className="flex items-center justify-between mb-8">
         <div>
           <h3 className="text-lg font-medium text-white">Visão geral de Performance</h3>
-          <p className="text-sm text-white/40">Comparativo de faturamento e volume de pedidos.</p>
+          <p className="text-sm text-white/40">
+            {chartData.length > 0 && /^\d{1,2}:\d{2}$/.test(String(chartData[0]?.label ?? ""))
+              ? "Comparativo por horário de faturamento e volume de pedidos."
+              : "Comparativo de faturamento e volume de pedidos."}
+          </p>
         </div>
 
         <Popover>
@@ -128,7 +132,8 @@ export function PerformanceChart({ data, valuesHidden = false }: PerformanceChar
                 tickLine={false}
                 tick={{ fill: "#666", fontSize: 10, fontWeight: 700 }}
                 dy={10}
-                interval="preserveStartEnd"
+                interval={chartData.length > 14 ? Math.floor(chartData.length / 8) : 0}
+                minTickGap={8}
               />
               <YAxis
                 yAxisId="revenue"

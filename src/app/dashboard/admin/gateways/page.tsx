@@ -47,7 +47,7 @@ const GATEWAY_TEMPLATES: GatewayTemplate[] = [
       { key: "clientId", label: "Chave Client ID", placeholder: "Client_Id_...", type: "text" },
       { key: "clientSecret", label: "Chave Secret", placeholder: "Client_Secret_...", type: "password" },
       { key: "pixKey", label: "Chave PIX", placeholder: "sua-chave@email.com", type: "text" },
-      { key: "certificateBase64", label: "Certificado .p12", type: "file", accept: ".p12", hint: "Arquivo .p12 exportado do painel Efí" },
+      { key: "certificateBase64", label: "Certificado .p12", type: "file", accept: ".p12", hint: "Arquivo .p12 exportado do painel Efí. Webhooks usam WEBHOOK_SHARED_SECRET do .env da API (?token=...&ignorar=)." },
     ],
   },
   {
@@ -63,7 +63,6 @@ const GATEWAY_TEMPLATES: GatewayTemplate[] = [
     fields: [
       { key: "publicKey", label: "Public Key", placeholder: "APP_USR-...", type: "text" },
       { key: "accessToken", label: "Access Token", placeholder: "APP_USR-...", type: "password" },
-      { key: "webhookSecret", label: "Webhook Secret (opcional)", placeholder: "...", type: "password" },
     ],
   },
   {
@@ -84,7 +83,7 @@ const GATEWAY_TEMPLATES: GatewayTemplate[] = [
         label: "Access Token (alternativo)",
         placeholder: "Cole o token do portal...",
         type: "password",
-        hint: "Token de portaldev.pagbank.com.br → ative Modo Sandbox. Produção: PagBank > Venda online > Integrações.",
+        hint: "Token de portaldev.pagbank.com.br → ative Modo Sandbox. Produção: PagBank > Venda online > Integrações. Webhooks usam WEBHOOK_SHARED_SECRET do .env (?token=).",
       },
     ],
   },
@@ -101,14 +100,21 @@ const GATEWAY_TEMPLATES: GatewayTemplate[] = [
     fields: [
       { key: "publishableKey", label: "Publishable Key", placeholder: "pk_live_...", type: "text" },
       { key: "secretKey", label: "Secret Key", placeholder: "sk_live_...", type: "password" },
-      { key: "webhookSecret", label: "Webhook Secret (opcional)", placeholder: "whsec_...", type: "password" },
     ],
   },
 ];
 
 function webhookUrl(slug: string) {
   const base = API_URL || "https://sua-api.com";
-  return `${base}${WEBHOOK_PATHS[slug] || "/v1/webhooks/payments"}`;
+  const path = WEBHOOK_PATHS[slug] || "/v1/webhooks/payments";
+  // Token vem do WEBHOOK_SHARED_SECRET no .env (não expor o valor no browser)
+  if (slug === "efi-bank") {
+    return `${base}${path}?token=SEU_WEBHOOK_SHARED_SECRET&ignorar=`;
+  }
+  if (slug === "pagbank" || slug === "mercado-pago" || slug === "stripe") {
+    return `${base}${path}?token=SEU_WEBHOOK_SHARED_SECRET`;
+  }
+  return `${base}${path}`;
 }
 
 function isGatewayConfigured(slug: string, config: Record<string, unknown> = {}) {
@@ -246,7 +252,8 @@ export default function GatewaysPage() {
     setEditingSlug(slug);
     setFormData({
       ...config,
-      sandbox: config.sandbox ?? true,
+      // Primeira configuração (ou sem flag): desligado. Só liga se já estava salvo como true.
+      sandbox: config.sandbox === true,
     });
   };
 
@@ -255,18 +262,20 @@ export default function GatewaysPage() {
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(",")[1];
-      setFormData((prev) => ({ ...prev, [key]: base64 }));
+      setFormData((prev) => ({ ...prev, [key]: base64, certificateFresh: true }));
     };
     reader.readAsDataURL(file);
   };
 
   const buildConfig = (slug: string) => {
     const existing = gateways.find((g) => g.slug === slug);
-    return {
+    const merged = {
       ...(existing?.config || {}),
       ...formData,
-      sandbox: formData.sandbox !== false,
+      sandbox: formData.sandbox === true,
     };
+    delete (merged as Record<string, unknown>).certificateFresh;
+    return merged;
   };
 
   const handleValidate = () => {
@@ -469,7 +478,9 @@ export default function GatewaysPage() {
               </li>
               <li className="flex gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                Configure a URL de webhook no painel do provedor para confirmação automática.
+                Todos os gateways usam <code className="text-xs">WEBHOOK_SHARED_SECRET</code> no{" "}
+                <code className="text-xs">.env</code> da API. Cadastre a URL com{" "}
+                <code className="text-xs">?token=...</code> no painel do provedor.
               </li>
             </ul>
           </div>

@@ -121,19 +121,28 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col border border-white/5 p-4">
-            {hideHeader && (
-              <div className="flex justify-end mb-4">
-                <Can I="pages:manage">
-                  <Button asChild className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto">
-                    <Link href="/dashboard/admin/banners/new">
-                      <PlusCircle className="h-4 w-4" />
-                      Adicionar Banner
-                    </Link>
-                  </Button>
-                </Can>
+          <div className="flex flex-col p-4">
+            <div className="flex flex-col gap-4 sm:flex-row items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-medium text-white">Banners Principais</h2>
+                <p className="text-sm text-muted-foreground">
+                  Configure os banners principais que aparecerão na página inicial da sua loja.
+                </p>
               </div>
-            )}
+
+              {hideHeader && (
+                <div className="flex justify-end mb-4">
+                  <Can I="pages:manage">
+                    <Button asChild className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto">
+                      <Link href="/dashboard/admin/banners/new">
+                        <PlusCircle className="h-4 w-4" />
+                        Adicionar Banner
+                      </Link>
+                    </Button>
+                  </Can>
+                </div>
+              )}
+            </div>
 
             <div className="rounded-md border border-white/5 bg-transparent overflow-hidden">
               <DragDropContext onDragEnd={onDragEnd}>
@@ -149,7 +158,7 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
                               </div>
 
                               <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-4 min-w-0">
-                                <div className="relative w-full h-auto sm:w-48 aspect-[13/4] rounded-md overflow-hidden bg-[#1A1A1A] shrink-0 border border-white/10">
+                                <div className="relative w-full h-auto sm:w-48 aspect-[13/4] rounded-md overflow-hidden shrink-0 border border-white/10">
                                   {banner.imageUrl ? (
                                     <Image
                                       src={banner.imageUrl}
@@ -191,7 +200,7 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
                               <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 mt-4 sm:mt-0">
                                 <Can I="pages:manage">
                                   <Tooltip>
-                                    <TooltipTrigger asChild>
+                                    <TooltipTrigger render={
                                       <Button
                                         variant="ghost"
                                         size="icon"
@@ -200,13 +209,14 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
                                       >
                                         <Pencil className="h-4 w-4" />
                                       </Button>
+                                    }>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>Editar banner</p>
                                     </TooltipContent>
                                   </Tooltip>
                                   <Tooltip>
-                                    <TooltipTrigger asChild>
+                                    <TooltipTrigger render={
                                       <Button
                                         variant="destructive"
                                         size="icon"
@@ -214,6 +224,7 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
                                       >
                                         <Trash2 className="h-4 w-4" />
                                       </Button>
+                                    }>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>Excluir banner</p>
@@ -243,16 +254,20 @@ export function HomePageSettings({ hideHeader = false }: { hideHeader?: boolean 
               Esta ação não pode ser desfeita. O banner será excluído permanentemente da sua vitrine.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="mt-6 flex gap-2 sm:gap-0">
+          <DialogFooter className="flex flex-row">
             <Button
-              variant="outline"
+              size="lg"
+              variant="ghost"
+              className="flex-1"
               onClick={() => setDeleteTarget(null)}
               disabled={removeMutation.isPending}
             >
               Cancelar
             </Button>
             <Button
+              size="lg"
               variant="destructive"
+              className="flex-1"
               disabled={removeMutation.isPending}
               onClick={() => {
                 if (deleteTarget) removeMutation.mutate(deleteTarget.id);

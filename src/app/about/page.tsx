@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import { InstitutionalPageView } from "@/components/institutional-page-view";
+import { notFound } from "next/navigation";
+import { DocumentPageLayout } from "@/components/institutional/document-page-layout";
 import { fetchInstitutionalPage } from "@/lib/site-api";
 import { institutionalMetadata } from "@/lib/seo-utils";
+import { isDocumentLayoutData } from "@/lib/institutional-layout";
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await fetchInstitutionalPage("about");
@@ -11,6 +13,15 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
-export default function AboutPage() {
-  return <InstitutionalPageView slug="about" />;
+export default async function AboutPage() {
+  const page = await fetchInstitutionalPage("about");
+  if (!page || !isDocumentLayoutData(page.layoutData)) notFound();
+
+  return (
+    <DocumentPageLayout
+      title={page.title}
+      layout={page.layoutData}
+      content={page.content}
+    />
+  );
 }

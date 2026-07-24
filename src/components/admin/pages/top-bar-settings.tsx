@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Save } from "lucide-react";
+import { Check, Loader2, Save, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { PromoTopBar } from "@/components/storefront/promo-top-bar";
 import { siteSettingsApi, type SiteConfigRecord } from "@/lib/admin-api";
 import type { PublicSiteConfig } from "@/lib/site-api";
+import { Toggle } from "@/components/ui/toggle";
 
 function toPreviewConfig(form: Partial<SiteConfigRecord>): PublicSiteConfig {
   return {
@@ -70,34 +71,43 @@ export function TopBarSettings({ hideHeader = false }: { hideHeader?: boolean })
   }
 
   return (
-    <div className="space-y-6">
-      {!hideHeader && (
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white lg:text-3xl">
-              Faixa promocional
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1 lg:text-base">
-              Barra no topo da loja para avisos, promoções e links rápidos.
-            </p>
-          </div>
-          <Button
-            className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto"
-            disabled={saveMutation.isPending}
-            onClick={() => saveMutation.mutate()}
-          >
-            {saveMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            Salvar alterações
-          </Button>
-        </div>
-      )}
-
+    <div className="space-y-4 p-4">
       {hideHeader && (
-        <div className="flex justify-end mb-4">
+        <div className="flex flex-col sm:flex-col md:flex-col lg:flex-row items-center justify-between gap-4 mb-4">
+          <div className="flex items-center rounded-md w-full md:w-3xl border border-white/5 py-2 px-3 gap-2">
+            <Toggle
+              id="top-bar-enabled"
+              size="sm"
+              pressed={form.topBarEnabled ?? false}
+              onPressedChange={(v) => set("topBarEnabled", v)}
+            >
+              {form.topBarEnabled ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            </Toggle>
+
+            <div className="truncate">
+              <p className="text-sm font-medium text-white">Faixa promocional <span className="text-blue-500 font-light">{form.topBarEnabled ? "( Ativada )" : "( Desativada )"}</span></p>
+              <p className="text-xs text-muted-foreground truncate">Barra no topo da loja para avisos, promoções e links rápidos.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center rounded-md w-full md:w-3xl border border-white/5 py-2 px-3 gap-2">
+            <Toggle
+              id="top-bar-dismissible"
+              size="sm"
+              pressed={form.topBarDismissible ?? true}
+              onPressedChange={(v) => set("topBarDismissible", v)}
+            >
+              {form.topBarDismissible ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            </Toggle>
+
+            <div className="truncate">
+              <p className="text-sm font-medium text-white">Permitir fechar <span className="text-blue-500 font-light">{form.topBarDismissible ? "( Ativado )" : "( Desativado )"}</span></p>
+              <p className="text-xs text-muted-foreground truncate">
+                O visitante pode dispensar a faixa até fechar o navegador.
+              </p>
+            </div>
+          </div>
+
           <Button
             className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto"
             disabled={saveMutation.isPending}
@@ -106,87 +116,59 @@ export function TopBarSettings({ hideHeader = false }: { hideHeader?: boolean })
             {saveMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Save className="h-4 w-4" />
+              <Save className="h-4 w-4 hidden" />
             )}
             Salvar alterações
           </Button>
         </div>
       )}
 
-      <div className="rounded-xl border border-white/10 bg-[#0A0A0A] overflow-hidden">
-        <p className="px-4 py-2 text-xs text-zinc-500 border-b border-white/10">Pré-visualização</p>
+      <div className="rounded-md bg-transparent border border-white/5 overflow-hidden">
+        <p className="px-4 py-2 text-xs text-muted-foreground border-b border-white/5">Pré-visualização</p>
         <PromoTopBar config={preview} />
         {!form.topBarEnabled && (
-          <p className="px-4 py-6 text-sm text-zinc-500 text-center">
+          <p className="px-4 py-6 text-sm text-muted-foreground text-center">
             Ative a faixa para ver a pré-visualização.
           </p>
         )}
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6 space-y-6">
-        <div className="flex items-center justify-between rounded-lg border border-white/10 bg-[#111] px-4 py-3">
-          <div>
-            <p className="text-sm font-medium text-white">Exibir faixa</p>
-            <p className="text-xs text-zinc-500">Visível em todas as páginas públicas da loja.</p>
-          </div>
-          <Switch
-            checked={form.topBarEnabled ?? false}
-            onCheckedChange={(v) => set("topBarEnabled", v)}
-          />
-        </div>
-
+      <div className="rounded-md border border-white/5 p-4 space-y-4">
         <div className="space-y-2">
-          <Label className="text-zinc-300">Texto</Label>
+          <Label className="text-muted-foreground">Texto</Label>
           <Input
             value={form.topBarText ?? ""}
             onChange={(e) => set("topBarText", e.target.value)}
             placeholder="Frete grátis em compras acima de R$ 99"
-            className="bg-[#111] border-white/10"
           />
         </div>
 
         <div className="space-y-2">
-          <Label className="text-zinc-300">Link (opcional)</Label>
+          <Label className="text-muted-foreground">Link (opcional)</Label>
           <Input
             value={form.topBarLinkUrl ?? ""}
             onChange={(e) => set("topBarLinkUrl", e.target.value)}
             placeholder="/products ou https://..."
-            className="bg-[#111] border-white/10"
           />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label className="text-zinc-300">Cor de fundo</Label>
+            <Label className="text-muted-foreground">Cor de fundo</Label>
             <Input
               value={form.topBarBackgroundColor ?? ""}
               onChange={(e) => set("topBarBackgroundColor", e.target.value)}
               placeholder="#9333EA"
-              className="bg-[#111] border-white/10"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-300">Cor do texto</Label>
+            <Label className="text-muted-foreground">Cor do texto</Label>
             <Input
               value={form.topBarTextColor ?? ""}
               onChange={(e) => set("topBarTextColor", e.target.value)}
               placeholder="#ffffff"
-              className="bg-[#111] border-white/10"
             />
           </div>
-        </div>
-
-        <div className="flex items-center justify-between rounded-lg border border-white/10 bg-[#111] px-4 py-3">
-          <div>
-            <p className="text-sm font-medium text-white">Permitir fechar</p>
-            <p className="text-xs text-zinc-500">
-              O visitante pode dispensar a faixa até fechar o navegador.
-            </p>
-          </div>
-          <Switch
-            checked={form.topBarDismissible ?? true}
-            onCheckedChange={(v) => set("topBarDismissible", v)}
-          />
         </div>
       </div>
     </div>

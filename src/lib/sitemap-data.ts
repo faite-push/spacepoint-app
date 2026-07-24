@@ -28,8 +28,15 @@ export async function buildSitemapEntries(baseUrl: string): Promise<MetadataRout
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: toAbsolutePath("/", baseUrl), lastModified: now, changeFrequency: "daily", priority: 1 },
     { url: toAbsolutePath("/about", baseUrl), lastModified: now, changeFrequency: "monthly", priority: 0.5 },
-    { url: toAbsolutePath("/privacy", baseUrl), lastModified: now, changeFrequency: "yearly", priority: 0.3 },
-    { url: toAbsolutePath("/refunds", baseUrl), lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: toAbsolutePath("/enterprise/terms", baseUrl), lastModified: now, changeFrequency: "yearly", priority: 0.4 },
+    { url: toAbsolutePath("/enterprise/privacy", baseUrl), lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: toAbsolutePath("/enterprise/refunds", baseUrl), lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: toAbsolutePath("/enterprise/cookies", baseUrl), lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: toAbsolutePath("/trust/support", baseUrl), lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: toAbsolutePath("/trust/fale-conosco", baseUrl), lastModified: now, changeFrequency: "monthly", priority: 0.45 },
+    { url: toAbsolutePath("/trust/como-comprar", baseUrl), lastModified: now, changeFrequency: "monthly", priority: 0.45 },
+    { url: toAbsolutePath("/trust/como-funciona", baseUrl), lastModified: now, changeFrequency: "monthly", priority: 0.45 },
+    { url: toAbsolutePath("/trust/envio-expresso", baseUrl), lastModified: now, changeFrequency: "monthly", priority: 0.45 },
   ];
 
   const [products, categories] = await Promise.all([

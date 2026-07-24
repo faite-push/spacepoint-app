@@ -75,9 +75,40 @@ function MetricCard({ label, value, description, icon: Icon, loading, className,
   );
 };
 
-function QuickActions({ recoveryUrl, whatsappUrl, onArchive, canArchive, }: { recoveryUrl: string | null; whatsappUrl: string | null; onArchive: () => void; canArchive?: boolean; }) {
+function QuickActions({
+  recoveryUrl,
+  whatsappUrl,
+  onArchive,
+  canArchive,
+  onSendEmail,
+  canSendEmail,
+  sendingEmail,
+}: {
+  recoveryUrl: string | null;
+  whatsappUrl: string | null;
+  onArchive: () => void;
+  canArchive?: boolean;
+  onSendEmail?: () => void;
+  canSendEmail?: boolean;
+  sendingEmail?: boolean;
+}) {
   return (
     <div className="flex shrink-0 items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+      {canSendEmail && onSendEmail ? (
+        <Can I="marketing:manage">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-white/45 hover:text-white"
+            title="Enviar e-mail agora"
+            disabled={sendingEmail}
+            onClick={onSendEmail}
+          >
+            <Mail className={cn("h-4 w-4", sendingEmail && "animate-pulse")} />
+          </Button>
+        </Can>
+      ) : null}
       {recoveryUrl && (
         <Button
           type="button"
@@ -220,6 +251,21 @@ export default function MarketingAutomationsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const [sendingCartId, setSendingCartId] = useState<string | null>(null);
+  const sendCartEmailMutation = useMutation({
+    mutationFn: (id: string) => marketingAutomationsApi.sendCartRecoveryEmail(id),
+    onMutate: (id) => setSendingCartId(id),
+    onSuccess: (data) => {
+      toast.success(
+        `E-mail etapa ${data.stepIndex}/${data.stepTotal} enviado para ${data.email}`
+      );
+      queryClient.invalidateQueries({ queryKey: ["admin", "marketing", "carts"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "marketing", "metrics"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+    onSettled: () => setSendingCartId(null),
+  });
+
   const metrics = metricsQuery.data;
 
   return (
@@ -238,12 +284,12 @@ export default function MarketingAutomationsPage() {
 
       <Tabs value={tab} onValueChange={setTab} className="relative z-10">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList className="h-auto w-full flex-wrap sm:w-auto bg-transparent p-0">
-            <TabsTrigger value="metrics" className="flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-md cursor-pointer transition-all duration-200">Métricas de Uso</TabsTrigger>
-            <TabsTrigger value="carts" className="flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-md cursor-pointer transition-all duration-200">Listagem de Carrinhos</TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-md cursor-pointer transition-all duration-200">Listagem de Pedidos</TabsTrigger>
+          <TabsList className="h-auto w-full flex-nowrap overflow-x-auto justify-start bg-transparent p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto md:flex-wrap md:overflow-visible">
+            <TabsTrigger value="metrics" className="flex shrink-0 items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-md cursor-pointer transition-all duration-200 sm:px-4 sm:py-3 sm:text-sm">Métricas de Uso</TabsTrigger>
+            <TabsTrigger value="carts" className="flex shrink-0 items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-md cursor-pointer transition-all duration-200 sm:px-4 sm:py-3 sm:text-sm">Listagem de Carrinhos</TabsTrigger>
+            <TabsTrigger value="orders" className="flex shrink-0 items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-md cursor-pointer transition-all duration-200 sm:px-4 sm:py-3 sm:text-sm">Listagem de Pedidos</TabsTrigger>
           </TabsList>
-          <Button type="button" variant="outline" className="px-5 py-5" asChild>
+          <Button type="button" variant="outline" className="w-full px-5 py-5 sm:w-auto" asChild>
             <Link href={AUTOMATIONS_SETTINGS}>
               <Settings className="h-4 w-4" />
               Configurações
@@ -251,8 +297,8 @@ export default function MarketingAutomationsPage() {
           </Button>
         </div>
 
-        <TabsContent value="metrics" className="space-y-3 rounded-md border border-white/5 h-142">
-          <div className="flex flex-wrap gap-2 pb-2 p-4">
+        <TabsContent value="metrics" className="space-y-3 rounded-md border border-white/5 h-auto">
+          <div className="flex flex-   gap-3 pb-2 p-4 md:flex-row md:flex-wrap md:gap-2">
             {ALL_METRIC_TYPES.map((type) => {
               const active = metricTypes.includes(type);
               return (
@@ -262,7 +308,7 @@ export default function MarketingAutomationsPage() {
                   onClick={() => toggleMetricType(type)}
                   aria-pressed={active}
                   className={cn(
-                    "flex items-center cursor-pointer rounded-full px-3 py-2 gap-2 text-sm transition-colors",
+                    "flex items-center cursor-pointer rounded-full px-3 py-2 gap-2 text-xs sm:text-sm transition-colors",
                     active
                       ? "bg-primary/10 text-primary"
                       : "bg-transparent text-white/45 hover:border-white/20 hover:text-white/70"
@@ -273,7 +319,7 @@ export default function MarketingAutomationsPage() {
               );
             })}
 
-            <div className="ml-auto">
+            <div className="w-full md:ml-auto md:w-auto">
               <DateRangeFilter defaultPreset="7d" onRangeChange={setDateRange} />
             </div>
           </div>
@@ -363,7 +409,7 @@ export default function MarketingAutomationsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="carts" className="rounded-md border border-white/5 h-142">
+        <TabsContent value="carts" className="rounded-md border border-white/5 h-auto">
           <div className="p-4">
             <Input
               placeholder="Buscar por nome, e-mail ou telefone..."
@@ -372,7 +418,7 @@ export default function MarketingAutomationsPage() {
                 setCartSearch(e.target.value);
                 setCartPage(1);
               }}
-              className="max-w-md border-white/5 bg-background"
+              className="w-full max-w-md border-white/5 bg-background"
             />
           </div>
 
@@ -388,7 +434,7 @@ export default function MarketingAutomationsPage() {
                 <ShoppingBag className="h-8 w-8" />
                 <p className="text-sm">Nenhum carrinho abandonado no período</p>
                 <p className="max-w-sm text-xs text-white/30">
-                  Só entram carrinhos após o tempo de inatividade configurado (padrão 20 min), sem atividade no site.
+                  Só entram carrinhos após o tempo de inatividade configurado (padrão 10 min), sem atividade no site.
                 </p>
               </div>
             ) : (
@@ -405,44 +451,60 @@ export default function MarketingAutomationsPage() {
                           setSelectedCart(cart);
                         }
                       }}
-                      className="flex flex-wrap select-none items-center justify-between cursor-pointer gap-3 px-3 py-3 text-left transition-colors hover:bg-white/[0.03] sm:px-4"
+                      className="flex flex-col gap-2 select-none cursor-pointer px-3 py-3 text-left transition-colors hover:bg-white/[0.03] sm:px-4 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-3"
                     >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={cn(
-                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium",
-                            cart.isVisitor ? "bg-white/5 text-white/40" : "bg-primary/15 text-primary"
-                          )}
-                        >
-                          {(cart.customerName || "?").charAt(0).toUpperCase()}
+                      <div className="flex min-w-0 items-center justify-between gap-2 md:contents">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div
+                            className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium",
+                              cart.isVisitor ? "bg-white/5 text-white/40" : "bg-primary/15 text-primary"
+                            )}
+                          >
+                            {(cart.customerName || "?").charAt(0).toUpperCase()}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-white">
+                              {cart.customerName || (cart.isVisitor ? "Cliente visitante" : cart.email || "Sem identificação")}
+                            </p>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-white">
-                            {cart.customerName || (cart.isVisitor ? "Cliente visitante" : cart.email || "Sem identificação")}
+                        <div className="shrink-0 md:hidden">
+                          <QuickActions
+                            recoveryUrl={cart.recoveryUrl}
+                            whatsappUrl={cart.whatsappUrl}
+                            canArchive
+                            canSendEmail={Boolean(cart.email)}
+                            sendingEmail={sendingCartId === cart.id}
+                            onSendEmail={() => sendCartEmailMutation.mutate(cart.id)}
+                            onArchive={() => archiveCartMutation.mutate(cart.id)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 pl-12 md:contents md:pl-0">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            {formatPrice(cart.subtotalCents)}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(cart.lastActivityAt), "dd/MM HH:mm", { locale: ptBR })}
                           </p>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-muted-foreground">
-                          {formatPrice(cart.subtotalCents)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-end gap-2">
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(cart.lastActivityAt), "dd/MM HH:mm", { locale: ptBR })}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-end gap-2">
-                        <QuickActions
-                          recoveryUrl={cart.recoveryUrl}
-                          whatsappUrl={cart.whatsappUrl}
-                          canArchive
-                          onArchive={() => archiveCartMutation.mutate(cart.id)}
-                        />
+                        <div className="hidden shrink-0 md:block">
+                          <QuickActions
+                            recoveryUrl={cart.recoveryUrl}
+                            whatsappUrl={cart.whatsappUrl}
+                            canArchive
+                            canSendEmail={Boolean(cart.email)}
+                            sendingEmail={sendingCartId === cart.id}
+                            onSendEmail={() => sendCartEmailMutation.mutate(cart.id)}
+                            onArchive={() => archiveCartMutation.mutate(cart.id)}
+                          />
+                        </div>
                       </div>
                     </div>
                   </li>
@@ -452,7 +514,7 @@ export default function MarketingAutomationsPage() {
           </div>
 
           {(cartsQuery.data?.totalPages || 0) > 1 && (
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2 px-3 pb-3 sm:px-4">
               <Button
                 variant="outline"
                 size="sm"
@@ -478,7 +540,7 @@ export default function MarketingAutomationsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="orders" className="rounded-md border border-white/5 h-142">
+        <TabsContent value="orders" className="rounded-md border border-white/5 h-auto">
           <div className="p-4">
             <Input
               placeholder="Buscar por nome, e-mail, telefone ou ID..."
@@ -487,7 +549,7 @@ export default function MarketingAutomationsPage() {
                 setOrderSearch(e.target.value);
                 setOrderPage(1);
               }}
-              className="max-w-md border-white/5 bg-background"
+              className="w-full max-w-md border-white/5 bg-background"
             />
           </div>
 
@@ -520,37 +582,49 @@ export default function MarketingAutomationsPage() {
                           setSelectedOrder(order);
                         }
                       }}
-                      className="flex flex-wrap select-none items-center justify-between cursor-pointer gap-3 px-3 py-3 text-left transition-colors hover:bg-white/[0.03] sm:px-4"
+                      className="flex flex-col gap-2 select-none cursor-pointer px-3 py-3 text-left transition-colors hover:bg-white/[0.03] sm:px-4 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-3"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-sm font-medium text-amber-400">
-                          {order.customerName.charAt(0).toUpperCase()}
+                      <div className="flex min-w-0 items-center justify-between gap-2 md:contents">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-sm font-medium text-amber-400">
+                            {order.customerName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-white">
+                              {order.customerName || order.email || "Sem identificação"}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-white">
-                            {order.customerName || order.email || "Sem identificação"}
+
+                        <div className="shrink-0 md:hidden">
+                          <QuickActions
+                            recoveryUrl={order.recoveryUrl}
+                            whatsappUrl={order.whatsappUrl}
+                            canArchive
+                            onArchive={() => archiveOrderMutation.mutate(order.id)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 pl-12 md:contents md:pl-0">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <p className="bg-amber-500/10 text-xs text-amber-500 px-3 py-1 rounded lowercase">
+                            {order.paymentMethod || "Pagamento"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(order.createdAt), "dd/MM HH:mm", { locale: ptBR })}
                           </p>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-2">
-                        <p className="bg-amber-500/10 text-xs text-amber-500 px-4 py-1 rounded lowercase">
-                          {order.paymentMethod || "Pagamento"}
-                        </p>
+                        <div className="hidden shrink-0 md:block">
+                          <QuickActions
+                            recoveryUrl={order.recoveryUrl}
+                            whatsappUrl={order.whatsappUrl}
+                            canArchive
+                            onArchive={() => archiveOrderMutation.mutate(order.id)}
+                          />
+                        </div>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(order.createdAt), "dd/MM HH:mm", { locale: ptBR })}
-                        </p>
-                      </div>
-
-                      <QuickActions
-                        recoveryUrl={order.recoveryUrl}
-                        whatsappUrl={order.whatsappUrl}
-                        canArchive
-                        onArchive={() => archiveOrderMutation.mutate(order.id)}
-                      />
                     </div>
                   </li>
                 ))}
@@ -559,7 +633,7 @@ export default function MarketingAutomationsPage() {
           </div>
 
           {(ordersQuery.data?.totalPages || 0) > 1 && (
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2 px-3 pb-3 sm:px-4">
               <Button
                 variant="outline"
                 size="sm"

@@ -158,7 +158,26 @@ export function getPreviewText(content: string, type?: string): React.ReactNode 
       </span>
     );
   }
-  if (type === 'AUTOMATED') return content.slice(0, 60);
+  if (type === 'AUTOMATED') {
+    const text = String(content || '');
+    if (/avalie nosso atendimento/i.test(text)) {
+      return (
+        <span className="flex items-center gap-1">
+          <BiSolidPackage className="h-4 w-4 shrink-0 text-blue-500" />
+          Pedido entregue · Avaliar
+        </span>
+      );
+    }
+    if (/entregue com sucesso/i.test(text)) {
+      return (
+        <span className="flex items-center gap-1">
+          <BiSolidPackage className="h-4 w-4 shrink-0 text-blue-500" />
+          Pedido entregue
+        </span>
+      );
+    }
+    return text.slice(0, 60);
+  }
   return content.slice(0, 80);
 }
 

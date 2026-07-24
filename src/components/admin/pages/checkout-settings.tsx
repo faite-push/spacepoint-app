@@ -104,10 +104,6 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
       <div className="absolute top-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
       <div className="absolute top-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
 
-      <div className="absolute bottom-0 right-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
-      <div className="absolute bottom-0 left-[-5%] w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
-      <div className="absolute bottom-0 left-[35%] w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-white/3 rounded-full blur-[120px] z-0 pointer-events-none" />
-
       {!hideHeader && (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -137,12 +133,7 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
         </div>
 
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 px-4 py-4">
-          <div className="flex items-center justify-between rounded-md border border-white/5 px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-white">Termos já marcados</p>
-              <p className="text-xs text-muted-foreground">Checkbox de termos vem selecionado</p>
-            </div>
-
+          <div className="flex items-center rounded-md border border-white/5 px-4 py-3 gap-2">
             <Toggle
               variant="default"
               size="sm"
@@ -155,13 +146,13 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
                 <X className="h-4 w-4" />
               )}
             </Toggle>
+            <div>
+              <p className="text-sm font-medium text-white">Termos já marcados</p>
+              <p className="text-xs text-muted-foreground">Checkbox de termos vem selecionado</p>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-md border border-white/5 px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-white">Preencher nome do usuário</p>
-              <p className="text-xs text-muted-foreground">Se logado, usa o nome da conta</p>
-            </div>
+          <div className="flex items-center rounded-md border border-white/5 px-4 py-3 gap-2">
             <Toggle
               variant="default"
               size="sm"
@@ -174,13 +165,13 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
                 <X className="h-4 w-4" />
               )}
             </Toggle>
+            <div>
+              <p className="text-sm font-medium text-white">Preencher nome do usuário</p>
+              <p className="text-xs text-muted-foreground">Se logado, usa o nome da conta</p>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-md border border-white/5 px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-white">Preencher e-mail do usuário</p>
-              <p className="text-xs text-muted-foreground">Se logado, usa o e-mail da conta</p>
-            </div>
+          <div className="flex items-center rounded-md border border-white/5 px-4 py-3 gap-2">
             <Toggle
               variant="default"
               size="sm"
@@ -193,27 +184,29 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
                 <X className="h-4 w-4" />
               )}
             </Toggle>
+            <div>
+              <p className="text-sm font-medium text-white">Preencher e-mail do usuário</p>
+              <p className="text-xs text-muted-foreground">Se logado, usa o e-mail da conta</p>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-md border border-white/5 px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-white">Autenticação no checkout</p>
-              <p className="text-xs text-muted-foreground">Define quando o cliente precisa entrar na conta para finalizar a compra.</p>
-            </div>
-            <Select
-              value={settings.authMode ?? "inline_at_payment"}
-              onValueChange={(value: CheckoutAuthMode) =>
-                setSettings((s) => ({ ...s, authMode: value }))
-              }
+          <div className="flex items-center rounded-md border border-white/5 px-4 py-3 gap-2">
+            <Toggle
+              variant="default"
+              size="sm"
+              pressed={settings.authMode === "inline_at_payment"}
+              onPressedChange={(val) => setSettings((s) => ({ ...s, authMode: val ? "inline_at_payment" : "login_before_checkout" }))}
             >
-              <SelectTrigger className="w-auto min-w-[300px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="inline_at_payment">Login ao pagar (modal no checkout)</SelectItem>
-                <SelectItem value="login_before_checkout">Exigir login antes do checkout</SelectItem>
-              </SelectContent>
-            </Select>
+              {settings.authMode === "inline_at_payment" ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <X className="h-4 w-4" />
+              )}
+            </Toggle>
+            <div className="truncate">
+              <p className="text-sm font-medium text-white">Autenticação <span className="text-blue-500 font-light">{settings.authMode === "inline_at_payment" ? "( ao pagar )" : "( antes do checkout )"}</span></p>
+              <p className="text-xs text-muted-foreground truncate">Define quando o cliente precisa entrar na conta para finalizar a compra. <span className="text-blue-500 font-light">{settings.authMode === "inline_at_payment" ? "( Login ao pagar (modal no checkout) )" : "( Exigir login antes do checkout )"}</span></p>
+            </div>
           </div>
         </div>
       </div>
@@ -224,11 +217,7 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
         </div>
 
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 px-4 py-4">
-          <div className="flex items-center justify-between rounded-md border border-white/5 px-4 py-3 md:col-span-2">
-            <div>
-              <p className="text-sm font-medium text-white">Ativar opções de entrega</p>
-              <p className="text-xs text-muted-foreground">Exibe padrão vs expressa no checkout</p>
-            </div>
+          <div className="flex items-center rounded-md border border-white/5 px-4 py-3 md:col-span-2 gap-2">
             <Toggle
               variant="default"
               size="sm"
@@ -242,6 +231,10 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
             >
               {settings.deliveryOptions?.enabled ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
             </Toggle>
+            <div>
+              <p className="text-sm font-medium text-white">Ativar opções de entrega <span className="text-blue-500 font-light">{settings.deliveryOptions?.enabled ? "( Ativado )" : "( Desativado )"}</span></p>
+              <p className="text-xs text-muted-foreground">Exibe padrão vs expressa no checkout. <span className="text-text-muted-foreground font-light">{settings.deliveryOptions?.enabled ? "( Exibe padrão e expressa no checkout )" : "( Exibe apenas o padrão no checkout )"}</span></p>
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -340,7 +333,6 @@ export function CheckoutSettingsPanel({ hideHeader = false }: { hideHeader?: boo
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <GripVertical className="h-4 w-4" />
                       <span className="text-xs font-medium uppercase tracking-wide">Campo {index + 1}</span>
                     </div>
 

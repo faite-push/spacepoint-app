@@ -36,6 +36,7 @@ function DelayToggles({
   onChange,
   recommendedHours = 1,
   templateBaseId,
+  maxSteps = 3,
 }: {
   options: number[];
   selected: number[];
@@ -43,9 +44,14 @@ function DelayToggles({
   recommendedHours?: number;
   /** Ex.: abandonedCartRecovery — etapa 1/2/3 conforme a ordem dos delays ativos */
   templateBaseId: string;
+  maxSteps?: number;
 }) {
   const toggle = (hours: number, checked: boolean) => {
     if (checked) {
+      if (selected.length >= maxSteps) {
+        toast.error(`Máximo de ${maxSteps} etapas na régua de e-mails`);
+        return;
+      }
       onChange([...new Set([...selected, hours])].sort((a, b) => a - b));
       return;
     }
@@ -63,22 +69,26 @@ function DelayToggles({
         const stepSlug =
           stepIndex <= 1
             ? templateBaseId
-            : `${templateBaseId}_step${Math.min(stepIndex, 3)}`;
+            : `${templateBaseId}_step${Math.min(stepIndex, maxSteps)}`;
 
         return (
           <div
             key={hours}
             className={cn(
-              "flex flex-wrap items-center justify-between gap-3 rounded-md border px-4 py-3 transition-colors",
+              "flex flex-col items-start gap-3 rounded-md border px-4 py-3 transition-colors md:flex-row md:flex-wrap md:items-center md:justify-between",
               active ? "border-primary/40 bg-primary/5" : "border-white/5 bg-background/20"
             )}
           >
-            <div className="flex items-center gap-3">
-              <Switch checked={active} onCheckedChange={(v) => toggle(hours, v)} />
+            <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
+              <Switch
+                checked={active}
+                onCheckedChange={(v) => toggle(hours, v)}
+                disabled={!active && selected.length >= maxSteps}
+              />
               <span className="text-sm text-white">{formatDelayLabel(hours)}</span>
               {active && stepIndex > 0 ? (
                 <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/60">
-                  Etapa {Math.min(stepIndex, 3)}
+                  Etapa {stepIndex}
                 </span>
               ) : null}
               {hours === recommendedHours ? (
@@ -92,7 +102,7 @@ function DelayToggles({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="text-white/55 hover:text-white"
+                className="w-full justify-start text-white/55 hover:text-white md:w-auto"
                 asChild
               >
                 <Link href={emailTemplateHref(stepSlug)}>
@@ -104,6 +114,9 @@ function DelayToggles({
           </div>
         );
       })}
+      <p className="text-xs text-white/35">
+        Até {maxSteps} etapas (uma por horário ativo), cada uma com template próprio.
+      </p>
     </div>
   );
 }
@@ -224,39 +237,40 @@ export function AutomationSettingsPanel() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <Tabs value={subTab} onValueChange={setSubTab}>
-        <div className="flex flex-row gap-4">
-          <TabsList className="h-auto w-full flex-wrap bg-transparent p-0 sm:w-auto">
+        <div className="flex flex-col gap-4 md:flex-row">
+          <TabsList className="h-auto w-full flex-nowrap overflow-x-auto bg-transparent p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible md:w-auto">
             <TabsTrigger
               value="general"
-              className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
+              className="flex shrink-0 items-center gap-2 rounded-md px-3 py-2.5 text-xs font-medium cursor-pointer transition-all duration-200 md:px-4 md:py-3 md:text-sm"
             >
               Configurações gerais
             </TabsTrigger>
             <TabsTrigger
               value="cart"
-              className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
+              className="flex shrink-0 items-center gap-2 rounded-md px-3 py-2.5 text-xs font-medium cursor-pointer transition-all duration-200 md:px-4 md:py-3 md:text-sm"
             >
               Carrinho Abandonado
             </TabsTrigger>
             <TabsTrigger
               value="product"
-              className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
+              className="flex shrink-0 items-center gap-2 rounded-md px-3 py-2.5 text-xs font-medium cursor-pointer transition-all duration-200 md:px-4 md:py-3 md:text-sm"
             >
               Abandono de Produto
             </TabsTrigger>
             <TabsTrigger
               value="cancelled"
-              className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium cursor-pointer transition-all duration-200"
+              className="flex shrink-0 items-center gap-2 rounded-md px-3 py-2.5 text-xs font-medium cursor-pointer transition-all duration-200 md:px-4 md:py-3 md:text-sm"
             >
               Pedido Cancelado
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex flex-row items-center gap-2 ml-auto">
+          <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-center md:ml-auto md:w-auto">
             <Button
               type="button"
               variant="ghost"
               size="lg"
+              className="w-full sm:w-auto"
               disabled={!dirty || saveMutation.isPending}
               onClick={() => baseline && setForm(baseline)}
             >
@@ -266,6 +280,7 @@ export function AutomationSettingsPanel() {
               <Button
                 type="button"
                 size="lg"
+                className="w-full sm:w-auto"
                 disabled={!dirty || saveMutation.isPending}
                 onClick={() => saveMutation.mutate()}
               >
@@ -281,6 +296,19 @@ export function AutomationSettingsPanel() {
         </div>
 
         <TabsContent value="general" className="mt-4 space-y-4">
+          <SettingsSection
+            title="Automações ativas"
+            description="Desative para pausar os disparos automáticos de carrinho abandonado (produto e pedido cancelado continuam com seus próprios interruptores)."
+          >
+            <label className="flex items-center gap-3 text-sm text-white">
+              <Switch
+                checked={form.enabled}
+                onCheckedChange={(v) => patch("enabled", v)}
+              />
+              {form.enabled ? "Carrinho abandonado ativo" : "Carrinho abandonado pausado"}
+            </label>
+          </SettingsSection>
+
           <SettingsSection
             title="Intervalo de notificação"
             description="Em qual horário o sistema de notificação deverá funcionar? O cliente receberá e-mails apenas dentro do horário programado. Múltiplas notificações irão respeitar o horário pré-estabelecido."
@@ -308,12 +336,59 @@ export function AutomationSettingsPanel() {
               </div>
             </div>
           </SettingsSection>
+
+          <SettingsSection
+            title="Critérios de abandono (carrinho)"
+            description="Define quando um carrinho entra na régua automática de recuperação."
+          >
+            <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
+              <div className="space-y-2">
+                <Label htmlFor="inactivity-minutes">Inatividade (minutos)</Label>
+                <Input
+                  id="inactivity-minutes"
+                  type="number"
+                  min={5}
+                  max={1440}
+                  value={form.inactivityMinutes}
+                  onChange={(e) =>
+                    patch("inactivityMinutes", Math.max(5, Number(e.target.value) || 5))
+                  }
+                  className="border-white/5 bg-background"
+                />
+                <p className="text-xs text-white/35">
+                  Tempo sem atividade antes do 1º e-mail (padrão{" "}
+                  {defaults.inactivityMinutes ?? 10} min).
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="min-subtotal">Subtotal mínimo (R$)</Label>
+                <Input
+                  id="min-subtotal"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={(form.minSubtotalCents / 100).toFixed(2)}
+                  onChange={(e) => {
+                    const reais = Number(e.target.value);
+                    patch(
+                      "minSubtotalCents",
+                      Number.isFinite(reais) ? Math.max(0, Math.round(reais * 100)) : 0
+                    );
+                  }}
+                  className="border-white/5 bg-background"
+                />
+                <p className="text-xs text-white/35">
+                  Carrinhos abaixo deste valor não entram na recuperação automática.
+                </p>
+              </div>
+            </div>
+          </SettingsSection>
         </TabsContent>
 
         <TabsContent value="cart" className="mt-4 space-y-4">
           <SettingsSection
             title="Envio de e-mails"
-            description="Os lembretes de carrinho abandonado para seus clientes serão enviados automaticamente ou por uma ação manual?"
+            description="No modo automatizado o cron dispara a régua. No modo manual use o botão de e-mail na listagem de carrinhos."
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
               <label className="flex items-center gap-3 text-sm text-white">
@@ -364,6 +439,12 @@ export function AutomationSettingsPanel() {
                 <li>
                   <code className="text-primary">{"{{ carrinho }}"}</code> — link do carrinho abandonado
                 </li>
+                <li>
+                  <code className="text-primary">{"{{ link }}"}</code> — mesmo link de recuperação
+                </li>
+                <li>
+                  <code className="text-primary">{"{{ loja }}"}</code> — nome da loja
+                </li>
               </ul>
             </TipBox>
           </SettingsSection>
@@ -377,6 +458,7 @@ export function AutomationSettingsPanel() {
               selected={form.cartEmailDelays}
               onChange={(next) => patch("cartEmailDelays", next)}
               templateBaseId="abandonedCartRecovery"
+              maxSteps={options.maxRecoverySteps ?? 3}
             />
           </SettingsSection>
         </TabsContent>
@@ -408,6 +490,7 @@ export function AutomationSettingsPanel() {
               selected={form.abandonedProductDelays}
               onChange={(next) => patch("abandonedProductDelays", next)}
               templateBaseId="abandonedProductRecovery"
+              maxSteps={options.maxRecoverySteps ?? 3}
             />
           </SettingsSection>
         </TabsContent>
@@ -464,6 +547,7 @@ export function AutomationSettingsPanel() {
               selected={form.cancelledOrderDelays}
               onChange={(next) => patch("cancelledOrderDelays", next)}
               templateBaseId="cancelledOrderRecovery"
+              maxSteps={options.maxRecoverySteps ?? 3}
             />
           </SettingsSection>
         </TabsContent>

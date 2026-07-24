@@ -7,6 +7,7 @@ import { MASK_COUNT, MASK_MONEY, MASK_PERCENT } from "@/components/admin/dashboa
 interface Metric {
   value: number;
   change: number;
+  delta?: number;
 }
 
 interface OverviewCardsProps {
@@ -35,16 +36,18 @@ export function OverviewCards({ metrics, valuesHidden = false }: OverviewCardsPr
       icon: DollarSign,
       formattedChange: valuesHidden
         ? MASK_MONEY
-        : formatBRL(Math.abs(metrics.revenue.value * (metrics.revenue.change / 100))),
+        : formatBRL(Math.abs(metrics.revenue.delta ?? 0)),
     },
     {
       title: "Vendas",
-      value: valuesHidden ? `${MASK_COUNT} Vendas` : metrics.sales.value.toLocaleString("pt-BR") + " Vendas",
+      value: valuesHidden
+        ? `${MASK_COUNT} Vendas`
+        : `${metrics.sales.value.toLocaleString("pt-BR")} Vendas`,
       change: metrics.sales.change,
       icon: ShoppingCart,
       formattedChange: valuesHidden
         ? MASK_COUNT
-        : Math.abs(Math.round(metrics.sales.value * (metrics.sales.change / 100))).toLocaleString("pt-BR"),
+        : Math.abs(metrics.sales.delta ?? 0).toLocaleString("pt-BR"),
     },
     {
       title: "Ticket Médio",
@@ -53,7 +56,7 @@ export function OverviewCards({ metrics, valuesHidden = false }: OverviewCardsPr
       icon: Wallet,
       formattedChange: valuesHidden
         ? MASK_MONEY
-        : formatBRL(Math.abs(metrics.avgTicket.value * (metrics.avgTicket.change / 100))),
+        : formatBRL(Math.abs(metrics.avgTicket.delta ?? 0)),
     },
     {
       title: "Visitas",
@@ -62,7 +65,7 @@ export function OverviewCards({ metrics, valuesHidden = false }: OverviewCardsPr
       icon: MousePointerClick,
       formattedChange: valuesHidden
         ? MASK_COUNT
-        : Math.abs(Math.round(metrics.visits.value * (metrics.visits.change / 100))).toLocaleString("pt-BR"),
+        : Math.abs(metrics.visits.delta ?? 0).toLocaleString("pt-BR"),
     },
   ];
 
@@ -70,12 +73,15 @@ export function OverviewCards({ metrics, valuesHidden = false }: OverviewCardsPr
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
+        const isFlat = Math.abs(card.change) < 0.05;
         const isUp = card.change >= 0;
         const TrendIcon = isUp ? TrendingUp : TrendingDown;
 
         return (
-          <div key={card.title} className="bg-card/50 border border-white/5 rounded-md p-4 sm:p-5 transition-all">
-            {/* Ajustado o wrap incorreto original para justify-between */}
+          <div
+            key={card.title}
+            className="bg-card/50 border border-white/5 rounded-md p-4 sm:p-5 transition-all"
+          >
             <div className="flex items-center justify-between gap-2 sm:gap-4 mb-2">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -87,20 +93,27 @@ export function OverviewCards({ metrics, valuesHidden = false }: OverviewCardsPr
                     <div
                       className={cn(
                         "flex items-center gap-0.5 rounded-xs px-2 py-0.5 text-xs font-medium",
-                        isUp ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                        isFlat
+                          ? "bg-white/5 text-white/50"
+                          : isUp
+                            ? "bg-emerald-500/10 text-emerald-400"
+                            : "bg-red-500/10 text-red-400"
                       )}
                     >
-                      <TrendIcon className="h-3.5 w-3.5" />
-                      {valuesHidden ? MASK_PERCENT : `${Math.abs(card.change).toFixed(1)}%`}
+                      {!isFlat && <TrendIcon className="h-3.5 w-3.5" />}
+                      {valuesHidden
+                        ? MASK_PERCENT
+                        : isFlat
+                          ? "0%"
+                          : `${Math.abs(card.change).toFixed(1)}%`}
                     </div>
                     <span className="text-[10px] sm:text-[11px] text-white/40 whitespace-nowrap">
-                      {isUp ? "+" : "-"} {card.formattedChange}
+                      {isFlat ? "~" : isUp ? "+" : "-"} {card.formattedChange}
                     </span>
                   </div>
                 </div>
               </div>
-              
-              {/* Aqui está o pulo do gato: hidden no mobile, visível (flex) a partir da tela small (sm) */}
+
               <span className="hidden sm:flex items-center justify-end text-xs font-medium text-white/60">
                 {card.title}
               </span>

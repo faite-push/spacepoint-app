@@ -151,7 +151,7 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
   };
 
   return (
-    <div className="space-y-6 rounded-md border border-white/5 bg-transparent p-4">
+    <div className="space-y-6 relative p-4">
       {!hideHeader && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -168,7 +168,7 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-medium text-white">Seções da vitrine</p>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             Marque produtos com a estrela na listagem e depois associe-os às seções abaixo.
           </p>
         </div>
@@ -187,8 +187,8 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
                   {(dragProvided, snapshot) => (
                     <div ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                       className={cn(
-                        "rounded-md border border-white/5 bg-white/[0.02] px-4 py-3",
-                        snapshot.isDragging && "border-primary/30 bg-primary/5"
+                        "rounded-md border border-white/5 bg-transparent px-4 py-3",
+                        snapshot.isDragging && "border-primary/10 bg-primary/5"
                       )}
                       style={dragProvided.draggableProps.style as React.CSSProperties}
                     >
@@ -251,7 +251,7 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
         </div>
       )}
 
-      <div className="rounded-md border border-white/10 bg-white/5 p-4">
+      <div className="rounded-md border border-white/5 bg-transparent p-4">
         <div className="flex items-center gap-2 text-sm text-white">
           <span>
             Produtos com estrela disponíveis: <strong>{featuredProducts.length}</strong>
@@ -269,60 +269,58 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
             <DialogDescription>Crie seções na home e escolha quais produtos com estrela aparecem em cada uma.</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4">
-            <div className="flex items-center justify-center gap-2">
-              <div className="space-y-2 flex-1">
-                <Label>Título</Label>
-                <Input
-                  value={sectionForm.title}
-                  onChange={(e) => setSectionForm((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="Ex: Mais Vendidos"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Máximo de produtos</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={24}
-                  value={sectionForm.maxItems}
-                  onChange={(e) =>
-                    setSectionForm((prev) => ({
-                      ...prev,
-                      maxItems: Math.max(1, Math.min(24, Number(e.target.value) || 12)),
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Subtítulo (opcional)</Label>
+          <div className="flex items-center justify-center gap-2">
+            <div className="space-y-2 flex-1">
+              <Label>Título</Label>
               <Input
-                value={sectionForm.subtitle}
-                onChange={(e) => setSectionForm((prev) => ({ ...prev, subtitle: e.target.value }))}
-                placeholder="Ex: Os favoritos da comunidade"
+                value={sectionForm.title}
+                onChange={(e) => setSectionForm((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="Ex: Mais Vendidos"
               />
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex flex-1 items-center border border-white/5 rounded-md p-3 gap-2">
-                <Toggle
-                  size="sm"
-                  pressed={sectionForm.enabled}
-                  onPressedChange={(pressed) =>
-                    setSectionForm((prev) => ({ ...prev, enabled: pressed }))
-                  }
-                >
-                  {sectionForm.enabled ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                </Toggle>
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    {sectionForm.enabled ? "Seção ativa" : "Seção inativa"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Controla se aparece na home.</p>
-                </div>
+            <div className="space-y-2">
+              <Label>Máximo de produtos</Label>
+              <Input
+                type="number"
+                min={1}
+                max={24}
+                value={sectionForm.maxItems}
+                onChange={(e) =>
+                  setSectionForm((prev) => ({
+                    ...prev,
+                    maxItems: Math.max(1, Math.min(24, Number(e.target.value) || 12)),
+                  }))
+                }
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Subtítulo (opcional)</Label>
+            <Input
+              value={sectionForm.subtitle}
+              onChange={(e) => setSectionForm((prev) => ({ ...prev, subtitle: e.target.value }))}
+              placeholder="Ex: Os favoritos da comunidade"
+            />
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex flex-1 items-center border border-white/5 rounded-md p-3 gap-2">
+              <Toggle
+                size="sm"
+                pressed={sectionForm.enabled}
+                onPressedChange={(pressed) =>
+                  setSectionForm((prev) => ({ ...prev, enabled: pressed }))
+                }
+              >
+                {sectionForm.enabled ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+              </Toggle>
+              <div>
+                <p className="text-sm font-medium text-white">
+                  Seção de produtos <span className="text-blue-500 font-light">{sectionForm.enabled ? "( Ativada )" : "( Desativada )"}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">Seção de produtos que aparece na home da loja.</p>
               </div>
             </div>
           </div>
@@ -342,29 +340,29 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
                 Nenhum produto marcado com estrela ainda. Vá em Produtos e marque os destaques.
               </div>
             ) : (
-              <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border border-white/5 p-3">
+              <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border border-white/5 p-3 w-full max-w-[370px] md:max-w-full">
                 {featuredProducts.map((product) => {
                   const selected = selectedProductIds.includes(product.id);
                   return (
                     <div
                       key={product.id}
                       className={cn(
-                        "flex items-center justify-between gap-3 rounded-md border px-3 py-2 transition-colors",
+                        "flex items-center justify-between gap-2 sm:gap-3 rounded-md border px-3 py-2 transition-colors w-full min-w-0",
                         selected ? "border-primary/30 bg-primary/5" : "border-white/5"
                       )}
                     >
-                      <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                         <Star
                           className={cn(
                             "size-4 shrink-0",
                             selected ? "fill-amber-400 text-amber-400" : "text-muted-foreground"
                           )}
                         />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-white">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs sm:text-sm font-medium text-white">
                             {decodeHtmlEntities(product.name)}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="truncate text-[11px] sm:text-xs text-muted-foreground">
                             {product.isActive && product.isVisible
                               ? "Visível na loja"
                               : "Oculto ou inativo"}
@@ -377,6 +375,7 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
                         pressed={selected}
                         onPressedChange={() => toggleProduct(product.id)}
                         aria-label={`Incluir ${decodeHtmlEntities(product.name)} na seção`}
+                        className="shrink-0"
                       >
                         {selected ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                       </Toggle>
@@ -387,10 +386,11 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
             )}
           </div>
 
-          <DialogFooter className="flex">
+          <DialogFooter className="flex flex-row">
             <Button
               type="button"
-              className="flex-1 px-6 py-4"
+              className="flex-1"
+              size="lg"
               disabled={saveSectionMutation.isPending || !sectionForm.title.trim()}
               onClick={() => saveSectionMutation.mutate()}
             >
@@ -399,7 +399,8 @@ export function HomeShowcaseSettings({ hideHeader = false }: { hideHeader?: bool
             <Button
               type="button"
               variant="ghost"
-              className="flex-1 px-6 py-4"
+              className="flex-1"
+              size="lg"
               onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Save, MousePointerClick } from "lucide-react";
+import { Loader2, Save, MousePointerClick, Check, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { siteSettingsApi, type SiteConfigRecord } from "@/lib/admin-api";
 import { Textarea } from "@/components/ui/textarea";
 import { ConversionPopupPreview } from "@/components/home/conversion-popup";
+import { Toggle } from "@/components/ui/toggle";
 
 export function HomePopupSettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const queryClient = useQueryClient();
@@ -60,7 +61,7 @@ export function HomePopupSettings({ hideHeader = false }: { hideHeader?: boolean
         <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
       </div>
     );
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -89,28 +90,28 @@ export function HomePopupSettings({ hideHeader = false }: { hideHeader?: boolean
         </div>
       )}
 
-      {hideHeader && (
-        <div className="flex justify-end mb-4">
-          <Button
-            className="gap-2 w-full shrink-0 px-4 py-5 sm:w-auto"
-            disabled={saveMutation.isPending}
-            onClick={() => saveMutation.mutate()}
-          >
-            {saveMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 hidden" />
-            )}
-            Salvar alterações
-          </Button>
-        </div>
-      )}
-
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
           <div className="rounded-md border border-white/5 bg-transparent">
-            <div className="border-b border-white/5 px-4 py-3">
+            <div className="flex justify-between items-center border-b border-white/5 px-4 py-2">
               <p className="text-sm font-medium text-white">Sistema de Pop-up</p>
+
+              {hideHeader && (
+                <div className="flex">
+                  <Button
+                    className="gap-2 w-full sm:w-auto"
+                    disabled={saveMutation.isPending}
+                    onClick={() => saveMutation.mutate()}
+                  >
+                    {saveMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 hidden" />
+                    )}
+                    Salvar alterações
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="px-4 py-3 space-y-2">
@@ -124,10 +125,14 @@ export function HomePopupSettings({ hideHeader = false }: { hideHeader?: boolean
                     <p className="text-xs text-zinc-500">Exibir pop-up para visitantes na Home.</p>
                   </div>
                 </div>
-                <Switch
-                  checked={form.popupEnabled ?? false}
-                  onCheckedChange={(v) => set("popupEnabled", v)}
-                />
+                <Toggle
+                  id="top-bar-enabled"
+                  size="sm"
+                  pressed={form.popupEnabled ?? false}
+                  onPressedChange={(v) => set("popupEnabled", v)}
+                >
+                  {form.popupEnabled ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                </Toggle>
               </div>
 
               <div className="flex md:flex-row flex-col gap-4">

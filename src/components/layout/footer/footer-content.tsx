@@ -125,9 +125,9 @@ export function FooterContent({ footer, isHome = false, compact = false, onNewsl
         <div className="relative z-10 mt-4 flex flex-col items-start justify-between gap-4 lg:mt-6 lg:flex-row lg:items-center lg:gap-6">
           <p className="text-xs text-white/80 leading-relaxed">{footer.copyright}</p>
 
-          {footer.legalLinks.length > 0 && (
+          {footer.companyLinks.length > 0 && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 lg:gap-x-6">
-              {footer.legalLinks.map((item) => (
+              {footer.companyLinks.map((item) => (
                 <Link
                   key={`${item.href}-${item.label}`}
                   href={item.href}

@@ -27,7 +27,6 @@ import { uploadChatImages } from '@/lib/chat-upload';
 import { useAuth } from '@/context/auth-context';
 import { useSocket } from '@/context/socket-context';
 import { cn } from '@/lib/utils';
-import { playNotificationSound } from '@/lib/notification-sound';
 import { ChatMessagesList, dedupeChatMessages } from '@/components/admin/chat/chat-messages-list';
 import { isSupportSender } from '@/lib/chat-message-display';
 import { ChatOrderPanel } from '@/components/admin/chat/chat-order-panel';
@@ -35,7 +34,7 @@ import { ChatInput } from '@/components/admin/chat/chat-input';
 import { ChatImageLightbox } from '@/components/admin/chat/chat-image-lightbox';
 import { ChatLabelModal, type ChatLabelFormValues } from '@/components/admin/chat/chat-label-modal';
 import { getUnreadCount, isOrderFullyDelivered, getPreviewText, formatChatListTimestamp, mergeChatData, mergeOrderData, } from '@/lib/chat-utils';
-import { claimRealtimeEvent, clearChatUnreadInCache, isCustomerAlertMessage, normalizeChatRealtimePayload, resetUnreadBumpKey, setActiveAdminChatId, } from '@/lib/admin-chat-realtime';
+import { clearChatUnreadInCache, isCustomerAlertMessage, resetUnreadBumpKey, setActiveAdminChatId, } from '@/lib/admin-chat-realtime';
 import { getChatListRowClass, isExpressDelivery } from '@/lib/order-delivery';
 import { buildChatFiltersSearchParams, buildChatListQueryParams, readChatFiltersFromSearchParams, type ChatStatusFilter, } from '@/lib/chat-list-filters';
 import { CHAT_LIST_SCROLL_CLASS, restoreChatListScroll, saveChatListScrollTop, } from '@/lib/chat-list-scroll';
@@ -56,7 +55,7 @@ export default function AdminChatsPage() {
   const [listSheetOpen, setListSheetOpen] = useState(false);
   const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const { socket, onlineUsers, isConnected } = useSocket();
+  const { socket, onlineUsers, isConnected, connectionGeneration } = useSocket();
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -195,65 +194,6 @@ export default function AdminChatsPage() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleNewMessageAlert = (raw: {
-      chatId: string;
-      type?: string;
-      orderId?: string;
-      customerName?: string;
-      message?: { id: string; content: string; senderId: string; type?: string };
-    }) => {
-      const payload = normalizeChatRealtimePayload(raw);
-      const activeChatId = selectedChatRef.current?.id ?? null;
-
-      // Lista e badge são atualizados por AdminChatNotifications (evita processar 2x)
-
-      if (!claimRealtimeEvent(payload)) return;
-
-      const isReopen = payload.type === 'reopened';
-      const isCustomer = isCustomerAlertMessage(payload.lastMessage);
-
-      if (payload.chatId !== activeChatId && notificationsEnabledRef.current && (isReopen || isCustomer)) {
-        playNotificationSound(notificationVolumeRef.current / 100);
-        if (isReopen) {
-          toast('Chat reaberto pelo cliente', {
-            description: raw.customerName
-              ? `${raw.customerName}${raw.orderId ? ` — Pedido #${raw.orderId.slice(-8)}` : ''}`
-              : 'O cliente reabriu o atendimento.',
-          });
-        } else if (payload.type === 'new_chat') {
-          toast('Nova compra recebida', {
-            description: raw.customerName
-              ? `${raw.customerName}${raw.orderId ? ` — Pedido #${raw.orderId.slice(-8)}` : ''}`
-              : 'Um novo chat de atendimento foi aberto.',
-          });
-        } else if (payload.lastMessage) {
-          toast('Nova mensagem no atendimento', {
-            description: `${raw.customerName || 'Cliente'}: ${payload.lastMessage.content?.slice(0, 80) || 'Nova mensagem'}`,
-          });
-        }
-      }
-    };
-
-    const handleChatListUpdate = (_raw: {
-      chatId: string;
-      lastMessage?: { id: string; content: string; senderId: string; type?: string };
-      type?: string;
-    }) => {
-      // Processado globalmente em AdminChatNotifications
-    };
-
-    socket.on('new_message_alert', handleNewMessageAlert);
-    socket.on('chat_list_update', handleChatListUpdate);
-
-    return () => {
-      socket.off('new_message_alert', handleNewMessageAlert);
-      socket.off('chat_list_update', handleChatListUpdate);
-    };
-  }, [socket, queryClient]);
-
-  useEffect(() => {
-    if (!socket) return;
-
     const findOrderIdForChat = (chatId: string): string | undefined => {
       const current = selectedChatRef.current;
       if (current?.id === chatId && current.orderId) return current.orderId;
@@ -327,7 +267,7 @@ export default function AdminChatsPage() {
   }, [socket, queryClient]);
 
   useEffect(() => {
-    if (!socket || !selectedChat?.id) return;
+    if (!socket || !selectedChat?.id || !isConnected) return;
 
     const chatId = selectedChat.id;
     const orderId = selectedChat.orderId;
@@ -351,7 +291,7 @@ export default function AdminChatsPage() {
       socket.emit('leave_chat', chatId);
       socket.off('typing', handleTyping);
     };
-  }, [socket, selectedChat?.id, selectedChat?.orderId, queryClient]);
+  }, [socket, selectedChat?.id, selectedChat?.orderId, queryClient, isConnected, connectionGeneration]);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {

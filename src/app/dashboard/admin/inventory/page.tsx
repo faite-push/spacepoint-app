@@ -292,9 +292,9 @@ export default function InventoryPage() {
 
                 return (
                 <Fragment key={group.productId}>
-                  <TableRow className="border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                    <TableCell colSpan={7} className="py-3 pl-4 pr-4">
-                      <div className="flex items-center justify-between gap-3">
+                  <TableRow className="border-white/5 cursor-pointer bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                    <TableCell colSpan={7} className="py-3 pl-4 pr-4 cursor-pointer">
+                      <div className="flex items-center justify-between gap-3 cursor-pointer">
                         <button
                           type="button"
                           onClick={() => toggleProductExpanded(group.productId)}
@@ -335,7 +335,7 @@ export default function InventoryPage() {
                     return (
                       <TableRow
                         key={variant.id}
-                        className="border-white/5 hover:bg-white/[0.01] transition-colors group"
+                        className="border-white/5 hover:bg-white/[0.01] cursor-pointer transition-colors group"
                       >
                         <TableCell className="pl-12 py-4">
                           <div className="flex flex-col">

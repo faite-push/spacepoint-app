@@ -9,12 +9,15 @@ interface SocketContextType {
   socket: Socket | null;
   onlineUsers: string[];
   isConnected: boolean;
+  /** Incrementa a cada connect/reconnect — use para re-emitir join_chat */
+  connectionGeneration: number;
 }
 
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   onlineUsers: [],
   isConnected: false,
+  connectionGeneration: 0,
 });
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
@@ -22,6 +25,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionGeneration, setConnectionGeneration] = useState(0);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -42,7 +46,6 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     const connect = async () => {
-      // Disconnect previous instance before creating a new one
       if (socketRef.current) {
         socketRef.current.removeAllListeners();
         socketRef.current.disconnect();
@@ -61,7 +64,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         } else {
           console.warn('[SOCKET] ws-token retornou', res.status);
         }
-      } catch (err) {
+      } catch {
         console.warn('[SOCKET] Falha ao obter ws-token — usando polling como fallback');
       }
 
@@ -75,7 +78,6 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
       const instance = io(API_URL!, {
         withCredentials: true,
-        // Try websocket first, fall back to polling if WS is blocked
         transports: ['websocket', 'polling'],
         auth: { token: wsToken },
         autoConnect: true,
@@ -98,6 +100,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
         console.log('[SOCKET] Conectado:', instance.id);
         setIsConnected(true);
+        setConnectionGeneration((g) => g + 1);
       });
 
       instance.on('disconnect', (reason) => {
@@ -121,7 +124,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
             instance.auth = { token: data.token };
           }
         } catch {
-          // ignore — will retry with existing token
+          // ignore
         }
       });
 
@@ -145,7 +148,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   }, [user?.id, loading]);
 
   return (
-    <SocketContext.Provider value={{ socket, onlineUsers, isConnected }}>
+    <SocketContext.Provider value={{ socket, onlineUsers, isConnected, connectionGeneration }}>
       {children}
     </SocketContext.Provider>
   );

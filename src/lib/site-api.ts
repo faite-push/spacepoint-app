@@ -46,6 +46,8 @@ export type PublicSiteConfig = {
   footerPaddingTopDefault: number | null;
   footerCategoryColumnTitle: string | null;
   footerSupportColumnTitle: string | null;
+  footerMarketplaceColumnTitle: string | null;
+  footerCompanyColumnTitle: string | null;
   socialFacebook: string | null;
   socialInstagram: string | null;
   socialTwitter: string | null;
@@ -54,6 +56,9 @@ export type PublicSiteConfig = {
   socialLinks: SocialLink[] | null;
   footerCategoryLinks: FooterLink[] | null;
   footerSupportLinks: FooterLink[] | null;
+  footerMarketplaceLinks: FooterLink[] | null;
+  footerCompanyLinks: FooterLink[] | null;
+  footerBottomLinks: FooterLink[] | null;
   footerLegalLinks: FooterLink[] | null;
   topBarEnabled: boolean | null;
   topBarText: string | null;
@@ -76,6 +81,9 @@ export type PublicSiteConfig = {
   homeReviewsTotalCount: number | null;
   homeReviewsGoogleMapsUrl: string | null;
   homeReviewsLinkLabel: string | null;
+  homeFamousEnabled: boolean | null;
+  homeFamousTitlePrimary: string | null;
+  homeFamousTitleSecondary: string | null;
   homeShowcaseEnabled: boolean | null;
   homeShowcaseTitle: string | null;
   homeShowcaseSubtitle: string | null;
@@ -102,6 +110,15 @@ export type PublicHomeReview = {
   sortOrder: number;
 };
 
+export type PublicFamousClient = {
+  id: string;
+  name: string;
+  subtitle: string | null;
+  avatarUrl: string | null;
+  videoUrl: string | null;
+  sortOrder: number;
+};
+
 export type PublicPageSeo = {
   pageKey: string;
   metaTitle: string | null;
@@ -109,11 +126,56 @@ export type PublicPageSeo = {
   ogImageUrl: string | null;
 };
 
+export type InstitutionalLayoutType = "help" | "document";
+
+export type HelpChannel = {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  responseTime: string;
+  features: string[];
+  ctaLabel: string;
+  ctaAction: "chat" | "link";
+  ctaHref: string;
+};
+
+export type HelpFaqItem = {
+  question: string;
+  answer: string;
+};
+
+export type HelpHours = {
+  title: string;
+  weekdays: string;
+  weekend: string;
+  timezone: string;
+};
+
+export type HelpLayoutData = {
+  heroTitle: string;
+  heroSubtitle: string;
+  channels: HelpChannel[];
+  faq: HelpFaqItem[];
+  hours: HelpHours;
+};
+
+export type DocumentLayoutData = {
+  eyebrow: string;
+  intro: string;
+  showToc: boolean;
+  updatedLabel: string;
+};
+
+export type InstitutionalLayoutData = HelpLayoutData | DocumentLayoutData;
+
 export type PublicInstitutionalPage = {
   id: string;
   slug: string;
   title: string;
   content: any;
+  layoutType?: InstitutionalLayoutType | null;
+  layoutData?: InstitutionalLayoutData | null;
   metaTitle: string | null;
   metaDescription: string | null;
 };
@@ -197,6 +259,19 @@ export async function fetchHomeReviews(): Promise<PublicHomeReview[]> {
     if (!r.ok) return [];
     const data = await r.json();
     return data.reviews ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchFamousClients(): Promise<PublicFamousClient[]> {
+  try {
+    const r = await fetchWithTimeout(`${API_URL}/v2/api/famous-clients`, {
+      next: { revalidate: 60 },
+    });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return data.clients ?? [];
   } catch {
     return [];
   }

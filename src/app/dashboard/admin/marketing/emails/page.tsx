@@ -96,34 +96,34 @@ function MarketingEmailsPageContent() {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="relative z-10">
-        <TabsList className={cn("h-auto w-full flex-wrap bg-transparent p-0 sm:w-auto")}>
+        <TabsList className={cn("h-auto w-full flex-nowrap overflow-x-auto justify-start bg-transparent p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto md:flex-wrap md:overflow-visible")}>
           <TabsTrigger
             value="components"
-            className="flex cursor-pointer items-center gap-2 rounded-md px-4 py-3 text-sm font-medium transition-all duration-200"
+            className="flex shrink-0 items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-md cursor-pointer transition-all duration-200 sm:px-4 sm:py-3 sm:text-sm"
           >
             Componentes do e-mail
           </TabsTrigger>
           <TabsTrigger
             value="transactional"
-            className="flex cursor-pointer items-center gap-2 rounded-md px-4 py-3 text-sm font-medium transition-all duration-200"
+            className="flex shrink-0 items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-md cursor-pointer transition-all duration-200 sm:px-4 sm:py-3 sm:text-sm"
           >
             Atualizações transacionais
           </TabsTrigger>
           <TabsTrigger
             value="abandonedCart"
-            className="flex cursor-pointer items-center gap-2 rounded-md px-4 py-3 text-sm font-medium transition-all duration-200"
+            className="flex shrink-0 items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-md cursor-pointer transition-all duration-200 sm:px-4 sm:py-3 sm:text-sm"
           >
             Carrinho abandonado
           </TabsTrigger>
           <TabsTrigger
             value="abandonedProduct"
-            className="flex cursor-pointer items-center gap-2 rounded-md px-4 py-3 text-sm font-medium transition-all duration-200"
+            className="flex shrink-0 items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-md cursor-pointer transition-all duration-200 sm:px-4 sm:py-3 sm:text-sm"
           >
             Abandono de produto
           </TabsTrigger>
           <TabsTrigger
             value="cancelledOrder"
-            className="flex cursor-pointer items-center gap-2 rounded-md px-4 py-3 text-sm font-medium transition-all duration-200"
+            className="flex shrink-0 items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-md cursor-pointer transition-all duration-200 sm:px-4 sm:py-3 sm:text-sm"
           >
             Pedido cancelado
           </TabsTrigger>

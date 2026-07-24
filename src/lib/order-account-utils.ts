@@ -1,22 +1,18 @@
 import type { Order } from "@/types/shop";
 
-const STATUS_PRIORITY: Record<string, number> = {
-  PENDING: 0,
-  PAID: 1,
-  DELIVERED: 2,
-  REFUNDED: 3,
-  CANCELLED: 4,
-};
-
 const VISIBLE_STATUSES = new Set(["PENDING", "PAID", "DELIVERED", "REFUNDED", "CANCELLED"]);
 
+/**
+ * Pendentes no topo (mais recentes primeiro); demais por data decrescente.
+ * Evita enterrar pedidos DELIVERED recentes abaixo de PAID antigos.
+ */
 export function sortAccountOrders(orders: Order[]) {
   return [...orders]
-    .filter((order) => VISIBLE_STATUSES.has(order.status.toUpperCase()))
+    .filter((order) => VISIBLE_STATUSES.has(String(order.status || "").toUpperCase()))
     .sort((a, b) => {
-      const priorityA = STATUS_PRIORITY[a.status.toUpperCase()] ?? 99;
-      const priorityB = STATUS_PRIORITY[b.status.toUpperCase()] ?? 99;
-      if (priorityA !== priorityB) return priorityA - priorityB;
+      const aPending = String(a.status).toUpperCase() === "PENDING";
+      const bPending = String(b.status).toUpperCase() === "PENDING";
+      if (aPending !== bPending) return aPending ? -1 : 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 }

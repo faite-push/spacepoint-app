@@ -162,6 +162,10 @@ function CheckoutPageContent() {
         if (reorderToken) {
           const reordered = await reorderCancelledOrder(reorderToken);
           if (cancelled) return;
+          saveCartRecoverySession({
+            token: reorderToken,
+            source: searchParams.get("src"),
+          });
           replaceItems(
             reordered.items.map((item) => ({
               cartKey: cartItemKey(item.productId, item.variantId),
@@ -972,7 +976,16 @@ function CheckoutPageContent() {
                 htmlFor="terms"
                 className="text-sm font-medium text-zinc-400 cursor-pointer select-none"
               >
-                Eu aceito os <span className="text-white font-semibold decoration-primary underline-offset-4">termos e condições</span> desta compra.
+                Eu aceito os{" "}
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  className="text-white font-semibold underline decoration-primary underline-offset-4 hover:text-primary"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  termos e condições
+                </Link>{" "}
+                desta compra.
               </label>
             </div>
           </aside>
