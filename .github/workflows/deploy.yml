@@ -1,0 +1,40 @@
+name: Deploy Next.js
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build && chmod -R 777 .next next.config.ts package.json
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+      - name: Zip
+        run: |
+          zip -r project.zip package.json pnpm-lock.yaml .next next.config.ts public \
+            -x ".next/cache/*"
+
+      - name: Deploy Square Cloud
+        uses: squarecloudofc/github-action@v2
+        with:
+          command: commit --file project.zip ${{ secrets.SQUARECLOUD_APP_ID }} --restart
+          token: ${{ secrets.SQUARE_CLOUD_TOKEN }}
